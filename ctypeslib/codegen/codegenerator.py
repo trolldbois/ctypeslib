@@ -150,7 +150,10 @@ class Generator(object):
 ##        self.stream = self.imports = self.output
         self.generate_comments = generate_comments
         self.known_symbols = known_symbols or {}
-        self.searched_dlls = searched_dlls or []
+        if searched_dlls is None:
+            self.searched_dlls = []
+        else:
+            self.searched_dlls = searched_dlls
 
         self.done = set() # type descriptions that have been generated
         self.names = set() # names that have been generated
