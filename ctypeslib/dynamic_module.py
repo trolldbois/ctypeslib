@@ -2,13 +2,22 @@
 
 See the docstring of the update_from function for usage information.
 """
-import sys, os, time, bz2, cPickle
+import sys, os, time, bz2, cPickle, md5
 import distutils.dep_util
 import ctypes
+import ctypeslib
 from ctypeslib.codegen import gccxmlparser, codegenerator, typedesc
 
+# TODO:
+#
+# Clean up the names Generator and CodeGenerator.
+#
+# If the .xml file does not exist but the .xml.pck.bz2 file does,
+# accept the latter.
+#
+# In include(): Something similar.
 
-def update_from(xml_file, persist=True):
+def update_from(xml_file, persist=True, _stacklevel=1):
     """This function replaces the *calling module* with a dynamic
     module that generates code on demand from type descriptions
     contained in the <xml_file>.  If <xml_file> is a relative
@@ -26,7 +35,7 @@ def update_from(xml_file, persist=True):
      - the calling module MUST contain 'from ctypes import *',
        and, on windows, also 'from ctypes.wintypes import *'.
     """
-    frame = sys._getframe(1)
+    frame = sys._getframe(_stacklevel)
     glob = frame.f_globals
     name = glob["__name__"]
     mod = sys.modules[name]
@@ -34,8 +43,34 @@ def update_from(xml_file, persist=True):
         xml_file = os.path.join(os.path.dirname(mod.__file__), xml_file)
     sys.modules[name] = DynamicModule(mod, xml_file, persist=persist)
 
-# Maybe we should add other functions, which even generate the xml
-# file on demand?
+def include(code):
+    """Does the same as update_from above, but takes C code instead of
+    an xml_file.  gccxml is used to create the xml_file with type
+    descriptions in a 'cache' directory.
+    """
+    # create a hash for the code, and use that as basename for the
+    # files we have to create
+    hashval = md5.new(code).hexdigest()
+
+    # XXX fixme: use fixed path
+    fnm = os.path.abspath(os.path.join(os.path.dirname(__file__), "xml", hashval))
+
+    h_file = fnm + ".h"
+    xml_file = fnm + ".xml"
+
+    if not os.path.exists(h_file):
+        print "Create %s" % h_file
+        open(h_file, "w").write(code)
+    if distutils.dep_util.newer(h_file, xml_file):
+        print "Create %s" % xml_file
+        from ctypeslib import h2xml
+        h2xml.main(["h2xml",
+                    "-I", os.path.dirname(fnm), "-c", "-q",
+                    h_file,
+                    "-o", xml_file])
+    update_from(xml_file, _stacklevel=2)
+        
+    
 
 ################################################################
 
