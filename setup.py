@@ -55,7 +55,7 @@ class test(Command):
 # class test
 
 setup(name="ctypeslib",
-      packages = ['ctypeslib'],
+      packages = ['ctypeslib', 'ctypeslib.codegen'],
       scripts = ['scripts/h2xml.py', 'scripts/xml2py.py'],
       description="ctypes code generator",
       long_description = __doc__,
