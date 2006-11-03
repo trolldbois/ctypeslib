@@ -1,7 +1,7 @@
 import sys, re, os
 from optparse import OptionParser
-from ctypes_codegen.codegenerator import generate_code
-from ctypes_codegen import typedesc
+from ctypeslib.codegen.codegenerator import generate_code
+from ctypeslib.codegen import typedesc
 
 ################################################################
 windows_dll_names = """\

@@ -1,1 +1,1 @@
-# ctypes_codegen.test package.
+# ctypeslib.test package.

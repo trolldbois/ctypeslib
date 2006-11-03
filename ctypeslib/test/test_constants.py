@@ -8,8 +8,8 @@ except ImportError:
     from StringIO import StringIO
 
 import ctypes
-from ctypes_codegen import h2xml
-from ctypes_codegen.codegenerator import generate_code
+from ctypeslib import h2xml
+from ctypeslib.codegen.codegenerator import generate_code
 
 def mktemp(suffix):
     handle, fnm = tempfile.mkstemp(suffix)

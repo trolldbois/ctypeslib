@@ -1,6 +1,6 @@
 """h2xml - convert C include file(s) into an xml file by running gccxml."""
 import sys, os, ConfigParser
-from ctypes_codegen import cparser
+from ctypeslib.codegen import cparser
 from optparse import OptionParser
 
 def main(argv=None):

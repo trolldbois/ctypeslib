@@ -24,7 +24,7 @@ class test(Command):
         self.build_base = 'build'
         self.use_resources = ""
         self.refcounts = False
-        self.tests = "ctypes_codegen.test"
+        self.tests = "ctypeslib.test"
 
     # initialize_options()
 
@@ -54,8 +54,8 @@ class test(Command):
 
 # class test
 
-setup(name="ctypes_codegen",
-      packages = ['ctypes_codegen'],
+setup(name="ctypeslib",
+      packages = ['ctypeslib'],
       scripts = ['scripts/h2xml.py', 'scripts/xml2py.py'],
       description="ctypes code generator",
       long_description = __doc__,
