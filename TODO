@@ -12,8 +12,6 @@ codegenerator bugs:
 - Refactor the code so that function generation can be easily adjusted
   in subclasses of the code generator.
 
-- Import the old docs into cvs.
-
 - Write a README file.
 
 - Fix code generation for inline functions:
