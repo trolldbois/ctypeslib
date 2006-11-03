@@ -442,14 +442,16 @@ class Generator(object):
                 print >> self.stream, "    ('%s', %s, %s)," % \
                       (fieldname, self.type_name(f.typ), f.bits)
         print >> self.stream, "]"
-        # generate assert statements for size and alignment
-        if body.struct.size and body.struct.name not in dont_assert_size:
-            size = body.struct.size // 8
-            print >> self.stream, "assert sizeof(%s) == %s, sizeof(%s)" % \
-                  (body.struct.name, size, body.struct.name)
-            align = body.struct.align // 8
-            print >> self.stream, "assert alignment(%s) == %s, alignment(%s)" % \
-                  (body.struct.name, align, body.struct.name)
+        # disable size checks because they are not portable across
+        # platforms:
+##        # generate assert statements for size and alignment
+##        if body.struct.size and body.struct.name not in dont_assert_size:
+##            size = body.struct.size // 8
+##            print >> self.stream, "assert sizeof(%s) == %s, sizeof(%s)" % \
+##                  (body.struct.name, size, body.struct.name)
+##            align = body.struct.align // 8
+##            print >> self.stream, "assert alignment(%s) == %s, alignment(%s)" % \
+##                  (body.struct.name, align, body.struct.name)
 
     def find_dllname(self, func):
         if hasattr(func, "dllname"):
