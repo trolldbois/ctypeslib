@@ -1,3 +1,22 @@
+2006-11-07  Thomas Heller  <theller@python.net>
+
+	* ctypeslib\codegen\gccxmlparser.py: Patch from Giovanni Bajo: Use
+	cElementtree, if installed, instead of xml.sax for XML parsing.
+	This gives a significant speedup.
+
+2006-11-03  Thomas Heller  <theller@python.net>
+
+	* ctypeslib\experimental\*.py contains experimental stuff.  This
+	directory is *not* package because it doesn't contain an
+	__init__.py file.
+	
+	* ctypeslib\dynamic_module.py: A module implementing incremental,
+	dynamic code generation. Removed the former ctypeslib\dynmod.py.
+
+	* Renamed restructured the ctypes_codegen package.  It is now
+	named ctypeslib, with a subpackage ctypeslib.codegen.  The
+	ctypeslib package now contains the h2xml and xml2py scripts.
+
 2006-10-31  Thomas Heller  <theller@python.net>
 
 	* ctypes_codegen\codegenerator.py (Generator.init_value): Reworked
