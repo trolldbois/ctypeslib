@@ -1,5 +1,18 @@
-"""gccxmlparser - parse a gccxml created XML file into a sequence type descriptions"""
-import xml.sax
+"""gccxmlparser - parse a gccxml created XML file into sequence type descriptions"""
+try:
+    from xml.etree import cElementTree
+except ImportError:
+    try:
+        import cElementTree
+    except ImportError:
+        cElementTree = None
+
+if cElementTree:
+    base = object
+else:
+    import xml.sax
+    base = xml.sax.ContentHandler
+
 import typedesc
 import sys
 try:
@@ -26,16 +39,30 @@ def CHECK_NAME(name):
         return name
     return None
 
-class GCCXML_Handler(xml.sax.handler.ContentHandler):
+class GCCXML_Parser(base):
     has_values = set(["Enumeration", "Function", "FunctionType",
                       "OperatorFunction", "Method", "Constructor",
                       "Destructor", "OperatorMethod"])
 
     def __init__(self, *args):
-        xml.sax.handler.ContentHandler.__init__(self, *args)
+        base.__init__(self, *args)
         self.context = []
         self.all = {}
         self.cpp_data = {}
+
+    if cElementTree:
+        def parse(self, xmlfile):
+            for event, node in cElementTree.iterparse(xmlfile, events=("start", "end")):
+                if event == "start":
+                    self.startElement(node.tag, dict(node.items()))
+                else:
+                    if node.text:
+                        self.characters(node.text)
+                    self.endElement(node.tag)
+                    node.clear()
+    else:
+        def parse(self, xmlfile):
+            xml.sax.parse(xmlfile, self)
 
     def startElement(self, name, attrs):
         # find and call the handler for this element
@@ -390,6 +417,6 @@ class GCCXML_Handler(xml.sax.handler.ContentHandler):
 
 def parse(xmlfile):
     # parse an XML file into a sequence of type descriptions
-    handler = GCCXML_Handler()
-    xml.sax.parse(xmlfile, handler)
-    return handler.get_result()
+    parser = GCCXML_Parser()
+    parser.parse(xmlfile)
+    return parser.get_result()
