@@ -7,6 +7,8 @@ import distutils.dep_util
 import ctypes
 import ctypeslib
 from ctypeslib.codegen import gccxmlparser, codegenerator, typedesc
+import logging
+logger = logging.getLogger(__name__)
 
 # TODO:
 #
@@ -43,7 +45,7 @@ def update_from(xml_file, persist=True, _stacklevel=1):
         xml_file = os.path.join(os.path.dirname(mod.__file__), xml_file)
     sys.modules[name] = DynamicModule(mod, xml_file, persist=persist)
 
-def include(code):
+def include(code, persist=True):
     """Does the same as update_from above, but takes C code instead of
     an xml_file.  gccxml is used to create the xml_file with type
     descriptions in a 'cache' directory.
@@ -59,16 +61,16 @@ def include(code):
     xml_file = fnm + ".xml"
 
     if not os.path.exists(h_file):
-        print "Create %s" % h_file
+        logger.info("Create %s", h_file)
         open(h_file, "w").write(code)
     if distutils.dep_util.newer(h_file, xml_file):
-        print "Create %s" % xml_file
+        logger.info("Create %s", xml_file)
         from ctypeslib import h2xml
         h2xml.main(["h2xml",
                     "-I", os.path.dirname(fnm), "-c", "-q",
                     h_file,
                     "-o", xml_file])
-    update_from(xml_file, _stacklevel=2)
+    update_from(xml_file, persist=persist, _stacklevel=2)
         
     
 
@@ -171,23 +173,26 @@ class CodeGenerator(object):
         start = time.clock()
         if persist:
             # We open the file in universal newline mode, read the
-            # whole contents and write it back to avoid creating a
-            # file with multiple line endings.
-            data = open(src_path, "U").read()
-            self.output = open(src_path, "w")
-            self.output.write(data)
-        pck_file = xml_file + ".pck.bz2"
-        if distutils.dep_util.newer(xml_file, pck_file):
+            # contents to determine the line endings.  All this to
+            # avoid creating files with mixed line endings!
+            ifi = open(src_path, "U")
+            ifi.read()
+            ifi.close()
+            self._newlines = ifi.newlines or "\n"
+            self.output = open(src_path, "ab")
+        tdesc_file = os.path.join(os.path.dirname(xml_file),
+                                  os.path.splitext(os.path.basename(xml_file))[0] + ".typedesc.bz2")
+        if distutils.dep_util.newer(xml_file, tdesc_file):
             decls = gccxmlparser.parse(xml_file)
-##            print "parsing xml took %.2f seconds" % (time.clock() - start)
+            logger.info("parsing xml took %.2f seconds", time.clock() - start)
             start = time.clock()
-            ofi = bz2.BZ2File(pck_file, "w")
+            ofi = bz2.BZ2File(tdesc_file, "w")
             data = cPickle.dump(decls, ofi, -1)
-##            print "dumping .pck took %.2f seconds" % (time.clock() - start)
+            logger.info("dumping .typedesc.bz2 took %.2f seconds", time.clock() - start)
         else:
-            data = open(pck_file, "rb").read()
+            data = open(tdesc_file, "rb").read()
             decls = cPickle.loads(bz2.decompress(data))
-##            print "loading .pck took %.2f seconds" % (time.clock() - start)
+            logger.info("loading %s took %.2f seconds", tdesc_file, time.clock() - start)
         names = {}
         self.namespace = ns
         done = set()
@@ -238,9 +243,10 @@ class CodeGenerator(object):
         exec code in self.namespace
         # I guess when this fails, it means that the dll exporting
         # this function is not in searched_dlls.  So we should
-        # probably raise a different exception:
-##        print code
+        # probably raise a different exception.
+
         if self.output is not None:
+            code = code.replace("\n", self._newlines)
             self.output.write(code)
         try:
             return self.namespace[name]
