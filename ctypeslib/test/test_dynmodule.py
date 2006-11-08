@@ -10,9 +10,9 @@ class DynModTest(unittest.TestCase):
         self.failUnlessEqual(stdio.fopen.argtypes, [stdio.STRING, stdio.STRING])
 
     def test_constants(self):
-        self.failUnlessEqual(stdio._O_RDONLY, 0)
-        self.failUnlessEqual(stdio._O_WRONLY, 1)
-        self.failUnlessEqual(stdio._O_RDWR, 2)
+        self.failUnlessEqual(stdio.O_RDONLY, 0)
+        self.failUnlessEqual(stdio.O_WRONLY, 1)
+        self.failUnlessEqual(stdio.O_RDWR, 2)
 
 if __name__ == "__main__":
     unittest.main()

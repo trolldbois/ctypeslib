@@ -9,11 +9,13 @@ if os.name == "nt":
 else:
     _libc = CDLL(None)
 
-
-
 include("""\
 #include <stdio.h>
-#include <io.h>
-#include <fcntl.h>
+
+#ifdef _MSC_VER
+#  include <fcntl.h>
+#else
+#  include <sys/fcntl.h>
+#endif
 """,
         persist=False)
