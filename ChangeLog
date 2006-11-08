@@ -1,3 +1,10 @@
+2006-11-08  Thomas Heller  <theller@python.net>
+
+	* ctypeslib\dynamic_module.y: Generate the .h, .xml, and
+	.typedesc.bz2 files in a temporary directory.  Should that
+	directory contain the GCCXML version number? Or the ctypeslib
+	version number?
+
 2006-11-07  Thomas Heller  <theller@python.net>
 
 	* ctypeslib\codegen\gccxmlparser.py: Patch from Giovanni Bajo: Use
