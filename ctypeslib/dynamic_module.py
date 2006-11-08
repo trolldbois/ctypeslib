@@ -1,7 +1,14 @@
 """A module for dynamic, incremental ctypes code generation.
 
-See the docstring of the update_from function for usage information.
+See the docstring of 'update_from' and 'include' for usage information.
 """
+# BUGS:
+#
+# - gccxml compiler errors in 'include' should raise an exception
+#
+# - The hash generated in 'include' should include whether -c was
+#   passed to h2xml or not
+#
 import sys, os, time, bz2, cPickle, md5, tempfile
 import distutils.dep_util
 import ctypes
