@@ -2,13 +2,17 @@
 
 See the docstring of the update_from function for usage information.
 """
-import sys, os, time, bz2, cPickle, md5
+import sys, os, time, bz2, cPickle, md5, tempfile
 import distutils.dep_util
 import ctypes
 import ctypeslib
 from ctypeslib.codegen import gccxmlparser, codegenerator, typedesc
 import logging
 logger = logging.getLogger(__name__)
+
+gen_dir = os.path.join(tempfile.gettempdir(), "gccxml_cache")
+if not os.path.exists(gen_dir):
+    os.mkdir(gen_dir)
 
 # TODO:
 #
@@ -54,9 +58,7 @@ def include(code, persist=True):
     # files we have to create
     hashval = md5.new(code).hexdigest()
 
-    # XXX fixme: use fixed path
-    fnm = os.path.abspath(os.path.join(os.path.dirname(__file__), "xml", hashval))
-
+    fnm = os.path.join(gen_dir, hashval)
     h_file = fnm + ".h"
     xml_file = fnm + ".xml"
 
@@ -184,6 +186,7 @@ class CodeGenerator(object):
         tdesc_file = os.path.join(os.path.dirname(xml_file),
                                   os.path.splitext(os.path.basename(xml_file))[0] + ".typedesc.bz2")
         if distutils.dep_util.newer(xml_file, tdesc_file):
+            logger.info("Create %s", tdesc_file)
             decls = gccxmlparser.parse(xml_file)
             logger.info("parsing xml took %.2f seconds", time.clock() - start)
             start = time.clock()
