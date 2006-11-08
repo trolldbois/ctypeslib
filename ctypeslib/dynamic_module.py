@@ -133,10 +133,11 @@ class Generator(codegenerator.Generator):
         # XXX This should assert that the correct calling convention
         # is used.
         dll = self.searched_dlls[dllname]
-        if cc == "stdcall":
-            assert isinstance(dll, ctypes.WinDLL), "wrong calling convention"
-        else:
-            assert not isinstance(dll, ctypes.WinDLL), "wrong calling convention"
+        if os.name == "nt":
+            if cc == "stdcall":
+                assert isinstance(dll, ctypes.WinDLL), "wrong calling convention"
+            else:
+                assert not isinstance(dll, ctypes.WinDLL), "wrong calling convention"
         return dllname
 
     def find_dllname(self, func):
