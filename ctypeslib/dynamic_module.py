@@ -65,9 +65,9 @@ def include(code, persist=True):
     # files we have to create
     hashval = md5.new(code).hexdigest()
 
-    fnm = os.path.join(gen_dir, hashval)
-    h_file = fnm + ".h"
-    xml_file = fnm + ".xml"
+    basename = os.path.join(gen_dir, hashval)
+    h_file = basename + ".h"
+    xml_file = basename + ".xml"
 
     if not os.path.exists(h_file):
         logger.info("Create %s", h_file)
@@ -76,11 +76,11 @@ def include(code, persist=True):
         logger.info("Create %s", xml_file)
         from ctypeslib import h2xml
         h2xml.main(["h2xml",
-                    "-I", os.path.dirname(fnm), "-c", "-q",
+                    "-I", os.path.dirname(basename), "-c", #"-q",
                     h_file,
                     "-o", xml_file])
     update_from(xml_file, persist=persist, _stacklevel=2)
-        
+    return basename
     
 
 ################################################################
