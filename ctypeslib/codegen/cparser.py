@@ -308,6 +308,13 @@ class IncludeParser(object):
 
         if options.cpp_symbols:
             if options.verbose:
+                print >> sys.stderr, "compile for syntax check ..."
+            # compile the input files to check for compilation errors,
+            # before trying the fancy stuff with cpp_symbols.
+            self.create_final_xml(include_files, types, None)
+
+        if options.cpp_symbols:
+            if options.verbose:
                 print >> sys.stderr, "finding definitions ..."
             defines = self.get_defines(include_files)
             if options.verbose:
