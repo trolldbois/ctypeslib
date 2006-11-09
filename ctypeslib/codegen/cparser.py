@@ -264,13 +264,14 @@ class IncludeParser(object):
                     types[name] = typ
         return types
 
-    def create_final_xml(self, include_files, types, xmlfile=None):
+    def create_final_xml(self, include_files, types):
         source = []
         for fname in include_files:
             source.append('#include "%s"' % fname)
         for name, value in types.iteritems():
             source.append("const %s cpp_sym_%s = (const %s) %s;" % (types[name], name, types[name], name))
-        self.create_xml(source, xmlfile)
+        fname = self.options.xmlfile
+        self.create_xml(source, fname)
 
     def c_type_name(self, tp):
         "Return the C type name for this type."
@@ -306,11 +307,6 @@ class IncludeParser(object):
         aliases = {}
         excluded = {}
 
-        if options.verbose:
-            if options.xmlfile is not None:
-                print >> sys.stderr, "creating xml output file ..."
-            self.create_final_xml(include_files, types, options.xmlfile)
-
         if options.cpp_symbols:
             if options.verbose:
                 print >> sys.stderr, "finding definitions ..."
@@ -335,10 +331,14 @@ class IncludeParser(object):
                 print >> sys.stderr, "Could not determine the types of #define symbols."
                 types = {}
 
+        if options.verbose:
+            print >> sys.stderr, "creating xml output file ..."
+        self.create_final_xml(include_files, types)
+
         # Include additional preprecessor definitions into the XML file.
 
-        if options.xmlfile is not None:
-            f = open(options.xmlfile, "r+")
+        if self.options.xmlfile:
+            f = open(self.options.xmlfile, "r+")
             f.seek(-12, 2)
             data = f.read()
             if len(data) == 11:
