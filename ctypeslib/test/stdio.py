@@ -7,7 +7,7 @@ if os.name == "nt":
 else:
     _libc = CDLL(None)
 
-include("""\
+_gen_basename = include("""\
 #include <stdio.h>
 
 #ifdef _MSC_VER
@@ -15,5 +15,7 @@ include("""\
 #else
 #  include <sys/fcntl.h>
 #endif
+
+/* Silly comment */
 """,
         persist=False)
