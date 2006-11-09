@@ -1,5 +1,7 @@
 2006-11-09  Thomas Heller  <theller@python.net>
 
+	* Reverted this change because it does not (yet) work:
+
 	* ctypeslib/codegen/cparser.py: The final xml-file is now created
 	before searching for preprocessor definitions (if no output file
 	is requested it will be deleted afterwards).  The advantage is
