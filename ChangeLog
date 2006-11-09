@@ -1,5 +1,7 @@
 2006-11-09  Thomas Heller  <theller@python.net>
 
+	* Inmplemented this change in a different way again.
+
 	* Reverted this change because it does not (yet) work:
 
 	* ctypeslib/codegen/cparser.py: The final xml-file is now created
