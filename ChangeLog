@@ -1,3 +1,11 @@
+2006-11-09  Thomas Heller  <theller@python.net>
+
+	* ctypeslib/codegen/cparser.py: The final xml-file is now created
+	before searching for preprocessor definitions (if no output file
+	is requested it will be deleted afterwards).  The advantage is
+	that compilation errors are detected early and don't disturb the
+	cpp magic.
+
 2006-11-08  Thomas Heller  <theller@python.net>
 
 	* ctypeslib\dynamic_module.y: Generate the .h, .xml, and
