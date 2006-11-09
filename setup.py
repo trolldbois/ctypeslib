@@ -62,7 +62,7 @@ setup(name="ctypeslib",
       author="Thomas Heller",
       author_email="theller@ctypes.org",
       license="MIT License",
-      version = "0.5.0",
+      version = "0.5.1",
 
 ##          url="http://starship.python.net/crew/theller/ctypes.html",
 ##          platforms=["windows", "Linux", "MacOS X", "Solaris", "FreeBSD"],
