@@ -22,5 +22,10 @@ class DynModTest(unittest.TestCase):
         self.failUnlessEqual(stdio.O_WRONLY, 1)
         self.failUnlessEqual(stdio.O_RDWR, 2)
 
+    def test_compiler_errors(self):
+        from ctypeslib.codegen.cparser import CompilerError
+        from ctypeslib.dynamic_module import include
+        self.failUnlessRaises(CompilerError, lambda: include("#error"))
+
 if __name__ == "__main__":
     unittest.main()

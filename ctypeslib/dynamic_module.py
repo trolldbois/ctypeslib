@@ -76,10 +76,10 @@ def include(code, persist=True):
 
         logger.info("Create %s", xml_file)
         from ctypeslib import h2xml
-        h2xml.main(["h2xml",
-                    "-I", os.path.dirname(basename), "-c", #"-q",
-                    h_file,
-                    "-o", xml_file])
+        h2xml.compile_to_xml(["h2xml",
+                              "-I", os.path.dirname(basename), "-c", "-q",
+                              h_file,
+                              "-o", xml_file])
     update_from(xml_file, persist=persist, _stacklevel=2)
     return basename
     

@@ -93,8 +93,7 @@ class IncludeParser(object):
             data, err = proc.communicate()
             retcode = proc.wait()
             if retcode:
-                print >> sys.stderr, err
-                raise CompilerError, "gccxml returned %s" % retcode
+                raise CompilerError(err)
         finally:
             if not self.options.keep_temporary_files:
                 os.remove(fname)
@@ -227,7 +226,7 @@ class IncludeParser(object):
                 if self.options.verbose:
                     print >> sys.stderr, "\t", n
         else:
-            raise CompilerError
+            raise CompilerError()
 
         items = gccxmlparser.parse(fname)
         # make sure the temporary file is removed after using it

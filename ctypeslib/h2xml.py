@@ -3,10 +3,7 @@ import sys, os, ConfigParser
 from ctypeslib.codegen import cparser
 from optparse import OptionParser
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-
+def compile_to_xml(argv):
     def add_option(option, opt, value, parser):
         parser.values.gccxml_options.extend((opt, value))
 
@@ -78,9 +75,15 @@ def main(argv=None):
     options.flags = options.gccxml_options
     options.verbose = not options.quiet
 
+    parser = cparser.IncludeParser(options)
+    parser.parse(files)
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
+
     try:
-        parser = cparser.IncludeParser(options)
-        parser.parse(files)
+        compile_to_xml(argv)
     except cparser.CompilerError, detail:
         print >> sys.stderr, "CompilerError:", detail
         return 1
