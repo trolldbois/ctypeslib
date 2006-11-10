@@ -1,3 +1,15 @@
+2006-11-10  Thomas Heller  <theller@python.net>
+
+	* ctypeslib/h2xml.py: Refactored a function compile_to_xml() out
+	of main(), CompilerErrors are catched in main() but not in
+	compile_to_xml().
+
+	Added test that an exception is raised in
+	dynamic_module.include() when a CompilerError occurs.
+
+	* ctypeslib/codegen/cparser.py: No configuration file
+	"~/ctypes_codegen/cparser.cfg" is used (or needed) anymore.
+
 2006-11-09  Thomas Heller  <theller@python.net>
 
 	* Inmplemented this change in a different way again.
