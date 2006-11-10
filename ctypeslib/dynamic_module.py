@@ -17,6 +17,7 @@ from ctypeslib.codegen import gccxmlparser, codegenerator, typedesc
 import logging
 logger = logging.getLogger(__name__)
 
+# The directory where the xml files reside
 gen_dir = os.path.join(tempfile.gettempdir(), "gccxml_cache")
 if not os.path.exists(gen_dir):
     os.mkdir(gen_dir)
@@ -66,13 +67,13 @@ def include(code, persist=True):
     hashval = md5.new(code).hexdigest()
 
     basename = os.path.join(gen_dir, hashval)
-    h_file = basename + ".h"
     xml_file = basename + ".xml"
 
-    if not os.path.exists(h_file):
+    if not os.path.exists(xml_file):
+        h_file = basename + ".h"
         logger.info("Create %s", h_file)
         open(h_file, "w").write(code)
-    if distutils.dep_util.newer(h_file, xml_file):
+
         logger.info("Create %s", xml_file)
         from ctypeslib import h2xml
         h2xml.main(["h2xml",
