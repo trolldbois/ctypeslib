@@ -25,12 +25,6 @@ if sys.platform == "win32":
     if loc:
         os.environ["PATH"] = loc
 
-CFG_DIR = os.path.expanduser(os.path.join("~", ".ctypes_codegen"))
-if not os.path.exists(CFG_DIR):
-    os.mkdir(CFG_DIR)
-
-EXCLUDES_FILE = os.path.join(CFG_DIR, "cparser_excludes")
-
 class CompilerError(Exception):
     pass
 
@@ -46,12 +40,6 @@ class IncludeParser(object):
         """
         self.options = options
         self.excluded = set()
-        try:
-            data = open(EXCLUDES_FILE, "U").read()
-        except IOError:
-            pass
-        else:
-            self.excluded.update(data.splitlines())
             
     def create_source_file(self, lines, ext=".cpp"):
         "Create a temporary file, write lines to it, and return the filename"
