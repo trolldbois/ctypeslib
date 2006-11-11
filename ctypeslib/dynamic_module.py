@@ -4,8 +4,6 @@ See the docstring of 'update_from' and 'include' for usage information.
 """
 # BUGS:
 #
-# - gccxml compiler errors in 'include' should raise an exception
-#
 # - The hash generated in 'include' should include whether -c was
 #   passed to h2xml or not
 #
