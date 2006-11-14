@@ -1,3 +1,9 @@
+2006-11-14  Thomas Heller  <theller@python.net>
+
+	* Added ctypeslib.contrib package which contains contributed code
+	that does not yet fit elsewehere.  ctypeslib.contrib.get_exports,
+	contributed by leppton, lists the exports in a dll.
+
 2006-11-10  Thomas Heller  <theller@python.net>
 
 	* ctypeslib/h2xml.py: Refactored a function compile_to_xml() out
