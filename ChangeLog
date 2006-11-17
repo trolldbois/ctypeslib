@@ -1,3 +1,10 @@
+2006-11-17  Thomas Heller  <theller@python.net>
+
+	* In ctypeslib.test, add a byref_offset module that contains a
+	byref_offset function; with tests.
+
+	Experimental code, currently.
+	
 2006-11-14  Thomas Heller  <theller@python.net>
 
 	* Added ctypeslib.contrib package which contains contributed code

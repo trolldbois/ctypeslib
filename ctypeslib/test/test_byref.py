@@ -1,6 +1,8 @@
 import unittest
+from byref_offset import byref_offset
 
 from ctypes import *
+
 import _ctypes_test
 
 dll = CDLL(_ctypes_test.__file__)
@@ -10,18 +12,6 @@ dll = CDLL(_ctypes_test.__file__)
 testfunc = dll._testfunc_p_p
 testfunc.argtypes = [c_void_p]
 testfunc.restype = c_void_p
-
-def byref_offset(obj, offset):
-    """byref_offset(cobj, offset) behaves similar this C code:
-
-        (((char *)&obj) + offset)
-
-    In other words, the returned 'reference' points to the address
-    of 'cobj' + 'offset'.  'offset' is in units of bytes.
-    """
-    ref = byref(obj)
-    c_void_p.from_address(id(ref) + 16).value += offset
-    return ref
 
 class ByrefTest(unittest.TestCase):
     def test_byref_array(self):
