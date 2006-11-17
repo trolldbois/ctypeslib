@@ -39,6 +39,7 @@ class value(Union):
 class PyCArgObject(Structure):
     _fields_ = [("PyObject_HEAD", c_byte * object.__basicsize__),
                 ("pffi_type", c_void_p),
+                ("tag", c_char),
                 ("value", value),
                 ("obj", c_void_p),
                 ("size", c_int)]
@@ -47,5 +48,9 @@ class PyCArgObject(Structure):
 assert sizeof(PyCArgObject) == type(byref(c_int())).__basicsize__
 
 print "sizeof(PyCArgObject)", sizeof(PyCArgObject)
+
+for name, _ in PyCArgObject._fields_:
+    print name, getattr(PyCArgObject, name)
+
 for name in "c h i l q d f p".split():
     print name, getattr(PyCArgObject, name)
