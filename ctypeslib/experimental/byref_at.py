@@ -1,21 +1,51 @@
-# hack a byref_at function
-
 from ctypes import *
 
-try:
-    set
-except NameError:
-    from sets import Set as set
+"""
+struct tagPyCArgObject {
+	PyObject_HEAD
+	ffi_type *pffi_type;
+	char tag;
+	union {
+		char c;
+		char b;
+		short h;
+		int i;
+		long l;
+#ifdef HAVE_LONG_LONG
+		PY_LONG_LONG q;
+#endif
+		double d;
+		float f;
+		void *p;
+	} value;
+	PyObject *obj;
+	int size; /* for the 'V' tag */
+};
+"""
 
-def _determine_layout():
-    result = set()
-    for obj in (c_int(), c_longlong(), c_float(), c_double(), (c_int * 32)()):
-        ref = byref(obj)
-        result.add((c_void_p * 32).from_address(id(ref))[:].index(id(obj)) * sizeof(c_void_p))
-    if len(result) != 1:
-        raise RuntimeError, "cannot determine byref() object layout"
-    return result.pop()
+class value(Union):
+    _fields_ = [("c", c_char),
+                ("h", c_short),
+                ("i", c_int),
+                ("l", c_long),
+                ("q", c_longlong),
+                ("d", c_double),
+                ("f", c_float),
+                ("p", c_void_p)]
 
-offset = _determine_layout()
+# Thanks to Lenard Lindstrom for this tip: The sizeof(PyObject_HEAD)
+# is the same as object.__basicsize__.
 
-__all__ = ["byref_at"]
+class PyCArgObject(Structure):
+    _fields_ = [("PyObject_HEAD", c_byte * object.__basicsize__),
+                ("pffi_type", c_void_p),
+                ("value", value),
+                ("obj", c_void_p),
+                ("size", c_int)]
+    _anonymous_ = ["value"]
+
+assert sizeof(PyCArgObject) == type(byref(c_int())).__basicsize__
+
+print "sizeof(PyCArgObject)", sizeof(PyCArgObject)
+for name in "c h i l q d f p".split():
+    print name, getattr(PyCArgObject, name)
