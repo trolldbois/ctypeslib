@@ -143,5 +143,16 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(ns.foo, "foo")
         self.failUnlessEqual(type(ns.foo), unicode)
 
+    def X_test_array_nosize(self):
+        ns = self.convert("""
+        typedef char array[];
+        struct blah {
+            char varsize[];
+        };
+        """, "-c")
+        # for 'typedef char array[];', gccxml does XXX
+        self.failUnlessEqual(ctypes.sizeof(ns.blah), 0)
+        self.failUnlessEqual(ctypes.sizeof(ns.array), 0)
+
 if __name__ == "__main__":
     unittest.main()
