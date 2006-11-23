@@ -63,6 +63,8 @@ def storage(t):
         return storage(t.typ)
     elif isinstance(t, typedesc.ArrayType):
         s, a = storage(t.typ)
+        if t.max.lower() == "0xffffffffffffffff":
+            return 0, a
         return s * (int(t.max) - int(t.min) + 1), a
     return int(t.size), int(t.align)
 
@@ -211,6 +213,8 @@ class Generator(object):
                 return "c_void_p"
             return result
         elif isinstance(t, typedesc.ArrayType):
+            if t.max.lower() == "0xffffffffffffffff" or t.max == "":
+                return "%s * 0" % (self.type_name(t.typ, generate),)
             return "%s * %s" % (self.type_name(t.typ, generate), int(t.max)+1)
         elif isinstance(t, typedesc.FunctionType):
             args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
