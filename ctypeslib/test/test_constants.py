@@ -143,7 +143,7 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(ns.foo, "foo")
         self.failUnlessEqual(type(ns.foo), unicode)
 
-    def X_test_array_nosize(self):
+    def test_array_nosize(self):
         ns = self.convert("""
         typedef char array[];
         struct blah {
