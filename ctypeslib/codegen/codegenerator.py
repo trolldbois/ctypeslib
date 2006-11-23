@@ -26,6 +26,9 @@ try:
 except ImportError:
     import StringIO
 
+# This is what GCCXML uses as size of varsized arrays in structure
+# field:
+GCCXML_NOSIZE = "0x" + "f" * ctypes.sizeof(ctypes.c_long) * 4
 
 # XXX Should this be in ctypes itself?
 ctypes_names = {
@@ -63,7 +66,7 @@ def storage(t):
         return storage(t.typ)
     elif isinstance(t, typedesc.ArrayType):
         s, a = storage(t.typ)
-        if t.max.lower() == "0xffffffffffffffff":
+        if t.max.lower() == GCCXML_NOSIZE:
             return 0, a
         return s * (int(t.max) - int(t.min) + 1), a
     return int(t.size), int(t.align)
@@ -213,7 +216,7 @@ class Generator(object):
                 return "c_void_p"
             return result
         elif isinstance(t, typedesc.ArrayType):
-            if t.max.lower() == "0xffffffffffffffff" or t.max == "":
+            if t.max.lower() == GCCXML_NOSIZE or t.max == "":
                 return "%s * 0" % (self.type_name(t.typ, generate),)
             return "%s * %s" % (self.type_name(t.typ, generate), int(t.max)+1)
         elif isinstance(t, typedesc.FunctionType):
