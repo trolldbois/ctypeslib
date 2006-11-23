@@ -1,3 +1,8 @@
+2006-11-23  Thomas Heller  <theller@python.net>
+
+	* Fixed a bug in the codegenerator with unsized arrays.
+	Thanks to Danielle Varrazzo for the report.
+
 2006-11-17  Thomas Heller  <theller@python.net>
 
 	* In ctypeslib.test, add a byref_offset module that contains a
