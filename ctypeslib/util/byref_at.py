@@ -43,8 +43,8 @@ def _calc_offset():
 
 _byref_pointer_offset = _calc_offset()
 
-def byref_offset(obj, offset):
-    """byref_offset(cobj, offset) behaves similar this C code:
+def byref_at(obj, offset):
+    """byref_at(cobj, offset) behaves similar this C code:
 
         (((char *)&obj) + offset)
 
@@ -56,4 +56,4 @@ def byref_offset(obj, offset):
     c_void_p.from_address(id(ref) + _byref_pointer_offset).value += offset
     return ref
 
-__all__ = ["byref_offset"]
+__all__ = ["byref_at"]

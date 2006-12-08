@@ -1,3 +1,13 @@
+2006-12-08  Thomas Heller  <theller@python.net>
+
+	* Created new module ctypeslib.util.  This module contains small
+	helper functions.  When using these functions it *may* be better
+	to copy them into the own project instead of having ctypeslib as
+	dependency.  YMMV.
+
+	* Moved byref_offset from the ctypeslib.test package into
+	ctypeslib.util, and renaming the function to byref_at.
+
 2006-11-23  Thomas Heller  <theller@python.net>
 
 	* Fixed a bug in the codegenerator with unsized arrays.

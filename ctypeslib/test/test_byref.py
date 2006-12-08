@@ -1,5 +1,5 @@
 import unittest
-from byref_offset import byref_offset
+from ctypeslib.util import byref_at
 
 from ctypes import *
 
@@ -27,15 +27,15 @@ class ByrefTest(unittest.TestCase):
         self.failUnlessEqual(addressof(obj), testfunc(byref(obj)))
         self.failUnlessEqual(addressof(obj), testfunc(pointer(obj)))
 
-    def test_byref_offset(self):
+    def test_byref_at(self):
         array = (c_int * 8)()
         self.failUnlessEqual(addressof(array) + 0,
-                             testfunc(byref_offset(array, 0)))
+                             testfunc(byref_at(array, 0)))
         self.failUnlessEqual(addressof(array) + 1,
-                             testfunc(byref_offset(array, 1)))
+                             testfunc(byref_at(array, 1)))
         for ofs in range(8 * sizeof(c_int)):
             self.failUnlessEqual(addressof(array) + ofs,
-                                 testfunc(byref_offset(array, ofs)))
+                                 testfunc(byref_at(array, ofs)))
 
 if __name__ == "__main__":
     unittest.main()
