@@ -8,14 +8,10 @@ See the docstring of 'update_from' and 'include' for usage information.
 #   passed to h2xml or not
 #
 import sys, os, time, bz2, cPickle, md5, tempfile
-import distutils.dep_util
 import ctypes
 import ctypeslib
 from ctypeslib.codegen import gccxmlparser, codegenerator, typedesc
-import logging
-logger = logging.getLogger(__name__)
 
-# The directory where the xml files reside
 gen_dir = os.path.join(tempfile.gettempdir(), "gccxml_cache")
 if not os.path.exists(gen_dir):
     os.mkdir(gen_dir)
@@ -24,17 +20,12 @@ if not os.path.exists(gen_dir):
 #
 # Clean up the names Generator and CodeGenerator.
 #
-# If the .xml file does not exist but the .xml.pck.bz2 file does,
-# accept the latter.
-#
-# In include(): Something similar.
 
-def update_from(xml_file, persist=True, _stacklevel=1):
+def include(code, persist=True):
     """This function replaces the *calling module* with a dynamic
-    module that generates code on demand from type descriptions
-    contained in the <xml_file>.  If <xml_file> is a relative
-    pathname, it is interpreted relative to the calling modules
-    __file__.
+    module that generates code on demand.  The code is generated from
+    type descriptions that are created by gccxml compiling the C code
+    'code'.
 
     If <persist> is True, generated code is appended to the module's
     source code, otherwise the generated code is executed and then
@@ -47,45 +38,60 @@ def update_from(xml_file, persist=True, _stacklevel=1):
      - the calling module MUST contain 'from ctypes import *',
        and, on windows, also 'from ctypes.wintypes import *'.
     """
-    frame = sys._getframe(_stacklevel)
-    glob = frame.f_globals
-    name = glob["__name__"]
-    mod = sys.modules[name]
-    if not os.path.isabs(xml_file):
-        xml_file = os.path.join(os.path.dirname(mod.__file__), xml_file)
-    sys.modules[name] = DynamicModule(mod, xml_file, persist=persist)
-
-def include(code, persist=True):
-    """Does the same as update_from above, but takes C code instead of
-    an xml_file.  gccxml is used to create the xml_file with type
-    descriptions in a 'cache' directory.
-    """
     # create a hash for the code, and use that as basename for the
     # files we have to create
     hashval = md5.new(code).hexdigest()
 
-    basename = os.path.join(gen_dir, hashval)
-    xml_file = basename + ".xml"
+    fnm = os.path.abspath(os.path.join(gen_dir, hashval))
+    h_file = fnm + ".h"
+    xml_file = fnm + ".xml"
+    tdesc_file = fnm + ".typedesc.bz2"
 
-    if not os.path.exists(xml_file):
-        h_file = basename + ".h"
-        logger.info("Create %s", h_file)
+    if not os.path.exists(h_file):
         open(h_file, "w").write(code)
+    if is_newer(h_file, tdesc_file):
+        if is_newer(h_file, xml_file):
+            print "# Compiling into...", xml_file
+            from ctypeslib import h2xml
+            h2xml.main(["h2xml",
+                        "-I", os.path.dirname(fnm), "-c", "-q",
+                        h_file,
+                        "-o", xml_file])
+        if is_newer(xml_file, tdesc_file):
+            start = time.clock()
+            decls = gccxmlparser.parse(xml_file)
+            start = time.clock()
+            ofi = bz2.BZ2File(tdesc_file, "w")
+            data = cPickle.dump(decls, ofi, -1)
+            os.remove(xml_file) # not needed any longer.
+        
+    frame = sys._getframe(1)
+    glob = frame.f_globals
+    name = glob["__name__"]
+    mod = sys.modules[name]
+    sys.modules[name] = DynamicModule(mod, tdesc_file, persist=persist)
+        
+def is_newer(source, target):
+    """Return true if 'source' exists and is more recently modified than
+    'target', or if 'source' exists and 'target' doesn't.  Return false if
+    both exist and 'target' is the same age or younger than 'source'.
+    Raise ValueError if 'source' does not exist.
+    """
+    if not os.path.exists(source):
+        raise ValueError("file '%s' does not exist" % source)
+    if not os.path.exists(target):
+        return 1
 
-        logger.info("Create %s", xml_file)
-        from ctypeslib import h2xml
-        h2xml.compile_to_xml(["h2xml",
-                              "-I", os.path.dirname(basename), "-c", "-q",
-                              h_file,
-                              "-o", xml_file])
-    update_from(xml_file, persist=persist, _stacklevel=2)
-    return basename
-    
+    from stat import ST_MTIME
+    mtime1 = os.stat(source)[ST_MTIME]
+    mtime2 = os.stat(target)[ST_MTIME]
+
+    return mtime1 > mtime2
 
 ################################################################
 
 class DynamicModule(object):
-    def __init__(self, mod, xml_file, persist):
+    def __init__(self, mod, tdesc_file, persist):
         # We need to keep 'mod' alive, otherwise it would set the
         # values of it's __dict__ to None when it's deleted.
         self.__dict__ = mod.__dict__
@@ -95,15 +101,24 @@ class DynamicModule(object):
             fnm = fnm[:-1]
         if persist and not os.path.exists(fnm):
             raise ValueError("source file %r does not exist" % fnm)
-        self.__generator = CodeGenerator(fnm, xml_file, mod.__dict__, persist)
-        self.__xml_file = xml_file
+        self.__code_generator_args = (fnm, tdesc_file, mod.__dict__, persist)
+        self.__code_generator = None
+        self.__tdesc_file = tdesc_file
+
+    @property
+    def _code_generator(self):
+        if not self.__code_generator:
+            print "# Loading type descriptions..."
+            self.__code_generator = CodeGenerator(*self.__code_generator_args)
+        return self.__code_generator
 
     def __repr__(self):
-        return "<DynamicModule(%r) %r from %r>" % (self.__xml_file, self.__name__, self.__file__)
+        return "<DynamicModule(%r) %r from %r>" % (self.__tdesc_file, self.__name__, self.__file__)
 
     def __getattr__(self, name):
         if not name.startswith("__") and not name.endswith("__"):
-            val = self.__generator.generate(name)
+            val = self._code_generator.generate(name)
+##            print "# Generating", name
             self.__dict__[name] = val
             return val
         raise AttributeError(name)
@@ -175,7 +190,7 @@ class CodeGenerator(object):
     executed in the dictionary <ns>, and appended to the file
     specified by <src_path>, if <persist> is True."""
     output = None
-    def __init__(self, src_path, xml_file, ns, persist):
+    def __init__(self, src_path, tdesc_file, ns, persist):
         # We should do lazy initialization, so that all this stuff is
         # only done when really needed because we have to generate
         # something.
@@ -189,20 +204,8 @@ class CodeGenerator(object):
             ifi.close()
             self._newlines = ifi.newlines or "\n"
             self.output = open(src_path, "ab")
-        tdesc_file = os.path.join(os.path.dirname(xml_file),
-                                  os.path.splitext(os.path.basename(xml_file))[0] + ".typedesc.bz2")
-        if distutils.dep_util.newer(xml_file, tdesc_file):
-            logger.info("Create %s", tdesc_file)
-            decls = gccxmlparser.parse(xml_file)
-            logger.info("parsing xml took %.2f seconds", time.clock() - start)
-            start = time.clock()
-            ofi = bz2.BZ2File(tdesc_file, "w")
-            data = cPickle.dump(decls, ofi, -1)
-            logger.info("dumping .typedesc.bz2 took %.2f seconds", time.clock() - start)
-        else:
-            data = open(tdesc_file, "rb").read()
-            decls = cPickle.loads(bz2.decompress(data))
-            logger.info("loading %s took %.2f seconds", tdesc_file, time.clock() - start)
+        data = open(tdesc_file, "rb").read()
+        decls = cPickle.loads(bz2.decompress(data))
         names = {}
         self.namespace = ns
         done = set()
