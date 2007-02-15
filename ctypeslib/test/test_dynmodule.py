@@ -6,12 +6,6 @@ import stdio
 from ctypes import POINTER, c_int
 
 class DynModTest(unittest.TestCase):
-    def tearDown(self):
-        for fnm in glob.glob(stdio._gen_basename + ".*"):
-            try:
-                os.remove(fnm)
-            except IOError:
-                pass
 
     def test_fopen(self):
         self.failUnlessEqual(stdio.fopen.restype, POINTER(stdio.FILE))
