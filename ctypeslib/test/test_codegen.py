@@ -24,7 +24,7 @@ class ADict(dict):
             raise AttributeError(name)
 
 class ConstantsTest(unittest.TestCase):
-    def convert(self, defs, flags=None, dump=False):
+    def convert(self, defs, flags=None, dump=False, **kw):
         hfile = mktemp(".h")
         open(hfile, "w").write(defs)
 
@@ -37,10 +37,11 @@ class ConstantsTest(unittest.TestCase):
                 h2xml.main(["h2xml", "-q", "-I.", hfile, "-o", xmlfile])
             
             ofi = StringIO()
-            generate_code(xmlfile, ofi)
+            from ctypes import CDLL
+            generate_code(xmlfile, ofi, **kw)
             namespace = {}
             exec ofi.getvalue() in namespace
-
+            print ofi.getvalue()
             return ADict(namespace)
 
         finally:
@@ -153,6 +154,19 @@ class ConstantsTest(unittest.TestCase):
         # for 'typedef char array[];', gccxml does XXX
         self.failUnlessEqual(ctypes.sizeof(ns.blah), 0)
         self.failUnlessEqual(ctypes.sizeof(ns.array), 0)
+
+    def test_docstring(self):
+        from ctypes import CDLL
+        ns = self.convert("""
+        #include <malloc.h>
+        """,
+                          generate_docstrings=True,
+                          searched_dlls=[CDLL("msvcr71")]
+        )
+        prototype = "void * malloc(size_t".replace(" ", "")
+        docstring = ns.malloc.__doc__.replace(" ", "")
+        self.failUnlessEqual(docstring[:len(prototype)], prototype)
+        self.failUnless("malloc.h" in ns.malloc.__doc__)
 
 if __name__ == "__main__":
     unittest.main()

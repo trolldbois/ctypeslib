@@ -49,6 +49,12 @@ def main(argv=None):
                       help="include source file location in comments",
                       default=False)
 
+    parser.add_option("-d",
+                      action="store_true",
+                      dest="generate_docstrings",
+                      help="include docstrings containing C prototype and source file location",
+                      default=False)
+    
     parser.add_option("-k",
                       action="store",
                       dest="kind",
@@ -173,6 +179,7 @@ def main(argv=None):
                   expressions=options.expressions,
                   verbose=options.verbose,
                   generate_comments=options.generate_comments,
+                  generate_docstrings=options.generate_docstrings,
                   known_symbols=known_symbols,
                   searched_dlls=dlls,
                   types=options.kind)

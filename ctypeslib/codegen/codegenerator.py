@@ -148,12 +148,14 @@ class Generator(object):
     def __init__(self, output,
                  generate_comments=False,
                  known_symbols=None,
-                 searched_dlls=None):
+                 searched_dlls=None,
+                 generate_docstrings=False):
         self.output = output
         self.stream = StringIO.StringIO()
         self.imports = StringIO.StringIO()
 ##        self.stream = self.imports = self.output
         self.generate_comments = generate_comments
+        self.generate_docstrings = generate_docstrings
         self.known_symbols = known_symbols or {}
         if searched_dlls is None:
             self.searched_dlls = []
@@ -546,6 +548,25 @@ class Generator(object):
             if self.generate_comments:
                 print >> self.stream, "# %s(%s)" % (func.name, ", ".join(argnames))
             print >> self.stream, "%s.argtypes = [%s]" % (func.name, ", ".join(args))
+            
+            if self.generate_docstrings:
+                def typeString(typ):
+                    if hasattr(typ, 'name'):
+                        return typ.name
+                    elif hasattr(typ, 'typ') and type(typ) == typedesc.PointerType:
+                        return typeString(typ.typ) + " *"
+                    else:
+                        return "unknown"
+                argsAndTypes = zip([typeString(t) for t in func.iterArgTypes()], argnames)
+                print >> self.stream, """%(funcname)s.__doc__ = \\
+\"\"\"%(ret)s %(funcname)s(%(args)s)
+%(file)s:%(line)s\"\"\"""" % \
+                    {'funcname': func.name, 
+                    'args': ", ".join(["%s %s" % i for i in argsAndTypes]),
+                    'file': func.location[0],
+                    'line': func.location[1],
+                    'ret': typeString(func.returns),
+                    }
 
             self.names.add(func.name)
             self._functiontypes += 1
@@ -651,7 +672,8 @@ def generate_code(xmlfile,
                   generate_comments=False,
                   known_symbols=None,
                   searched_dlls=None,
-                  types=None):
+                  types=None,
+                  generate_docstrings=False,):
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
     from gccxmlparser import parse
@@ -689,6 +711,7 @@ def generate_code(xmlfile,
     ################
     gen = Generator(outfile,
                     generate_comments=generate_comments,
+                    generate_docstrings=generate_docstrings,
                     known_symbols=known_symbols,
                     searched_dlls=searched_dlls)
 
