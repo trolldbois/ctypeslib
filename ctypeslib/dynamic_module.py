@@ -53,10 +53,10 @@ def include(code, persist=True):
         if is_newer(h_file, xml_file):
             print "# Compiling into...", xml_file
             from ctypeslib import h2xml
-            h2xml.main(["h2xml",
-                        "-I", os.path.dirname(fnm), "-c", "-q",
-                        h_file,
-                        "-o", xml_file])
+            h2xml.compile_to_xml(["h2xml",
+                                  "-I", os.path.dirname(fnm), "-c", "-q",
+                                  h_file,
+                                  "-o", xml_file])
         if is_newer(xml_file, tdesc_file):
             start = time.clock()
             decls = gccxmlparser.parse(xml_file)
