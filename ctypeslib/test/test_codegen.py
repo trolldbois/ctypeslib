@@ -8,6 +8,7 @@ except ImportError:
     from StringIO import StringIO
 
 import ctypes
+from ctypes.util import find_library
 from ctypeslib import h2xml
 from ctypeslib.codegen.codegenerator import generate_code
 
@@ -157,11 +158,16 @@ class ConstantsTest(unittest.TestCase):
 
     def test_docstring(self):
         from ctypes import CDLL
+        from ctypes.util import find_library
+        if os.name == "nt":
+            libc = CDLL("msvcrt")
+        else:
+            libc = CDLL(find_library("c"))
         ns = self.convert("""
         #include <malloc.h>
         """,
                           generate_docstrings=True,
-                          searched_dlls=[CDLL("msvcr71")]
+                          searched_dlls=[libc]
         )
         prototype = "void * malloc(size_t".replace(" ", "")
         docstring = ns.malloc.__doc__.replace(" ", "")
