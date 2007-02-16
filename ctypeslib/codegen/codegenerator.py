@@ -54,6 +54,8 @@ ctypes_names = {
     "double": "c_double",
     "float": "c_float",
 
+    "long double": "c_longdouble",
+
     # Hm...
     "void": "None",
 }
@@ -350,7 +352,7 @@ class Generator(object):
             return
         try:
             value = self.init_value(tp.typ, tp.init)
-        except (TypeError, ValueError), detail:
+        except (TypeError, ValueError, SyntaxError), detail:
             print "Could not init", tp.name, tp.init, detail
 ##            raise
             return
