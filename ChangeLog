@@ -1,3 +1,15 @@
+2007-02-16  Thomas Heller  <theller@python.net>
+
+	* The xml2py script now also accepts full pathnames to shared
+	libraries in the -l command line switch.
+
+	* Fix failing tests on linux.
+
+	* The code generator will now happily generate Python code for the
+	C 'long double' type.  This type is not currently supported by
+	ctypes; so the generated code must be fixed manually.  Still
+	better than to let the code generation crash.
+
 2007-02-15  Thomas Heller  <theller@python.net>
 
 	* In ctypeslib.dynamic_module the function update_from() has been
