@@ -147,7 +147,9 @@ def main(argv=None):
             return CDLL(name)
         path = find_library(name)
         if path is None:
-            raise RuntimeError("Library '%s' not found" % name)
+            # Maybe 'name' is not a library name in the linker style,
+            # give CDLL a last chance to find the library.
+            path = name
         return CDLL(path)
 
     dlls = [load_library(name) for name in options.dlls]
