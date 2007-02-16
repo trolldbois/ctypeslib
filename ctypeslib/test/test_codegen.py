@@ -41,7 +41,7 @@ class ConstantsTest(unittest.TestCase):
             generate_code(xmlfile, ofi, **kw)
             namespace = {}
             exec ofi.getvalue() in namespace
-            print ofi.getvalue()
+##            print ofi.getvalue()
             return ADict(namespace)
 
         finally:
