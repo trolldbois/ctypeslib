@@ -1,3 +1,10 @@
+2007-03-01  Thomas Heller  <theller@python.net>
+
+	* Added ctypeslib.contrib.pythonhdr module, by Lenard Lindstrom:
+	The is a python module, pythonhdr.py, which declares several,
+	hopefully useful, Python C API declarations and functions. Also
+	includes is a unit test.
+
 2007-02-16  Thomas Heller  <theller@python.net>
 
 	* The xml2py script now also accepts full pathnames to shared
