@@ -120,6 +120,13 @@ def main(argv=None):
                       action="append",
                       default=default_modules)
 
+    parser.add_option("--preload",
+                      dest="preload",
+                      metavar="DLL",
+                      help="dlls to be loaded before all others (to resolve symbols)",
+                      action="append",
+                      default=[])
+
     options, files = parser.parse_args(argv[1:])
 
     if len(files) != 1:
@@ -139,19 +146,21 @@ def main(argv=None):
 
     known_symbols = {}
 
-    from ctypes import CDLL
+    from ctypes import CDLL, RTLD_LOCAL, RTLD_GLOBAL
     from ctypes.util import find_library
 
-    def load_library(name):
+    def load_library(name, mode=RTLD_LOCAL):
         if os.name == "nt":
-            return CDLL(name)
+            return CDLL(name, mode=mode)
         path = find_library(name)
         if path is None:
             # Maybe 'name' is not a library name in the linker style,
             # give CDLL a last chance to find the library.
             path = name
-        return CDLL(path)
-
+        return CDLL(path, mode=mode)
+    
+    preloaded_dlls = [load_library(name, mode=RTLD_GLOBAL) for name in options.preload]
+    
     dlls = [load_library(name) for name in options.dlls]
 
     for name in options.modules:
@@ -184,6 +193,7 @@ def main(argv=None):
                   generate_docstrings=options.generate_docstrings,
                   known_symbols=known_symbols,
                   searched_dlls=dlls,
+                  preloaded_dlls=options.preload,
                   types=options.kind)
 
 

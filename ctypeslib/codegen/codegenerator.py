@@ -151,6 +151,7 @@ class Generator(object):
                  generate_comments=False,
                  known_symbols=None,
                  searched_dlls=None,
+                 preloaded_dlls=[],
                  generate_docstrings=False):
         self.output = output
         self.stream = StringIO.StringIO()
@@ -159,6 +160,7 @@ class Generator(object):
         self.generate_comments = generate_comments
         self.generate_docstrings = generate_docstrings
         self.known_symbols = known_symbols or {}
+        self.preloaded_dlls = preloaded_dlls
         if searched_dlls is None:
             self.searched_dlls = []
         else:
@@ -507,8 +509,12 @@ class Generator(object):
                 self._stdcall_libraries[dllname] = None
             return "_stdcall_libraries[%r]" % dllname
         self.need_CLibraries()
+        if self.preloaded_dlls != []:
+          global_flag = ", mode=RTLD_GLOBAL"
+        else:
+          global_flag = ""
         if not dllname in self._c_libraries:
-            print >> self.imports, "_libraries[%r] = CDLL(%r)" % (dllname, dllname)
+            print >> self.imports, "_libraries[%r] = CDLL(%r%s)" % (dllname, dllname, global_flag)
             self._c_libraries[dllname] = None
         return "_libraries[%r]" % dllname
 
@@ -631,6 +637,9 @@ class Generator(object):
 
     def generate_code(self, items):
         print >> self.imports, "from ctypes import *"
+        print >> self.imports, "\n".join(["CDLL('%s', RTLD_GLOBAL)" % preloaded_dll
+                                          for preloaded_dll
+                                          in  self.preloaded_dlls])
         loops = self.generate_items(items)
 
         self.output.write(self.imports.getvalue())
@@ -675,6 +684,7 @@ def generate_code(xmlfile,
                   known_symbols=None,
                   searched_dlls=None,
                   types=None,
+                  preloaded_dlls=[],
                   generate_docstrings=False,):
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
@@ -715,7 +725,8 @@ def generate_code(xmlfile,
                     generate_comments=generate_comments,
                     generate_docstrings=generate_docstrings,
                     known_symbols=known_symbols,
-                    searched_dlls=searched_dlls)
+                    searched_dlls=searched_dlls,
+                    preloaded_dlls=preloaded_dlls)
 
     loops = gen.generate_code(items)
     if verbose:

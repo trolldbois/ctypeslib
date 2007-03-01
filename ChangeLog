@@ -1,5 +1,10 @@
 2007-03-01  Thomas Heller  <theller@python.net>
 
+	* Applied a patch from Michal J. Gajda: This patch adds the
+	--preload option to xml2py.py to resolve missing references from
+	DLLs.  See
+	http://sourceforge.net/tracker/?func=detail&aid=1670758&group_id=71702&atid=532156
+
 	* Added ctypeslib.contrib.pythonhdr module, by Lenard Lindstrom:
 	The is a python module, pythonhdr.py, which declares several,
 	hopefully useful, Python C API declarations and functions. Also
