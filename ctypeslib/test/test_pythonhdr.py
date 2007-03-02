@@ -103,17 +103,18 @@ class Pythonhdr_TestCase(unittest.TestCase):
             return 1
         close_callback = closefn(close)
         try:
-            f = file(__file__, 'r')
+            path = sys.executable
+            f = file(path, 'rb')
             try:
                 fp = PyFile_AsFile(f)
                 self.failUnless(fp)
-                g = PyFile_FromFile(fp, __file__, 'r', close_callback)
+                g = PyFile_FromFile(fp, path, 'rb', close_callback)
                 fno = g.fileno()
                 del g
                 self.failUnlessEqual(f.fileno(), fno)
             finally:
                 f.close()
-        except NameError:
+        except (NameError, IOError):
             pass
 
     def test_cell(self):
