@@ -1,6 +1,29 @@
 #!/usr/bin/env python
-"""ctypes code generator
+"""ctypeslib contains these packages:
+
+ - ``ctypeslib.codegen``       - a code generator
+
+ - ``ctypeslib.contrib``       - various contributed modules
+
+ - ``ctypeslib.util``          - assorted small helper functions
+
+ - ``ctypeslib.test``          - unittests
+
+There is not yet an official release, but ctypeslib can be installed
+directly from the subversion repository with::
+
+    easy_install ctypeslib==dev
+
+The SVN repository is here:
+
+http://svn.python.org/projects/ctypes/trunk/ctypeslib/#egg=ctypeslib-dev
+
 """
+try:
+    import setuptools
+except ImportError:
+    pass
+
 import os, sys
 from distutils.core import setup, Command
 
@@ -54,18 +77,36 @@ class test(Command):
 
 # class test
 
+classifiers = [
+    'Development Status :: 3 - Alpha',
+##    'Development Status :: 4 - Beta',
+##    'Development Status :: 5 - Production/Stable',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: MIT License',
+##    'Operating System :: Microsoft :: Windows',
+    'Programming Language :: Python',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    ]
+
+
 setup(name="ctypeslib",
-      packages = ['ctypeslib', 'ctypeslib.codegen'],
+      packages = ['ctypeslib',
+                  'ctypeslib.codegen',
+                  'ctypeslib.contrib',
+                  'ctypeslib.util',
+                  'ctypeslib.test'],
       scripts = ['scripts/h2xml.py', 'scripts/xml2py.py'],
-      description="ctypes code generator",
+      description="ctypeslib - useful additions to the ctypes FFI library",
       long_description = __doc__,
       author="Thomas Heller",
       author_email="theller@ctypes.org",
       license="MIT License",
-      version = "0.5.3",
+      version = "0.0.1a",
 
-      url="http://starship.python.net/crew/theller/ctypeswiki.cgi",
-      download_url="http://svn.python.org/projects/ctypes/trunk/ctypeslib",
+      zip_safe = True,
+
+##      url="http://starship.python.net/crew/theller/ctypeswiki.cgi",
+##      download_url="http://svn.python.org/projects/ctypes/trunk/ctypeslib",
 
       cmdclass = {'test': test},
 
