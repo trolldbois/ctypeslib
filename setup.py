@@ -101,7 +101,7 @@ setup(name="ctypeslib",
       author="Thomas Heller",
       author_email="theller@ctypes.org",
       license="MIT License",
-      version = "0.0.1a",
+      version = "0.5.4a",
 
       zip_safe = True,
 
