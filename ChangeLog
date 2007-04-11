@@ -1,3 +1,10 @@
+2007-04-11  Thomas Heller  <theller@python.net>
+
+	* Add a 'compilerflags' optional argument to the include()
+	function.  This allows to specify the compilerflags for h2xml when
+	the code is 'compiled'.  Default is 'compilerflags=["-c"]' which
+	will include #define constants.
+
 2007-03-01  Thomas Heller  <theller@python.net>
 
 	* Applied a patch from Michal J. Gajda: This patch adds the
