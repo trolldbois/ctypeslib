@@ -21,7 +21,7 @@ if not os.path.exists(gen_dir):
 # Clean up the names Generator and CodeGenerator.
 #
 
-def include(code, persist=True):
+def include(code, persist=True, compilerflags=["-c"]):
     """This function replaces the *calling module* with a dynamic
     module that generates code on demand.  The code is generated from
     type descriptions that are created by gccxml compiling the C code
@@ -40,7 +40,8 @@ def include(code, persist=True):
     """
     # create a hash for the code, and use that as basename for the
     # files we have to create
-    hashval = md5.new(code).hexdigest()
+    fullcode = "/* compilerflags: %r */\n%s" % (compilerflags, code)
+    hashval = md5.new(fullcode).hexdigest()
 
     fnm = os.path.abspath(os.path.join(gen_dir, hashval))
     h_file = fnm + ".h"
@@ -48,19 +49,18 @@ def include(code, persist=True):
     tdesc_file = fnm + ".typedesc.bz2"
 
     if not os.path.exists(h_file):
-        open(h_file, "w").write(code)
+        open(h_file, "w").write(fullcode)
     if is_newer(h_file, tdesc_file):
         if is_newer(h_file, xml_file):
-            print "# Compiling into...", xml_file
+            print >> sys.stderr, "# Compiling into...", xml_file
             from ctypeslib import h2xml
             h2xml.compile_to_xml(["h2xml",
-                                  "-I", os.path.dirname(fnm), "-c", "-q",
+                                  "-I", os.path.dirname(fnm), "-q",
                                   h_file,
-                                  "-o", xml_file])
+                                  "-o", xml_file] + list(compilerflags))
         if is_newer(xml_file, tdesc_file):
-            start = time.clock()
+            print >> sys.stderr, "# Parsing XML file and compressing type descriptions..."
             decls = gccxmlparser.parse(xml_file)
-            start = time.clock()
             ofi = bz2.BZ2File(tdesc_file, "w")
             data = cPickle.dump(decls, ofi, -1)
             os.remove(xml_file) # not needed any longer.
@@ -108,7 +108,6 @@ class DynamicModule(object):
     @property
     def _code_generator(self):
         if not self.__code_generator:
-            print "# Loading type descriptions..."
             self.__code_generator = CodeGenerator(*self.__code_generator_args)
         return self.__code_generator
 
@@ -194,7 +193,6 @@ class CodeGenerator(object):
         # We should do lazy initialization, so that all this stuff is
         # only done when really needed because we have to generate
         # something.
-        start = time.clock()
         if persist:
             # We open the file in universal newline mode, read the
             # contents to determine the line endings.  All this to
