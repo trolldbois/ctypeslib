@@ -174,11 +174,6 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(docstring[:len(prototype)], prototype)
         self.failUnless("malloc.h" in ns.malloc.__doc__)
 
-    # XXX this test fails:
-    # ctypeslib\codegen\codegenerator.py:425:
-    # UserWarning: Structure tagEMPTY: PACKING FAILED: total size
-    # (0/8)
-
     def test_emptystruct(self):
         ns = self.convert("""
         typedef struct tagEMPTY {
