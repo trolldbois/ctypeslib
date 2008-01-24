@@ -79,7 +79,7 @@ class test(Command):
 
 classifiers = [
     'Development Status :: 3 - Alpha',
-##    'Development Status :: 4 - Beta',
+    'Development Status :: 4 - Beta',
 ##    'Development Status :: 5 - Production/Stable',
     'Intended Audience :: Developers',
     'License :: OSI Approved :: MIT License',
@@ -103,6 +103,7 @@ setup(name="ctypeslib",
       license="MIT License",
       version = "0.5.4a",
 
+      classifiers = classifiers,
       zip_safe = True,
 
 ##      url="http://starship.python.net/crew/theller/ctypeswiki.cgi",
