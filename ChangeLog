@@ -1,3 +1,8 @@
+2008-01-24  Thomas Heller  <theller@python.net>
+
+	* Fix the codegenerator to handle structures without fields; it
+	did fail to calculate the packing.
+
 2007-04-11  Thomas Heller  <theller@python.net>
 
 	* Add a 'compilerflags' optional argument to the include()

@@ -415,15 +415,18 @@ class Generator(object):
             # we don't need _pack_ on Unions (I hope, at least), and not
             # on COM interfaces.
             try:
-                pack = calc_packing(body.struct, fields)
-                if pack is not None:
-                    print >> self.stream, "%s._pack_ = %s" % (body.struct.name, pack)
+                # gccxml reports a non-zero size on structures that
+                # have no fields.  The packing would fail, but it is
+                # unneeded anyway so we skip it.
+                if fields:
+                    pack = calc_packing(body.struct, fields)
+                    if pack is not None:
+                        print >> self.stream, "%s._pack_ = %s" % (body.struct.name, pack)
             except PackingError, details:
                 # if packing fails, write a warning comment to the output.
                 import warnings
                 message = "Structure %s: %s" % (body.struct.name, details)
                 warnings.warn(message, UserWarning)
-                print >> self.stream, "# WARNING: %s" % details
 
         if body.struct.bases:
             assert len(body.struct.bases) == 1

@@ -179,7 +179,7 @@ class ConstantsTest(unittest.TestCase):
     # UserWarning: Structure tagEMPTY: PACKING FAILED: total size
     # (0/8)
 
-    def XXX_test_emptystruct(self):
+    def test_emptystruct(self):
         ns = self.convert("""
         typedef struct tagEMPTY {
         } EMPTY;
