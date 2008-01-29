@@ -62,16 +62,16 @@ class test(Command):
     def run(self):
         self.run_command('build')
 
-        import ctypes.test
-        ctypes.test.use_resources.extend(self.use_resources)
+        import ctypeslib.test
+        ctypeslib.test.use_resources.extend(self.use_resources)
 
         for name in self.tests:
             package = __import__(name, globals(), locals(), ['*'])
             print "Testing package", name, (sys.version, sys.platform, os.name)
-            ctypes.test.run_tests(package,
-                                  "test_*.py",
-                                  self.verbose,
-                                  self.refcounts)
+            ctypeslib.test.run_tests(package,
+                                     "test_*.py",
+                                     self.verbose,
+                                     self.refcounts)
 
     # run()
 

@@ -9,7 +9,7 @@
 from ctypes import *
 from ctypeslib.contrib.pythonhdr import *
 import unittest, sys
-from ctypes.test import is_resource_enabled
+from ctypeslib.test import is_resource_enabled
 from thread import start_new_thread, allocate_lock
 from array import array
 
