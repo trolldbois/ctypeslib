@@ -354,8 +354,8 @@ class Generator(object):
             return
         try:
             value = self.init_value(tp.typ, tp.init)
-        except (TypeError, ValueError, SyntaxError), detail:
-            print "Could not init", tp.name, tp.init, detail
+        except (TypeError, ValueError, SyntaxError, NameError), detail:
+            print "Could not init", (tp.name, tp.init), detail
 ##            raise
             return
         print >> self.stream, \
