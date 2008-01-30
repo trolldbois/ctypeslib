@@ -38,7 +38,6 @@ class ConstantsTest(unittest.TestCase):
                 h2xml.main(["h2xml", "-q", "-I.", hfile, "-o", xmlfile])
             
             ofi = StringIO()
-            from ctypes import CDLL
             generate_code(xmlfile, ofi, **kw)
             namespace = {}
             exec ofi.getvalue() in namespace
