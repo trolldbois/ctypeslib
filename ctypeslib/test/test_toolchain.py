@@ -15,11 +15,9 @@ class ToolchainTest(unittest.TestCase):
 
     def test(self):
         h2xml.main(["h2xml", "-q",
-                    "-D WIN32_LEAN_AND_MEAN",
-                    "-D _UNICODE", "-D UNICODE",
                     "-c", "stdio.h",
                     "-o", "_stdio_gen.xml"])
-        xml2py.main(["xml2py", "_stdio_gen.xml", "-o", "_stdio_gen.py"])
+        xml2py.main(["xml2py", "_stdio_gen.xml", "-l", "c", "-o", "_stdio_gen.py"])
         import _stdio_gen
 
 
