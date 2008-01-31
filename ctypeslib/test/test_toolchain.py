@@ -17,7 +17,10 @@ class ToolchainTest(unittest.TestCase):
         h2xml.main(["h2xml", "-q",
                     "-c", "stdio.h",
                     "-o", "_stdio_gen.xml"])
-        xml2py.main(["xml2py", "_stdio_gen.xml", "-l", "c", "-o", "_stdio_gen.py"])
+        if sys.platform == "win32":
+            xml2py.main(["xml2py", "_stdio_gen.xml", "-l", "msvcrt", "-o", "_stdio_gen.py"])
+        else:
+            xml2py.main(["xml2py", "_stdio_gen.xml", "-l", "c", "-o", "_stdio_gen.py"])
         import _stdio_gen
 
 
