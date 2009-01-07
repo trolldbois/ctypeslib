@@ -19,11 +19,6 @@ The SVN repository is here:
 http://svn.python.org/projects/ctypes/trunk/ctypeslib/#egg=ctypeslib-dev
 
 """
-try:
-    import setuptools
-except ImportError:
-    pass
-
 import os, sys
 from distutils.core import setup, Command
 
@@ -101,7 +96,7 @@ setup(name="ctypeslib",
       author="Thomas Heller",
       author_email="theller@ctypes.org",
       license="MIT License",
-      version = "0.5.4a",
+      version = "0.5.5",
 
       classifiers = classifiers,
       zip_safe = True,

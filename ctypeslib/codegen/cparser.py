@@ -11,7 +11,11 @@ if sys.platform == "win32":
 
     def _locate_gccxml():
         import _winreg
-        for subkey in (r"Software\gccxml", r"Software\Kitware\GCC_XML"):
+        for subkey, valuename in [
+            (r"Software\Kitware\GCCXMLComplete 0.9.0", ""),
+            (r"Software\gccxml", "loc"),
+            (r"Software\Kitware\GCC_XML", "loc"),
+            ]:
             for root in (_winreg.HKEY_CURRENT_USER, _winreg.HKEY_LOCAL_MACHINE):
                 try:
                     hkey = _winreg.OpenKey(root, subkey, 0, _winreg.KEY_READ)
@@ -19,7 +23,7 @@ if sys.platform == "win32":
                     if detail.errno != 2:
                         raise
                 else:
-                    return _winreg.QueryValueEx(hkey, "loc")[0] + r"\bin"
+                    return _winreg.QueryValueEx(hkey, valuename)[0] + r"\bin"
 
     loc = _locate_gccxml()
     if loc:

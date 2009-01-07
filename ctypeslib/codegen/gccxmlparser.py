@@ -236,13 +236,15 @@ class GCCXML_Parser(base):
     def _fixup_OperatorFunction(self, func):
         func.returns = self.all[func.returns]
 
-    def Constructor(self, attrs):
+    def _Ignored(self, attrs):
         name = attrs.get("name", None)
         if not name:
             name = attrs["mangled"]
-        return typedesc.Constructor(name)
+        return typedesc.Ignored(name)
 
-    def _fixup_Constructor(self, const): pass
+    def _fixup_Ignored(self, const): pass
+
+    Constructor = Destructor = OperatorMethod = _Ignored
 
     def Method(self, attrs):
         # name, virtual, pure_virtual, returns

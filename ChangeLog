@@ -1,3 +1,25 @@
+2008-10-20  Thomas Heller  <theller@ctypes.org>
+
+	* Remove the import of setuptools in the setup.py script.
+
+	* Add support for float and double constants and variables.
+
+	* Fix structure support.  Patch from Shalabh Chaturvedi.
+
+2008-02-01  Thomas Heller  <theller@ctypes.org>
+
+	* Include the variable initializers in the generated code (in a
+	comment).
+
+	* Change version number to 0.5.6.  Also, the version number is now
+	available as 'ctypeslib.__version__'.
+
+	* Make the codegenerator compatible with gccxml 0.9.0.
+	
+	* Move the calculation of initializers into a separate class; this
+	makes it easier to customize the behaviour depending on the
+	initializer type.
+	
 2008-01-24  Thomas Heller  <theller@python.net>
 
 	* Fix the codegenerator to handle structures without fields; it

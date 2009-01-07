@@ -94,6 +94,21 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(ns.minusone, 4294967295)
         self.failUnlessEqual(ns.maxuint, 0xFFFFFFFF)
 
+    def test_doubles(self):
+        ns = self.convert("""
+        #define A  0.9642
+        #define B  1.0
+        #define C  0.8249
+
+        double d = 0.0036;
+        float f = 2.5;
+        """, "-c")
+        self.failUnlessAlmostEqual(ns.A, 0.9642)
+        self.failUnlessAlmostEqual(ns.B, 1.0)
+        self.failUnlessAlmostEqual(ns.C, 0.8249)
+        self.failUnlessAlmostEqual(ns.d, 0.0036)
+        self.failUnlessAlmostEqual(ns.f, 2.5)
+
     def test_char(self):
         ns = self.convert("""
         char x = 'x';

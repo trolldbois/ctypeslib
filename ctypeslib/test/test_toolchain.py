@@ -8,9 +8,13 @@ class ToolchainTest(unittest.TestCase):
             h2xml.main(["h2xml", "-q",
                         "-D WIN32_LEAN_AND_MEAN",
                         "-D _UNICODE", "-D UNICODE",
+                        "-D", "NO_STRICT",
                         "-c", "windows.h",
                         "-o", "_windows_gen.xml"])
-            xml2py.main(["xml2py", "_windows_gen.xml", "-w", "-o", "_winapi_gen.py"])
+            xml2py.main(["xml2py", "_windows_gen.xml",
+                         "-w",
+                         "-m", "ctypes.wintypes",
+                         "-o", "_winapi_gen.py"])
             import _winapi_gen
 
     def test(self):

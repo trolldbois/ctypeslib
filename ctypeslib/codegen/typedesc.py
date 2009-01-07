@@ -64,7 +64,7 @@ class Function(_HasArgs):
         self.attributes = attributes # dllimport, __stdcall__, __cdecl__
         self.extern = extern
 
-class Constructor(_HasArgs):
+class Ignored(_HasArgs):
     location = None
     def __init__(self, name):
         _HasArgs.__init__(self)
@@ -116,8 +116,8 @@ class ArrayType(object):
     location = None
     def __init__(self, typ, min, max):
         self.typ = typ
-        self.min = min
-        self.max = max
+        self.min = min.rstrip("ul")
+        self.max = max.rstrip("ul")
 
 class StructureHead(object):
     location = None
