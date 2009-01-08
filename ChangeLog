@@ -1,5 +1,9 @@
 2009-01-08  Thomas Heller  <theller@python.net>
 
+	* setup.py: Correct the version number.  Remove the 'zip_safe'
+	argument in the setup call; it was left over from setuptools
+	experiments.
+
 	* On Windows, the codegenerator uses WinDLL instead of CDLL so
 	that functions with stdcall mangled names can be loaded.
 	Use the correct registry key to find gccxml.

@@ -96,10 +96,9 @@ setup(name="ctypeslib",
       author="Thomas Heller",
       author_email="theller@ctypes.org",
       license="MIT License",
-      version = "0.5.5",
+      version = "0.5.6",
 
       classifiers = classifiers,
-      zip_safe = True,
 
 ##      url="http://starship.python.net/crew/theller/ctypeswiki.cgi",
 ##      download_url="http://svn.python.org/projects/ctypes/trunk/ctypeslib",
