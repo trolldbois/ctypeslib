@@ -1,3 +1,9 @@
+2009-01-08  Thomas Heller  <theller@python.net>
+
+	* On Windows, the codegenerator uses WinDLL instead of CDLL so
+	that functions with stdcall mangled names can be loaded.
+	Use the correct registry key to find gccxml.
+
 2008-10-20  Thomas Heller  <theller@ctypes.org>
 
 	* Remove the import of setuptools in the setup.py script.
