@@ -151,7 +151,9 @@ def main(argv=None):
 
     def load_library(name, mode=RTLD_LOCAL):
         if os.name == "nt":
-            return CDLL(name, mode=mode)
+            from ctypes import WinDLL
+            # WinDLL does demangle the __stdcall names, so use that.
+            return WinDLL(name, mode=mode)
         path = find_library(name)
         if path is None:
             # Maybe 'name' is not a library name in the linker style,
