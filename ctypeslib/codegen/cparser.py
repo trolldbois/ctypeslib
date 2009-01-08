@@ -12,6 +12,7 @@ if sys.platform == "win32":
     def _locate_gccxml():
         import _winreg
         for subkey, valuename in [
+            (r"Software\Kitware\gccxml 0.9.0", ""),
             (r"Software\Kitware\GCCXMLComplete 0.9.0", ""),
             (r"Software\gccxml", "loc"),
             (r"Software\Kitware\GCC_XML", "loc"),
