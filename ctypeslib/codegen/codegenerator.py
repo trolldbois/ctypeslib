@@ -403,7 +403,23 @@ class Generator(object):
         
     _typedefs = 0
     def Typedef(self, tp):
+        sized_types = {
+            "uint8_t":  "c_uint8",
+            "uint16_t": "c_uint16",
+            "uint32_t": "c_uint32",
+            "uint64_t": "c_uint64",
+            "int8_t":  "c_int8",
+            "int16_t": "c_int16",
+            "int32_t": "c_int32",
+            "int64_t": "c_int64",
+            }
         self._typedefs += 1
+        if type(tp.typ) == typedesc.FundamentalType \
+           and tp.name in sized_types:
+            print >> self.stream, "%s = %s" % \
+                  (tp.name, sized_types[tp.name])
+            self.names.add(tp.name)
+            return
         if type(tp.typ) in (typedesc.Structure, typedesc.Union):
             self.generate(tp.typ.get_head())
             self.more.add(tp.typ)

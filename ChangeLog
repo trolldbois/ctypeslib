@@ -1,3 +1,8 @@
+2009-01-08  Thomas Heller  <theller@ctypes.org>
+
+	* The codegenerator now uses ctypes sized int and uint types
+	for the sized integers <from stdint.h>.
+
 2009-01-08  Thomas Heller  <theller@python.net>
 
 	* setup.py: Correct the version number.  Remove the 'zip_safe'
