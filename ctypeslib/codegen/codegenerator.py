@@ -32,6 +32,7 @@ GCCXML_NOSIZE = "0x" + "f" * ctypes.sizeof(ctypes.c_long) * 4
 
 # XXX Should this be in ctypes itself?
 ctypes_names = {
+    "bool": "c_bool",
     "unsigned char": "c_ubyte",
     "signed char": "c_byte",
     "char": "c_char",
@@ -463,10 +464,30 @@ class Generator(object):
         self.generate(tp.typ)
 
     _variables = 0
+    _notfound_variables = 0
     def Variable(self, tp):
         self._variables += 1
-        if tp.init is None:
+        dllname = self.find_dllname(tp)
+        if dllname:
+            self.generate(tp.typ)
+            # calling convention does not matter for in_dll...
+            libname = self.get_sharedlib(dllname, "cdecl")
+            print >> self.stream, \
+                  "%s = (%s).in_dll(%s, '%s')" % (tp.name,
+                                                  self.type_name(tp.typ),
+                                                  libname,
+                                                  tp.name)
+            self.names.add(tp.name)
             # wtypes.h contains IID_IProcessInitControl, for example
+            return
+
+        # Hm.  The variable MAY be a #define'd symbol that we have
+        # artifically created, or it may be an exported variable that
+        # is not in the libraries that we search.  Anyway, if it has
+        # no tp.init value we can't generate code for it anyway, so we
+        # drop it.
+        if tp.init is None:
+            self._notfound_variables += 1
             return
         try:
             value = self.initialize(tp.typ, tp.init)
@@ -789,6 +810,7 @@ class Generator(object):
         print >> stream, "# Pointertypes:       %5d" % self._pointertypes
         print >> stream, "# Arraytypes:         %5d" % self._arraytypes
         print >> stream, "# unknown functions:  %5d" % self._notfound_functiontypes
+        print >> stream, "# unknown variables:  %5d" % self._notfound_variables
         print >> stream, "#"
         print >> stream, "# Total symbols: %5d" % total
         print >> stream, "###########################"

@@ -1,13 +1,14 @@
 """A module for dynamic, incremental ctypes code generation.
 
-See the docstring of 'update_from' and 'include' for usage information.
+See the 'include' function for usage information.
 """
-# BUGS:
-#
-# - The hash generated in 'include' should include whether -c was
-#   passed to h2xml or not
-#
-import sys, os, time, bz2, cPickle, md5, tempfile
+import sys, os, time, bz2, cPickle, tempfile
+try:
+    # md5 is deprecated in Python 2.5, so use hashlib if available
+    from hashlib import md5
+except ImportError:
+    from md5 import new as md5
+
 import ctypes
 import ctypeslib
 from ctypeslib.codegen import gccxmlparser, codegenerator, typedesc
@@ -34,14 +35,14 @@ def include(code, persist=True, compilerflags=["-c"]):
     The calling module must load all the shared libraries that it uses
     *BEFORE* this function is called.
 
-    BUGS:
+    NOTE:
      - the calling module MUST contain 'from ctypes import *',
        and, on windows, also 'from ctypes.wintypes import *'.
     """
     # create a hash for the code, and use that as basename for the
     # files we have to create
     fullcode = "/* compilerflags: %r */\n%s" % (compilerflags, code)
-    hashval = md5.new(fullcode).hexdigest()
+    hashval = md5(fullcode).hexdigest()
 
     fnm = os.path.abspath(os.path.join(gen_dir, hashval))
     h_file = fnm + ".h"

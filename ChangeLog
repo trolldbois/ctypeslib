@@ -1,3 +1,9 @@
+2009-01-16  Thomas Heller  <theller@python.net>
+
+	* Add the ability to generate code for variables exported from
+	dlls.  Based on a patch from Carlos Scheidegger.
+	Add the c_bool type.
+
 2009-01-08  Thomas Heller  <theller@ctypes.org>
 
 	* The codegenerator now uses ctypes sized int and uint types
