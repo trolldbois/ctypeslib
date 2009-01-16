@@ -4,6 +4,9 @@
 	dlls.  Based on a patch from Carlos Scheidegger.
 	Add the c_bool type.
 
+	* In Python 2.6 the md5 module is deprecated, use hashlib (when
+	available) instead.
+
 2009-01-08  Thomas Heller  <theller@ctypes.org>
 
 	* The codegenerator now uses ctypes sized int and uint types
