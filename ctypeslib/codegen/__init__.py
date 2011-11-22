@@ -1,1 +1,0 @@
-# the ctypeslib.codegen package
