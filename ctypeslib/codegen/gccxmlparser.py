@@ -42,7 +42,8 @@ def CHECK_NAME(name):
 class GCCXML_Parser(base):
     has_values = set(["Enumeration", "Function", "FunctionType",
                       "OperatorFunction", "Method", "Constructor",
-                      "Destructor", "OperatorMethod"])
+                      "Destructor", "OperatorMethod",
+                      "Converter"])
 
     def __init__(self, *args):
         base.__init__(self, *args)
@@ -180,6 +181,8 @@ class GCCXML_Parser(base):
 
     ReferenceType = PointerType
     _fixup_ReferenceType = _fixup_PointerType
+    OffsetType = PointerType
+    _fixup_OffsetType = _fixup_PointerType
 
     def ArrayType(self, attrs):
         # type, min?, max?
@@ -244,7 +247,7 @@ class GCCXML_Parser(base):
 
     def _fixup_Ignored(self, const): pass
 
-    Constructor = Destructor = OperatorMethod = _Ignored
+    Converter = Constructor = Destructor = OperatorMethod = _Ignored
 
     def Method(self, attrs):
         # name, virtual, pure_virtual, returns
