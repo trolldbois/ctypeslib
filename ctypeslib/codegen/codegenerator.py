@@ -67,6 +67,8 @@ def storage(t):
     # return the size and alignment of a type
     if isinstance(t, typedesc.Typedef):
         return storage(t.typ)
+    elif isinstance(t, typedesc.CvQualifiedType):
+      return storage(t.typ)
     elif isinstance(t, typedesc.ArrayType):
         s, a = storage(t.typ)
         if t.max.lower() == GCCXML_NOSIZE:
