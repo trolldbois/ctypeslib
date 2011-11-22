@@ -13,6 +13,7 @@ else:
     import xml.sax
     base = xml.sax.ContentHandler
 
+import codegenerator
 import typedesc
 import sys
 try:
@@ -294,6 +295,11 @@ class GCCXML_Parser(base):
         name = attrs.get("name")
         if name is None:
             name = MAKE_NAME(attrs["mangled"])
+        if name in codegenerator.dont_assert_size:
+            return typedesc.Ignored(name)
+        for k, v in [('<','_'), ('>','_'), ('::','__'), (',',''), (' ',''), ]:
+          if k in name: # template
+            name = name.replace(k,v)
         bases = attrs.get("bases", "").split()
         members = attrs.get("members", "").split()
         align = attrs["align"]
