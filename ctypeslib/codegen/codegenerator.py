@@ -569,8 +569,13 @@ class Generator(object):
                 warnings.warn(message, UserWarning)
 
         if body.struct.bases:
-            assert len(body.struct.bases) == 1
-            self.generate(body.struct.bases[0].get_body())
+            #print body, type(body.struct).__name__, body.struct.name, len(body.struct.bases)
+            #print body.struct.bases
+            if len(body.struct.bases) == 1: # its a Struct or a simple Class
+              self.generate(body.struct.bases[0].get_body())
+            else: # we have a multi-parent inheritance
+              for b in body.struct.bases:
+                self.generate(b.get_body())              
         # field definition normally span several lines.
         # Before we generate them, we need to 'import' everything they need.
         # So, call type_name for each field once,
