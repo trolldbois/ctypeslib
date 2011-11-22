@@ -39,6 +39,7 @@ def CHECK_NAME(name):
         return name
     return None
 
+''' see GCCXML /GCC/gcc/tree.def '''
 class GCCXML_Parser(base):
     has_values = set(["Enumeration", "Function", "FunctionType",
                       "OperatorFunction", "Method", "Constructor",
@@ -97,7 +98,7 @@ class GCCXML_Parser(base):
     ################################
     # do-nothing element handlers
 
-    def Class(self, attrs): pass
+    #def Class(self, attrs): pass
     def Destructor(self, attrs): pass
     
     cvs_revision = None
@@ -286,7 +287,7 @@ class GCCXML_Parser(base):
 
     def _fixup_EnumValue(self, e): pass
 
-    # structures, unions
+    # structures, unions, classes
 
     def Struct(self, attrs):
         # id, name, members
@@ -313,6 +314,9 @@ class GCCXML_Parser(base):
         align = attrs["align"]
         size = attrs.get("size")
         return typedesc.Union(name, align, members, bases, size)
+
+    Class = Struct
+    _fixup_Class = _fixup_Structure
 
     def Field(self, attrs):
         # name, type
