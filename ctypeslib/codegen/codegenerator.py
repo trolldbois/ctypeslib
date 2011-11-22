@@ -592,20 +592,21 @@ class Generator(object):
         if unnamed_fields:
             print >> self.stream, "%s._anonymous_ = %r" % \
                   (body.struct.name, unnamed_fields.values())
-        print >> self.stream, "%s._fields_ = [" % body.struct.name
+        if len(fields) > 0:
+          print >> self.stream, "%s._fields_ = [" % body.struct.name
 
-        if self.generate_comments and body.struct.location:
-            print >> self.stream, "    # %s %s" % body.struct.location
-        index = 0
-        for f in fields:
-            fieldname = unnamed_fields.get(f, f.name)
-            if f.bits is None:
-                print >> self.stream, "    ('%s', %s)," % \
-                   (fieldname, self.type_name(f.typ))
-            else:
-                print >> self.stream, "    ('%s', %s, %s)," % \
-                      (fieldname, self.type_name(f.typ), f.bits)
-        print >> self.stream, "]"
+          if self.generate_comments and body.struct.location:
+              print >> self.stream, "    # %s %s" % body.struct.location
+          index = 0
+          for f in fields:
+              fieldname = unnamed_fields.get(f, f.name)
+              if f.bits is None:
+                  print >> self.stream, "    ('%s', %s)," % \
+                     (fieldname, self.type_name(f.typ))
+              else:
+                  print >> self.stream, "    ('%s', %s, %s)," % \
+                        (fieldname, self.type_name(f.typ), f.bits)
+          print >> self.stream, "]"
         # disable size checks because they are not portable across
         # platforms:
 ##        # generate assert statements for size and alignment
