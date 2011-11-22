@@ -1,0 +1,298 @@
+2009-01-16  Thomas Heller  <theller@python.net>
+
+	* Add the ability to generate code for variables exported from
+	dlls.  Based on a patch from Carlos Scheidegger.
+	Add the c_bool type.
+
+	* In Python 2.6 the md5 module is deprecated, use hashlib (when
+	available) instead.
+
+2009-01-08  Thomas Heller  <theller@ctypes.org>
+
+	* The codegenerator now uses ctypes sized int and uint types
+	for the sized integers <from stdint.h>.
+
+2009-01-08  Thomas Heller  <theller@python.net>
+
+	* setup.py: Correct the version number.  Remove the 'zip_safe'
+	argument in the setup call; it was left over from setuptools
+	experiments.
+
+	* On Windows, the codegenerator uses WinDLL instead of CDLL so
+	that functions with stdcall mangled names can be loaded.
+	Use the correct registry key to find gccxml.
+
+2008-10-20  Thomas Heller  <theller@ctypes.org>
+
+	* Remove the import of setuptools in the setup.py script.
+
+	* Add support for float and double constants and variables.
+
+	* Fix structure support.  Patch from Shalabh Chaturvedi.
+
+2008-02-01  Thomas Heller  <theller@ctypes.org>
+
+	* Include the variable initializers in the generated code (in a
+	comment).
+
+	* Change version number to 0.5.6.  Also, the version number is now
+	available as 'ctypeslib.__version__'.
+
+	* Make the codegenerator compatible with gccxml 0.9.0.
+	
+	* Move the calculation of initializers into a separate class; this
+	makes it easier to customize the behaviour depending on the
+	initializer type.
+	
+2008-01-24  Thomas Heller  <theller@python.net>
+
+	* Fix the codegenerator to handle structures without fields; it
+	did fail to calculate the packing.
+
+2007-04-11  Thomas Heller  <theller@python.net>
+
+	* Add a 'compilerflags' optional argument to the include()
+	function.  This allows to specify the compilerflags for h2xml when
+	the code is 'compiled'.  Default is 'compilerflags=["-c"]' which
+	will include #define constants.
+
+2007-03-01  Thomas Heller  <theller@python.net>
+
+	* Applied a patch from Michal J. Gajda: This patch adds the
+	--preload option to xml2py.py to resolve missing references from
+	DLLs.  See
+	http://sourceforge.net/tracker/?func=detail&aid=1670758&group_id=71702&atid=532156
+
+	* Added ctypeslib.contrib.pythonhdr module, by Lenard Lindstrom:
+	The is a python module, pythonhdr.py, which declares several,
+	hopefully useful, Python C API declarations and functions. Also
+	includes is a unit test.
+
+2007-02-16  Thomas Heller  <theller@python.net>
+
+	* The xml2py script now also accepts full pathnames to shared
+	libraries in the -l command line switch.
+
+	* Fix failing tests on linux.
+
+	* The code generator will now happily generate Python code for the
+	C 'long double' type.  This type is not currently supported by
+	ctypes; so the generated code must be fixed manually.  Still
+	better than to let the code generation crash.
+
+2007-02-15  Thomas Heller  <theller@python.net>
+
+	* In ctypeslib.dynamic_module the function update_from() has been
+	removed.  Use the include() function instead, which will - if
+	needed - recompile the C code passed to it and adds generated
+	Python code to the calling module.
+
+	* The xml2py script can now add comments for functions and
+	structures into the generated code.  The comments include the name
+	and linenumber of the header file where the function/structure was
+	defined, plus the C function argument names.
+
+2006-12-08  Thomas Heller  <theller@python.net>
+
+	* Created new module ctypeslib.util.  This module contains small
+	helper functions.  When using these functions it *may* be better
+	to copy them into the own project instead of having ctypeslib as
+	dependency.  YMMV.
+
+	* Moved byref_offset from the ctypeslib.test package into
+	ctypeslib.util, and renaming the function to byref_at.
+
+2006-11-23  Thomas Heller  <theller@python.net>
+
+	* Fixed a bug in the codegenerator with unsized arrays.
+	Thanks to Danielle Varrazzo for the report.
+
+2006-11-17  Thomas Heller  <theller@python.net>
+
+	* In ctypeslib.test, add a byref_offset module that contains a
+	byref_offset function; with tests.
+
+	Experimental code, currently.
+	
+2006-11-14  Thomas Heller  <theller@python.net>
+
+	* Added ctypeslib.contrib package which contains contributed code
+	that does not yet fit elsewehere.  ctypeslib.contrib.get_exports,
+	contributed by leppton, lists the exports in a dll.
+
+2006-11-10  Thomas Heller  <theller@python.net>
+
+	* ctypeslib/h2xml.py: Refactored a function compile_to_xml() out
+	of main(), CompilerErrors are catched in main() but not in
+	compile_to_xml().
+
+	Added test that an exception is raised in
+	dynamic_module.include() when a CompilerError occurs.
+
+	* ctypeslib/codegen/cparser.py: No configuration file
+	"~/ctypes_codegen/cparser.cfg" is used (or needed) anymore.
+
+2006-11-09  Thomas Heller  <theller@python.net>
+
+	* Inmplemented this change in a different way again.
+
+	* Reverted this change because it does not (yet) work:
+
+	* ctypeslib/codegen/cparser.py: The final xml-file is now created
+	before searching for preprocessor definitions (if no output file
+	is requested it will be deleted afterwards).  The advantage is
+	that compilation errors are detected early and don't disturb the
+	cpp magic.
+
+2006-11-08  Thomas Heller  <theller@python.net>
+
+	* ctypeslib\dynamic_module.y: Generate the .h, .xml, and
+	.typedesc.bz2 files in a temporary directory.  Should that
+	directory contain the GCCXML version number? Or the ctypeslib
+	version number?
+
+2006-11-07  Thomas Heller  <theller@python.net>
+
+	* ctypeslib\codegen\gccxmlparser.py: Patch from Giovanni Bajo: Use
+	cElementtree, if installed, instead of xml.sax for XML parsing.
+	This gives a significant speedup.
+
+2006-11-03  Thomas Heller  <theller@python.net>
+
+	* ctypeslib\experimental\*.py contains experimental stuff.  This
+	directory is *not* package because it doesn't contain an
+	__init__.py file.
+	
+	* ctypeslib\dynamic_module.py: A module implementing incremental,
+	dynamic code generation. Removed the former ctypeslib\dynmod.py.
+
+	* Renamed restructured the ctypes_codegen package.  It is now
+	named ctypeslib, with a subpackage ctypeslib.codegen.  The
+	ctypeslib package now contains the h2xml and xml2py scripts.
+
+2006-10-31  Thomas Heller  <theller@python.net>
+
+	* ctypes_codegen\codegenerator.py (Generator.init_value): Reworked
+	the init function to use eval, the output should be correct now.
+
+	* Cast #define'd symbols to the type found, to avoid compilation
+	errors because of 'const'ness mismatch.
+
+2006-10-20  Thomas Heller  <theller@python.net>
+
+	* Added ctypes_codegen.test package for codegenerator tests.
+	
+	* Renamed modules from ctypes_codegen.h2xml_main to
+	ctypes_codegen.h2xml and ctypes_codegen.xml2py to
+	ctypes_codegen.xml2py.
+
+	So, with Python2.5 it is possible to execute
+	'python -m ctypes_codegen.h2xml ...' and
+	'python -m ctypes_codegen.xml2py ...'.
+	
+2006-10-05  Thomas Heller  <theller@python.net>
+
+	* Added '#!/usr/bin/env python' to the h2xml.py and xml2py.py
+	scripts.  Patch by Victor Stinner.
+
+2006-09-19  Thomas Heller  <theller@python.net>
+
+	* cparser.py: Lots of changes.  The summary: xml2py doesn't use a
+	config file for #define symbols to exclude, instead it loops
+	several times to find the symbols that don't compile.
+	
+	* scripts/xml2py_main.py: Change the generated code that loads
+	libraries.  On windows, the absolute pathname is no longer used.
+
+	* codegenerator.py: Rework the .init_value() method so that
+	decode_value() is used in all cases.  Correct the decoding of
+	integer values - it seems decimal numbers are used except when
+	they start with a '0' which means hex (previously I assumed hex
+	always).
+
+2006-09-15  Thomas Heller  <theller@python.net>
+
+	* codegenerator.py: Refactored a method 'generate_items' out of
+	'generate_code'.  This allows better incremental code generation.
+
+	* os.name is 'win32', not 'nt', on windows. This prevented that
+	definitions from ctypes.wintypes to be used in generated code.
+
+2006-09-06  Thomas Heller  <theller@python.net>
+
+	* codegenerator.py: '_anonymous_' declarations are only generated
+	for unnamed Structure/Union fields if the type of the field is a
+	Structure or Union.  (Windows header files contain unnamed
+	structure fields of type 'int', probably for padding.)
+
+2006-08-11  Thomas Heller  <theller@python.net>
+
+	* codegenerator.py: Empty _field_ attributes are now generated for
+	Structure/Union (for weird reasons having to do with COM
+	interfaces NO _fields_ attribute was generated before).
+
+2006-06-23  Thomas Heller  <theller@python.net>
+
+	* xml2py.py: Remove the use_generators argument and the
+	corresponding command line option for xml2py.py, since the code
+	generator does not create decorators any more.
+
+	Add a '-c' command line option which will insert comments in the
+	generated code that will point the the location in the include
+	file where the data types are defined.  This replaces the
+	hardcoded USE_COMMENTS variable.
+
+2006-06-13  Thomas Heller  <theller@python.net>
+
+	* xml2py.py: The '-l' option for the xml2py.py script now takes
+	the linker library name instead of the library pathname.  I still
+	have to find out which library (on posix systems) really defines a
+	function.  The generated code that loads the libraries has been
+	reworked.
+
+2006-06-14  Thomas Heller  <theller@python.net>
+
+	* h2xml.py: The subprocess module is now required, although the
+	code is still compatible with Python 2.3.
+
+	* The '#define' symbols that cause compilation errors are now
+	determined at runtime:
+
+	If the '-c' option is given, compiler error messages are parsed to
+	find those '#define ' symbols that are causing them.  These
+	symbols are then appended to the file
+	~/.ctypes_codegen/cparser_excludes.  If these errors occur, it is
+	required to restart h2xml.py, but chances are good that the next
+	run works better (it may be required to repeat this process
+	several times until all errors have vanished).
+
+	The cparser_config.py module has been removed because it does no
+	longer list symbols that have to be excluded.
+
+2006-06-13  Thomas Heller  <theller@python.net>
+
+	* Fixed a problem in gccxmlparser.py when 'Constructor'
+	descriptions created by gccxml gave no 'name' attribute.
+
+2006-06-09  Thomas Heller  <theller@python.net>
+
+	* ctypes_codegen\codegenerator.py: Added a USE_COMMENTS variable
+	which allows to turn comment generation off.  Generated
+	'_anonymous_' declarations for unnamed structure fields.
+
+	Changed the way libraries are loaded, the cdecl and stdcall
+	decorators are no longer used.  Functions are generated with
+	assignments of .restype and .argtypes.:
+
+2006-06-08  Thomas Heller  <theller@python.net>
+
+	* ctypes_codegen\codegenerator.py: When generating the '__all__'
+	list, don't break long strings.
+
+	* h2xml does no longer create a file named 'None' when no output
+	file was given on the command line.
+
+	* Added a TODO list.
+
+	* Initial import of the current ctypes codegenerator version.
+
