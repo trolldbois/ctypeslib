@@ -18,9 +18,14 @@ The SVN repository is here:
 
 http://svn.python.org/projects/ctypes/trunk/ctypeslib/#egg=ctypeslib-dev
 
+--
+2013. LXJ Version from https://github.com/trolldbois/ctypeslib is rev77594 
+git-svn-id: http://svn.python.org/projects/ctypes/trunk/ctypeslib@77594 6015fed2-1504-0410-9fe1-9d1591cc4771
+
+
 """
 import os, sys
-from distutils.core import setup, Command
+from setuptools import setup, Command
 
 class test(Command):
     # Original version of this class posted
@@ -90,7 +95,7 @@ setup(name="ctypeslib",
                   'ctypeslib.contrib',
                   'ctypeslib.util',
                   'ctypeslib.test'],
-      scripts = ['scripts/h2xml.py', 'scripts/xml2py.py'],
+      scripts = ['scripts/h2xml', 'scripts/xml2py'],
       description="ctypeslib - useful additions to the ctypes FFI library",
       long_description = __doc__,
       author="Thomas Heller",

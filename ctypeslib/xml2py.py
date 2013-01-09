@@ -1,3 +1,4 @@
+#!/usr/bin/python -E
 import sys, re, os
 from optparse import OptionParser
 from ctypeslib.codegen.codegenerator import generate_code
