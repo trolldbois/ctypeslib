@@ -825,7 +825,7 @@ class Generator(object):
 
 ################################################################
 
-def generate_code(xmlfile,
+def generate_code(srcfile,
                   outfile,
                   expressions=None,
                   symbols=None,
@@ -835,11 +835,15 @@ def generate_code(xmlfile,
                   searched_dlls=None,
                   types=None,
                   preloaded_dlls=[],
-                  generate_docstrings=False,):
+                  generate_docstrings=False,
+                  use_clang=False,):
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
-    from gccxmlparser import parse
-    items = parse(xmlfile)
+    if not use_clang:
+        from gccxmlparser import parse
+    else:
+        from clangparser import parse
+    items = parse(srcfile)
 
     # filter symbols to generate
     todo = []
