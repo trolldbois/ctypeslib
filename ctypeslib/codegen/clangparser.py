@@ -79,6 +79,9 @@ So I could do ( preferably in C plutot )
     ASTContext_getASTRecordLayout( RecordDecl ) restype ASTRecordLayout
     ( also _align )
 
+Best solution, 
+add getASTRecordLayout infos into 
+
 How to get a RecordDecl ?
 
 ##########################################################

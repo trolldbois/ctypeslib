@@ -43,7 +43,7 @@ def main(argv=None):
     def windows_dlls(option, opt, value, parser):
         parser.values.dlls.extend(windows_dll_names)
 
-    parser = OptionParser("usage: %prog xmlfile [options]")
+    parser = OptionParser("usage: %prog [options] {filename} [clang-args*]")
     parser.add_option("-c",
                       action="store_true",
                       dest="generate_comments",
@@ -128,10 +128,21 @@ def main(argv=None):
                       action="append",
                       default=[])
 
-    options, files = parser.parse_args(argv[1:])
+    parser.add_option("", "--show-ids", dest="showIDs",
+                      help="Don't compute cursor IDs (very slow)",
+                      default=False)
 
-    if len(files) != 1:
+    parser.add_option("", "--max-depth", dest="maxDepth",
+                      help="Limit cursor expansion to depth N",
+                      metavar="N", type=int, default=None)
+
+    parser.disable_interspersed_args()
+    (options, args) = parser.parse_args()
+
+    if len(args) == 0:
+        parser.error('invalid number arguments')
         parser.error("Exactly one input file must be specified")
+    #options, files = parser.parse_args(argv[1:])
 
     if options.output == "-":
         stream = sys.stdout
@@ -188,7 +199,7 @@ def main(argv=None):
             types.extend(typ)
         options.kind = tuple(types)
 
-    generate_code(files[0], stream,
+    generate_code(args, stream,
                   symbols=options.symbols,
                   expressions=options.expressions,
                   verbose=options.verbose,

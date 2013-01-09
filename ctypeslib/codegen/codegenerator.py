@@ -836,7 +836,7 @@ def generate_code(srcfile,
                   types=None,
                   preloaded_dlls=[],
                   generate_docstrings=False,
-                  use_clang=False,):
+                  use_clang=False,): # TODO change to parser object
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
     if not use_clang:
