@@ -1,3 +1,7 @@
 build
 dist
 .svn
+*~
+*.pyc
+ctypeslib.egg-info/
+*.gitignore~
