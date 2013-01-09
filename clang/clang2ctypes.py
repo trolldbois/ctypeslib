@@ -18,12 +18,8 @@ import sys
 from clang.cindex import Index
 from clang.cindex import CursorKind, TypeKind
 
-def get_diag_info(diag):
-    return { 'severity' : diag.severity,
-             'location' : diag.location,
-             'spelling' : diag.spelling,
-             'ranges' : diag.ranges,
-             'fixits' : diag.fixits }
+
+
 
 def get_cursor_id(cursor, cursor_list = []):
     if not opts.showIDs:
