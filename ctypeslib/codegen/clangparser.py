@@ -171,6 +171,7 @@ class Clang_Parser(object):
 
         # if this element has children, treat them.
         # if name in self.has_values:
+        ## no need to parse children, recursive parsing should have happen by default.
         #self.context.append( node )
         #for child in node.get_children():
         #    self.startElement( child ) 
@@ -360,8 +361,8 @@ class Clang_Parser(object):
         if name is None:
             raise ValueError('could try get_usr()')
             name = MAKE_NAME( cursor.get_usr() )
-        align = clang.cindex.clang_getRecordAlignment( self.tu, cursor) # 
-        size = clang.cindex.clang_getRecordSize( self.tu, cursor) # 
+        align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
+        size = clang.cindex._clang_getRecordSize( self.tu, cursor) # 
         return typedesc.Enumeration(name, size, align)
 
     def _fixup_Enumeration(self, e): pass
@@ -395,8 +396,8 @@ class Clang_Parser(object):
         print '** ', cursor.kind.name
         print '** ', cursor.type.kind.name
         bases = None # FIXME: support CXX
-        align = clang.cindex.clang_getRecordAlignment( self.tu, cursor) # 
-        size = clang.cindex.clang_getRecordSize( self.tu, cursor) # 
+        align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
+        size = clang.cindex._clang_getRecordSize( self.tu, cursor) # 
         members = [self.startElement( child ) for child in cursor.get_children()]
              
         return typedesc.Structure(name, align, members, bases, size)
@@ -414,8 +415,8 @@ class Clang_Parser(object):
             name = MAKE_NAME( cursor.get_usr() )
         bases = None # FIXME: support CXX
         members = None # FIXME: delayed construct
-        align = clang.cindex.clang_getRecordAlignment( self.tu, cursor) # 
-        size = clang.cindex.clang_getRecordSize( self.tu, cursor) # 
+        align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
+        size = clang.cindex._clang_getRecordSize( self.tu, cursor) # 
         return typedesc.Union(name, align, members, bases, size)
 
     Class = STRUCT_DECL
@@ -431,7 +432,7 @@ class Clang_Parser(object):
         # offset = attrs.get("offset")
         # FIXME
         bits = None
-        offset = clang.cindex.clang_getRecordFieldOffset(self.tu, cursor)
+        offset = clang.cindex._clang_getRecordFieldOffset(self.tu, cursor)
 
         return typedesc.Field(name, typ, bits, offset)
 
