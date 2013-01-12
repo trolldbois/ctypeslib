@@ -159,15 +159,19 @@ class Clang_Parser(object):
             result.location = node.location
         # record the result
         # NO id in clang nodes. ## _id = attrs.get("id", None)
-        _id = id(node)
+        _id = node.get_usr() #id(node)
+        #print _id, node
         # The '_id' attribute is used to link together all the
         # nodes, in the _fixup_ methods.
-        if _id is not None:
-            self.all[_id] = result
-        else:
-            # EnumValue, for example, has no "_id" attribute.
-            # Invent our own...
-            self.all[id(result)] = result
+        #if _id is not None:
+        
+        ## self.all[_id] should return the Typedesc object, so that type(x).__name__ is a local func to codegen object
+        self.all[_id] = result
+        
+        #else:
+        #    # EnumValue, for example, has no "_id" attribute.
+        #    # Invent our own...
+        #    self.all[id(result)] = result
 
         # if this element has children, treat them.
         # if name in self.has_values:
@@ -240,11 +244,13 @@ class Clang_Parser(object):
     def TYPEDEF_DECL(self, cursor):
         log.debug('Found a typedef')
         name = cursor.displayname
-        typ = cursor.type.get_canonical().kind.name
+        typ = cursor.get_usr() #cursor.type.get_canonical().kind.name
         return typedesc.Typedef(name, typ)
 
     def _fixup_Typedef(self, t):
-        t.typ = self.all[t.typ]
+        #print 'fixing typdef with self.all[%s]'%(t) 
+        t.typ = self.all[ t.typ]
+        pass
 
     def FundamentalType(self, attrs):
         name = attrs["name"]
@@ -296,18 +302,23 @@ class Clang_Parser(object):
     # callables
     
     #def Function(self, attrs):
-    def FUNCTION_DECL(self, attrs):
+    def FUNCTION_DECL(self, cursor):
         # name, returns, extern, attributes
-        name = attrs["name"]
-        returns = attrs["returns"]
-        attributes = attrs.get("attributes", "").split()
-        extern = attrs.get("extern")
+        #name = attrs["name"]
+        #returns = attrs["returns"]
+        #attributes = attrs.get("attributes", "").split()
+        #extern = attrs.get("extern")
+        name = cursor.displayname
+        returns = None
+        attributes = None
+        extern = None
         return typedesc.Function(name, returns, attributes, extern)
 
-    #def _fixup_Function(self, func):
-    def _fixup_FUNCTION_DECL(self, func):
-        func.returns = self.all[func.returns]
-        func.fixup_argtypes(self.all)
+    def _fixup_Function(self, func):
+        #FIXME
+        #func.returns = self.all[func.returns]
+        #func.fixup_argtypes(self.all)
+        pass
 
     def FunctionType(self, attrs):
         # id, returns, attributes
@@ -395,7 +406,7 @@ class Clang_Parser(object):
         # check get_children. # members = attrs.get("members", "").split()
         print '** ', cursor.kind.name
         print '** ', cursor.type.kind.name
-        bases = None # FIXME: support CXX
+        bases = [] # FIXME: support CXX
         align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
         size = clang.cindex._clang_getRecordSize( self.tu, cursor) # 
         members = [self.startElement( child ) for child in cursor.get_children()]
@@ -403,8 +414,9 @@ class Clang_Parser(object):
         return typedesc.Structure(name, align, members, bases, size)
 
     def _fixup_Structure(self, s):
-        s.members = [self.all[m] for m in s.members]
-        s.bases = [self.all[b] for b in s.bases]
+        #s.members = [self.all[m] for m in s.members]
+        #s.bases = [self.all[b] for b in s.bases]
+        pass
     _fixup_Union = _fixup_Structure
 
     #def Union(self, attrs):
@@ -413,10 +425,10 @@ class Clang_Parser(object):
         if name is None:
             raise ValueError('could try get_usr()')
             name = MAKE_NAME( cursor.get_usr() )
-        bases = None # FIXME: support CXX
-        members = None # FIXME: delayed construct
+        bases = [] # FIXME: support CXX
         align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
         size = clang.cindex._clang_getRecordSize( self.tu, cursor) # 
+        members = [self.startElement( child ) for child in cursor.get_children()]
         return typedesc.Union(name, align, members, bases, size)
 
     Class = STRUCT_DECL
@@ -425,19 +437,22 @@ class Clang_Parser(object):
     def FIELD_DECL(self, cursor):
         # name, type
         name = cursor.displayname
-        typ = cursor.type.get_canonical().kind.name
 ##        if name.startswith("__") and not name.endswith("__"):
 ##            print "INVALID FIELD NAME", name
         # bits = attrs.get("bits", None)
         # offset = attrs.get("offset")
         # FIXME
+        #typ = cursor.type.get_canonical().kind.name
+        typ = cursor.get_usr() 
         bits = None
         offset = clang.cindex._clang_getRecordFieldOffset(self.tu, cursor)
 
         return typedesc.Field(name, typ, bits, offset)
 
     def _fixup_Field(self, f):
+        print 'before fixup, field f.typ:',f.typ#, self.all[f.typ]
         f.typ = self.all[f.typ]
+        pass
 
     ################
 
@@ -488,14 +503,8 @@ class Clang_Parser(object):
                        typedesc.Function, typedesc.Structure, typedesc.Union,
                        typedesc.Variable, typedesc.Macro, typedesc.Alias)
 
-        import warnings
-        if self.cvs_revision is None:
-            warnings.warn("Could not determine CVS revision of GCCXML")
-        elif self.cvs_revision < (1, 114):
-            warnings.warn("CVS Revision of GCCXML is %d.%d" % self.cvs_revision)
-
         self.get_macros(self.cpp_data.get("functions"))
-
+        print 'self.all', self.all
         remove = []
         for n, i in self.all.items():
             location = getattr(i, "location", None)
@@ -506,7 +515,8 @@ class Clang_Parser(object):
             mth = getattr(self, "_fixup_" + type(i).__name__)
             try:
                 mth(i)
-            except KeyError: # XXX better exception catching
+            except KeyError,e: # XXX better exception catching
+                log.warning('function "%s" missing, err:%s, remove %d'%("_fixup_" + type(i).__name__, e, n) )
                 remove.append(n)
 
         for n in remove:
@@ -516,6 +526,7 @@ class Clang_Parser(object):
         namespace = {}
         for i in self.all.values():
             if not isinstance(i, interesting):
+                log.debug('ignoring %s'%( i) )
                 continue  # we don't want these
             name = getattr(i, "name", None)
             if name is not None:
@@ -528,6 +539,7 @@ class Clang_Parser(object):
             if isinstance(i, interesting):
                 result.append(i)
 
+        print 'clangparser get_result:',result
         return result
     
     #catch-all
