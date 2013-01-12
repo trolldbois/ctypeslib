@@ -1784,7 +1784,7 @@ _clang_getCompletionPriority = lib.clang_getCompletionPriority
 _clang_getCompletionPriority.argtypes = [c_void_p]
 _clang_getCompletionPriority.restype = c_int
 
-_clang_getRecordAlignment = lib.clang_getRecordAlignement # FIXME, alignment
+_clang_getRecordAlignment = lib.clang_getRecordAlignment 
 _clang_getRecordAlignment.argtypes = [TranslationUnit, Cursor]
 _clang_getRecordAlignment.restype = c_int
 
