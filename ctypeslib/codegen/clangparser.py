@@ -1,5 +1,6 @@
 """clangparser - use clang to get preprocess a source code."""
 
+import clang.cindex 
 from clang.cindex import Index
 from clang.cindex import CursorKind, TypeKind
 
@@ -121,15 +122,16 @@ class Clang_Parser(object):
         self.all = {}
         self.cpp_data = {}
         self._unhandled = []
+        self.tu = None
 
     def parse(self, args):
         index = Index.create()
-        tu = index.parse(None, args)
-        if not tu:
+        self.tu = index.parse(None, args)
+        if not self.tu:
             log.warning("unable to load input")
             return
         
-        root = tu.cursor
+        root = self.tu.cursor
         self.context = []
         for node in root.get_children():
             # if open
@@ -397,8 +399,8 @@ class Clang_Parser(object):
         
         
         bases = None
-        align = 4 # FIXME
-        size = None
+        align = clang.cindex.clang_getRecordAlignment( self.tu, cursor) # 
+        size = clang.cindex.clang_getRecordSize( self.tu, cursor) # 
         members = None
         return typedesc.Structure(name, align, members, bases, size)
 
@@ -431,7 +433,8 @@ class Clang_Parser(object):
         # offset = attrs.get("offset")
         # FIXME
         bits = None
-        offset = None
+        offset = clang.cindex.clang_getRecordFieldOffset(self.tu, cursor)
+
         return typedesc.Field(name, typ, bits, offset)
 
     def _fixup_Field(self, f):

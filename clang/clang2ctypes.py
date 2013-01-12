@@ -15,10 +15,11 @@ Library.
 """
 import os
 import sys
+import clang.cindex as cindex
 from clang.cindex import Index
 from clang.cindex import CursorKind, TypeKind
 
-
+from pprint import pprint
 
 
 def get_cursor_id(cursor, cursor_list = []):
@@ -36,28 +37,43 @@ def get_cursor_id(cursor, cursor_list = []):
     cursor_list.append(cursor)
     return len(cursor_list) - 1
 
-def get_info(node, depth=0):
+def get_info(tu, node, depth=0):
     if opts.maxDepth is not None and depth >= opts.maxDepth:
         children = None
     else:
         children = []
         for c in node.get_children():
             try:
-                children.append(get_info(c, depth+1))
+                print '  '*depth, c.kind
+                children.append(get_info(tu, c, depth+1))
             except ValueError,e:
+                print 'value error',e
                 pass
     name = node.spelling
     if name == '':
       name = node.get_usr()
-
     if depth != 0:
         if node.location.file is None:
-            raise ValueError('non local definition debug test')
+            raise ValueError('no location')
         elif node.location.file.name != os.path.abspath(sys.argv[1]):
-            raise ValueError('non local definition debug test')
+            raise ValueError('location file name != %s'%(sys.argv[1]))
             #print node.location.file.name
+
+    print { 'id' : get_cursor_id(node),
+             'kind' : node.kind,
+             'usr' : node.get_usr(),
+             'spelling' : node.spelling,
+             'location' : node.location,
+             'extent.start' : node.extent.start,
+             'extent.end' : node.extent.end,
+             'is_definition' : node.is_definition(),
+             'definition id' : get_cursor_id(node.get_definition()),
+             'children' : children }
     
     if node.kind == CursorKind.STRUCT_DECL:
+        print 'tu is', tu
+        print '***** spelling', cindex.TranslationUnit_spelling(tu)
+        print 'record size is' , cindex._clang_getRecordSize(tu, node)
         return "class %s(ctypes.Structure):\n  _fields_ = [ %s ]"%(name, ('\n%s'%(' '*15)).join([ str(child) for child in children]))
     elif node.kind == CursorKind.UNION_DECL:
         return "class %s(ctypes.Union):\n  _fields_ = [ %s ]"%(name, ('\n%s'%(' '*12)).join([ str(child) for child in children]))
@@ -86,6 +102,7 @@ def get_info(node, depth=0):
 #             'kind' : node.kind,
 #             'spelling' : node.spelling }   
     elif node.kind == CursorKind.TRANSLATION_UNIT:
+        print 'goto'
         return children
     else: #if node.is_definition() or True:
         return [ node.kind, name, # node.spelling
@@ -106,6 +123,7 @@ def get_info(node, depth=0):
              'definition id' : get_cursor_id(node.get_definition()),
              'children' : children }
 '''
+
 
 def main():
     from pprint import pprint
@@ -132,7 +150,8 @@ def main():
     if not tu:
         parser.error("unable to load input")
 
-    for node in get_info(tu.cursor):
+    print 'p'
+    for node in get_info(tu, tu.cursor):
       print node
 
 if __name__ == '__main__':
