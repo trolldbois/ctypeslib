@@ -171,12 +171,12 @@ class Clang_Parser(object):
 
         # if this element has children, treat them.
         # if name in self.has_values:
-        self.context.append( node )
-        for child in node.get_children():
-            self.startElement( child ) 
-        
-        self.context.pop()
-        pass
+        #self.context.append( node )
+        #for child in node.get_children():
+        #    self.startElement( child ) 
+        # 
+        #self.context.pop()
+        return result
 
     ################################
     # do-nothing element handlers
@@ -354,13 +354,14 @@ class Clang_Parser(object):
 
     # enumerations
 
-    def Enumeration(self, attrs):
+    def ENUM_DECL(self, cursor):
         # id, name
-        name = attrs["name"]
-        # If the name isn't a valid Python identifier, create an unnamed enum
-        name = CHECK_NAME(name)
-        size = attrs["size"]
-        align = attrs["align"]
+        name = cursor.displayname
+        if name is None:
+            raise ValueError('could try get_usr()')
+            name = MAKE_NAME( cursor.get_usr() )
+        align = clang.cindex.clang_getRecordAlignment( self.tu, cursor) # 
+        size = clang.cindex.clang_getRecordSize( self.tu, cursor) # 
         return typedesc.Enumeration(name, size, align)
 
     def _fixup_Enumeration(self, e): pass
@@ -391,17 +392,13 @@ class Clang_Parser(object):
         # FIXME: lets ignore members for now.
         #bases = attrs.get("bases", "").split() # that for cpp ?
         # check get_children. # members = attrs.get("members", "").split()
-        #align = attrs["align"]
-        #size = attrs.get("size")
-
         print '** ', cursor.kind.name
         print '** ', cursor.type.kind.name
-        
-        
-        bases = None
+        bases = None # FIXME: support CXX
         align = clang.cindex.clang_getRecordAlignment( self.tu, cursor) # 
         size = clang.cindex.clang_getRecordSize( self.tu, cursor) # 
-        members = None
+        members = [self.startElement( child ) for child in cursor.get_children()]
+             
         return typedesc.Structure(name, align, members, bases, size)
 
     def _fixup_Structure(self, s):
@@ -410,14 +407,15 @@ class Clang_Parser(object):
     _fixup_Union = _fixup_Structure
 
     #def Union(self, attrs):
-    def UNION_DECL(self, attrs):
-        name = attrs.get("name")
+    def UNION_DECL(self, cursor):
+        name = cursor.displayname
         if name is None:
-            name = MAKE_NAME(attrs["mangled"])
-        bases = attrs.get("bases", "").split()
-        members = attrs.get("members", "").split()
-        align = attrs["align"]
-        size = attrs.get("size")
+            raise ValueError('could try get_usr()')
+            name = MAKE_NAME( cursor.get_usr() )
+        bases = None # FIXME: support CXX
+        members = None # FIXME: delayed construct
+        align = clang.cindex.clang_getRecordAlignment( self.tu, cursor) # 
+        size = clang.cindex.clang_getRecordSize( self.tu, cursor) # 
         return typedesc.Union(name, align, members, bases, size)
 
     Class = STRUCT_DECL
@@ -536,7 +534,10 @@ class Clang_Parser(object):
         if name not in self._unhandled:
             log.debug('%s is not handled'%(name))
             self._unhandled.append(name)
-        return
+        def p(node):
+            for child in node.get_children():
+                self.startElement( child ) 
+        return p
 
 ################################################################
 

@@ -2747,6 +2747,9 @@ unsigned clang_getRecordFieldOffset(CXTranslationUnit TU, CXCursor cursor) {
   return layout.getFieldOffset( FieldNo );
 }
 
+// TODO: FieldDecl::isBitField()
+// TODO: FieldDecl::getBitWidthValue()
+
 } // end: extern "C"
 
 //===----------------------------------------------------------------------===//
