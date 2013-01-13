@@ -109,9 +109,9 @@ def main(argv=None):
                       help="add all standard windows dlls to the searched dlls list")
 
     if os.name in ("ce", "nt"):
-        default_modules = ["ctypes.wintypes", "ctypes" ]
+        default_modules = ["ctypes.wintypes" ]
     else:
-        default_modules = ["ctypes" ]
+        default_modules = [ ] # ctypes is already imported
 
     parser.add_option("-m",
                       dest="modules",

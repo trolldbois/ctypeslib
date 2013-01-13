@@ -102,7 +102,7 @@ def _calc_packing(struct, fields, pack, isStruct):
         if size % a:
             size += a - size % a
         if isStruct:
-            if size != f.offset:
+            if size != f.offset: 
                 raise PackingError, "field %s offset (%s/%s)" % (f.name, size, f.offset)
             size += s
         else:
@@ -160,7 +160,8 @@ class Initializer(object):
 
     def FundamentalType(self, tp, init, is_pointer=False):
         try:
-            mth = getattr(self, ctypes_names[tp.name].replace("None", "void"))
+            #mth = getattr(self, ctypes_names[tp.name].replace("None", "void"))
+            mth = getattr(self, tp.name.replace("None", "void"))
         except AttributeError:
             raise TypeError("Cannot initialize %s" % tp.name)
         return mth(tp, init, is_pointer)
@@ -302,6 +303,7 @@ class Generator(object):
         if isinstance(t, typedesc.Typedef):
             return t.name
         if isinstance(t, typedesc.PointerType):
+            #print '** type_name we have pointer ',t
             if ASSUME_STRINGS:
                 x = get_real_type(t.typ)
                 if isinstance(x, typedesc.FundamentalType):
@@ -453,6 +455,7 @@ class Generator(object):
     _pointertypes = 0
     def PointerType(self, tp):
         self._pointertypes += 1
+        #print 'generate', tp.typ
         if type(tp.typ) is typedesc.PointerType:
             self.generate(tp.typ)
         elif type(tp.typ) in (typedesc.Union, typedesc.Structure):
@@ -560,14 +563,15 @@ class Generator(object):
                 # have no fields.  The packing would fail, but it is
                 # unneeded anyway so we skip it.
                 if fields:
-                    pack = 0 #FIXME #calc_packing(body.struct, fields)
+                    #pack = 0 #FIXME #
+                    pack = calc_packing(body.struct, fields)
                     if pack is not None:
                         print >> self.stream, "%s._pack_ = %s" % (body.struct.name, pack)
             except PackingError, details:
                 # if packing fails, write a warning comment to the output.
                 import warnings
                 message = "Structure %s: %s" % (body.struct.name, details)
-                warnings.warn(message, UserWarning)
+                # FIXME warnings.warn(message, UserWarning)
 
         if body.struct.bases:
             #print body, type(body.struct).__name__, body.struct.name, len(body.struct.bases)
@@ -743,11 +747,18 @@ class Generator(object):
     def generate(self, item):
         if item in self.done:
             return
+        
+        n=''
+        if hasattr(item, 'name'):
+            n = item.name 
+        #print '** got an item', type(item).__name__, n, id(item)
+        
         if isinstance(item, typedesc.StructureHead):
             name = getattr(item.struct, "name", None)
         else:
             name = getattr(item, "name", None)
         if name in self.known_symbols:
+            print 'item is in known_symbols', name
             mod = self.known_symbols[name]
             print >> self.imports, "from %s import %s" % (mod, name)
             self.done.add(item)
@@ -844,6 +855,7 @@ def generate_code(srcfile,
         from gccxmlparser import parse
     else:
         from clangparser import parse
+
     items = parse(srcfile)
 
     # filter symbols to generate
