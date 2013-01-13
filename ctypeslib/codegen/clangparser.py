@@ -14,9 +14,59 @@ import re
 log = logging.getLogger('clangparser')
 logging.basicConfig(level=logging.DEBUG)
 
+# TODO:
+# ignore packing method.
+# clang does a better job.
+
 ################################################################
+clang_ctypes_names = {
+    #TypeKind.INVALID : 'None' ,
+    #TypeKind.UNEXPOSED : 'c_' ,
+    TypeKind.VOID : 'None' ,
+    TypeKind.BOOL : 'c_bool' ,
+    TypeKind.CHAR_U : 'c_ubyte' ,
+    TypeKind.UCHAR : 'c_ubyte' ,
+    TypeKind.CHAR16 : 'c_wchar' ,
+    TypeKind.CHAR32 : 'c_wchar*2' , # FIXME
+    TypeKind.USHORT : 'c_ushort' ,
+    TypeKind.UINT : 'c_uint' ,
+    TypeKind.ULONG : 'c_ulong' ,
+    TypeKind.ULONGLONG : 'c_ulonglong' ,
+    TypeKind.UINT128 : 'c_uin128' , #FIXME
+    TypeKind.CHAR_S : 'c_byte' ,
+    TypeKind.SCHAR : 'c_byte' ,
+    TypeKind.WCHAR : 'c_wchar' ,
+    TypeKind.SHORT : 'c_short' ,
+    TypeKind.INT : 'c_int' ,
+    TypeKind.LONG : 'c_long' ,
+    TypeKind.LONGLONG : 'c_longlong' ,
+    TypeKind.INT128 : 'c_int128' , # FIXME
+    TypeKind.FLOAT : 'c_float' ,
+    TypeKind.DOUBLE : 'c_double' ,
+    TypeKind.LONGDOUBLE : 'c_longdouble' ,
+    TypeKind.NULLPTR : 'c_void_p' , #FIXME
+    #TypeKind.OVERLOAD : 'c_' ,
+    #TypeKind.DEPENDENT : 'c_' ,
+    #TypeKind.OBJCID : 'c_' ,
+    #TypeKind.OBJCCLASS : 'c_' ,
+    #TypeKind.OBJCSEL : 'c_' ,
+    #TypeKind.COMPLEX : 'c_' ,
+    TypeKind.POINTER : 'c_void_p' ,
+    TypeKind.BLOCKPOINTER : 'c_void_p' ,
+    #TypeKind.LVALUEREFERENCE : 'c_' ,
+    #TypeKind.RVALUEREFERENCE : 'c_' ,
+    #TypeKind.RECORD : 'c_' ,
+    #TypeKind.ENUM : 'c_' ,
+    #TypeKind.TYPEDEF : 'c_' ,
+    #TypeKind.OBJCINTERFACE : 'c_' ,
+    #TypeKind.OBJCOBJECTPOINTER : 'c_' ,
+    #TypeKind.FUNCTIONNOPROTO : 'c_' ,
+    #TypeKind.FUNCTIONPROTO : 'c_' ,
+    #TypeKind.CONSTANTARRAY : 'c_' ,
+}
 
 def MAKE_NAME(name):
+    name = name.split('@')[-1]
     name = name.replace("$", "DOLLAR")
     name = name.replace(".", "DOT")
     if name.startswith("__"):
@@ -151,6 +201,7 @@ class Clang_Parser(object):
         mth = getattr(self, node.kind.name)
         if mth is None:
             return
+        log.debug('Found a %s %s'%(node.kind.name, node.displayname))
         result = mth(node)
         if result is None:
             return
@@ -159,7 +210,7 @@ class Clang_Parser(object):
             result.location = node.location
         # record the result
         # NO id in clang nodes. ## _id = attrs.get("id", None)
-        _id = node.get_usr() #id(node)
+        _id = id(node.get_usr() ) #id(node)
         #print _id, node
         # The '_id' attribute is used to link together all the
         # nodes, in the _fixup_ methods.
@@ -167,6 +218,7 @@ class Clang_Parser(object):
         
         ## self.all[_id] should return the Typedesc object, so that type(x).__name__ is a local func to codegen object
         self.all[_id] = result
+        
         
         #else:
         #    # EnumValue, for example, has no "_id" attribute.
@@ -199,6 +251,14 @@ class Clang_Parser(object):
     def Base(self, attrs): pass
     def Ellipsis(self, attrs): pass
     def OperatorMethod(self, attrs): pass
+
+    def UNEXPOSED_ATTR(self, cursor): 
+        log.debug('Found UNEXPOSED_ATTR %s %s'%(cursor.kind.name, cursor.kind.value))
+        parent = self.context[-1]
+        print 'parent is',parent.displayname, parent.location, parent.extent
+        # TODO until attr is exposed by clang:
+        # readlines()[extent] .split(' ') | grep {inline,packed}
+        pass
 
     ################################
     # real element handlers
@@ -242,9 +302,8 @@ class Clang_Parser(object):
 
     #def Typedef(self, attrs):
     def TYPEDEF_DECL(self, cursor):
-        log.debug('Found a typedef')
         name = cursor.displayname
-        typ = cursor.get_usr() #cursor.type.get_canonical().kind.name
+        typ = id(cursor.get_usr()) #cursor.type.get_canonical().kind.name
         return typedesc.Typedef(name, typ)
 
     def _fixup_Typedef(self, t):
@@ -393,23 +452,24 @@ class Clang_Parser(object):
     def STRUCT_DECL(self, cursor):
         # id, name, members
         name = cursor.displayname
-        if name is None:
-            raise ValueError('could try get_usr()')
+        if name == '':
             name = MAKE_NAME( cursor.get_usr() )
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
         for k, v in [('<','_'), ('>','_'), ('::','__'), (',',''), (' ',''), ]:
           if k in name: # template
             name = name.replace(k,v)
-        # FIXME: lets ignore members for now.
+        # FIXME: lets ignore bases for now.
         #bases = attrs.get("bases", "").split() # that for cpp ?
         # check get_children. # members = attrs.get("members", "").split()
-        print '** ', cursor.kind.name
-        print '** ', cursor.type.kind.name
+
         bases = [] # FIXME: support CXX
         align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
         size = clang.cindex._clang_getRecordSize( self.tu, cursor) # 
+
+        self.context.append( cursor )
         members = [self.startElement( child ) for child in cursor.get_children()]
+        self.context.pop()
              
         return typedesc.Structure(name, align, members, bases, size)
 
@@ -443,7 +503,14 @@ class Clang_Parser(object):
         # offset = attrs.get("offset")
         # FIXME
         #typ = cursor.type.get_canonical().kind.name
-        typ = cursor.get_usr() 
+        t = cursor.type.get_canonical().kind
+        if t in clang_ctypes_names:
+            typ = typedesc.FundamentalType( clang_ctypes_names[t], 0, 0 )
+        else: # if record ?
+            # FIXME ????
+            typ = cursor.type #cursor.get_usr() 
+        print 'found a field with type', t.name #clang_ctypes_names[cursor.type] 
+        cursor.type #
         bits = None
         offset = clang.cindex._clang_getRecordFieldOffset(self.tu, cursor)
 
@@ -452,6 +519,7 @@ class Clang_Parser(object):
     def _fixup_Field(self, f):
         print 'before fixup, field f.typ:',f.typ#, self.all[f.typ]
         f.typ = self.all[f.typ]
+        print 'after, type(f.typ) = ',type(f.typ).__name__
         pass
 
     ################
@@ -504,7 +572,9 @@ class Clang_Parser(object):
                        typedesc.Variable, typedesc.Macro, typedesc.Alias)
 
         self.get_macros(self.cpp_data.get("functions"))
-        print 'self.all', self.all
+        
+        #print 'self.all', self.all
+        
         remove = []
         for n, i in self.all.items():
             location = getattr(i, "location", None)
@@ -539,7 +609,7 @@ class Clang_Parser(object):
             if isinstance(i, interesting):
                 result.append(i)
 
-        print 'clangparser get_result:',result
+        #print 'clangparser get_result:',result
         return result
     
     #catch-all

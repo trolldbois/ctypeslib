@@ -335,7 +335,8 @@ class Generator(object):
             # const and volatile are ignored
             return "%s" % self.type_name(t.typ, generate)
         elif isinstance(t, typedesc.FundamentalType):
-            return ctypes_names[t.name]
+            #return ctypes_names[t.name] # FIXED clang
+            return t.name
         elif isinstance(t, typedesc.Structure):
             return t.name
         elif isinstance(t, typedesc.Enumeration):
@@ -559,7 +560,7 @@ class Generator(object):
                 # have no fields.  The packing would fail, but it is
                 # unneeded anyway so we skip it.
                 if fields:
-                    pack = calc_packing(body.struct, fields)
+                    pack = 0 #FIXME #calc_packing(body.struct, fields)
                     if pack is not None:
                         print >> self.stream, "%s._pack_ = %s" % (body.struct.name, pack)
             except PackingError, details:
