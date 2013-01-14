@@ -30,3 +30,14 @@ struct Node2 {
   unsigned char m1;
   struct Node * m2;
 };
+
+enum myEnum {
+ONE,
+TWO,
+FOUR = 4 // no support exposed for now.
+};
+
+//COREDUMP 
+//struct Anon;
+//struct Anon2;
+

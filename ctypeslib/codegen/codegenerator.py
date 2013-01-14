@@ -5,6 +5,9 @@ import typedesc, sys, os
 import textwrap
 import struct, ctypes
 
+import logging
+log=logging.getLogger('codegen')
+
 # This should be configurable
 ASSUME_STRINGS = True
 
@@ -750,8 +753,9 @@ class Generator(object):
         
         n=''
         if hasattr(item, 'name'):
-            n = item.name 
-        #print '** got an item', type(item).__name__, n, id(item)
+            n = item.name
+        elif isinstance( item, (str,)):
+            log.error( '** got an string item %s'%( item ) )
         
         if isinstance(item, typedesc.StructureHead):
             name = getattr(item.struct, "name", None)

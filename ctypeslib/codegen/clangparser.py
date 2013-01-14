@@ -206,12 +206,18 @@ class Clang_Parser(object):
         result = mth(node)
         if result is None:
             return
+        #if isinstance(result, (str,)):
+        #    return
 
         if node.location.file is not None:
+            #print result, node
             result.location = node.location
+
         ## self.all[_id] should return the Typedesc object, so that type(x).__name__ is a local func to codegen object
         _id = node.get_usr()
-        self.all[_id] = result
+        #print '++ startElement _id ', _id
+        if _id != '': # TYPE_REF, Ignore.        
+            self.all[_id] = result
         
         # if this element has children, treat them.
         # if name in self.has_values:
@@ -298,6 +304,21 @@ class Clang_Parser(object):
         t.typ = self.all[ t.typ]
         pass
 
+    def TYPE_REF(self, t):
+        #t.get_definition().get_usr()
+        # get the definition, create or reuse typedesc.
+        next = t.get_definition()
+        _id = next.get_usr()
+        ##print '** _id is ', _id
+        if _id in self.all:
+            return self.all[_id]
+        mth = getattr(self, next.kind.name)
+        if mth is None:
+            raise TypeError('unhandled Type_ref TypeKind %s'%(next.kind))
+        self.all[_id]  = mth(next)
+        return self.all[_id]
+        
+        
     def FundamentalType(self, cursor):
         t = cursor.type.get_canonical().kind
         ctypesname = clang_ctypes_names[t]
@@ -310,7 +331,7 @@ class Clang_Parser(object):
 
     def _fixup_FundamentalType(self, t): pass
 
-    def PointerType(self, cursor):
+    def POINTER(self, cursor):
         # we shortcut to canonical defs
         typ = cursor.type.get_pointee().get_canonical().kind
 
@@ -351,9 +372,9 @@ class Clang_Parser(object):
         if type(p.typ.typ) != typedesc.FundamentalType:
             p.typ.typ = self.all[p.typ.typ]
 
-    ReferenceType = PointerType
+    ReferenceType = POINTER
     _fixup_ReferenceType = _fixup_PointerType
-    OffsetType = PointerType
+    OffsetType = POINTER
     _fixup_OffsetType = _fixup_PointerType
 
     def ArrayType(self, attrs):
@@ -447,32 +468,67 @@ class Clang_Parser(object):
 
     def ENUM_DECL(self, cursor):
         # id, name
+        #print '** ENUMERATION', cursor.displayname
         name = cursor.displayname
-        if name is None:
-            raise ValueError('could try get_usr()')
+        if name == '':
+            #raise ValueError('could try get_usr()')
             name = MAKE_NAME( cursor.get_usr() )
         align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
         size = clang.cindex._clang_getRecordSize( self.tu, cursor) # 
+        #print align, size
         return typedesc.Enumeration(name, size, align)
 
     def _fixup_Enumeration(self, e): pass
 
-    def EnumValue(self, attrs):
-        name = attrs["name"]
-        value = attrs["init"]
-        v = typedesc.EnumValue(name, value, self.context[-1])
-        self.context[-1].add_value(v)
+    def ENUM_CONSTANT_DECL(self, cursor):
+        #import code
+        #code.interact(local=locals())
+
+        name = cursor.displayname
+        print name
+        # FIXME: need token support in clang.py
+        # if no val 
+        parent = self.all[self.context[-1].get_usr()]
+        if len(parent.values) == 0:
+            value = 0
+        else:
+            last_val = parent.values[-1]
+            value = last_val.value+1
+        ## If val
+        # cursor.get_children()[0]
+        
+        v = typedesc.EnumValue(name, value, parent)
+        parent.add_value(v)
         return v
 
     def _fixup_EnumValue(self, e): pass
 
     # structures, unions, classes
 
-    #def Struct(self, attrs):
+    def RECORD(self, cursor):
+        # either Union, Struct, Enum(?) in Ref or in Decl.
+        ## TypeKind RECORD = cursor.type.get_canonical().kind
+        children = [c for c in cursor.get_children()]
+        if len(children) != 1:
+            raise ValueError('There is %d children - not expected in a record type '%(len(children)))
+
+        next = children[0]
+        mth = getattr(self, next.kind.name)
+        if mth is None:
+            raise TypeError('unhandled Record TypeKind %s'%(next.kind))
+        ## if next == CursorKind.TYPE_REF: # defer
+        ## if next == CursorKind.UNION_DECL: # create
+        ## if next == CursorKind.STRUCT_DECL: # create
+        
+        import code
+        code.interact(local=locals())
+
+        return mth(next)
+
     def STRUCT_DECL(self, cursor):
         # id, name, members
         name = cursor.displayname
-        if name == '':
+        if name == '': # anonymous is spelling == ''
             name = MAKE_NAME( cursor.get_usr() )
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
@@ -499,11 +555,9 @@ class Clang_Parser(object):
         pass
     _fixup_Union = _fixup_Structure
 
-    #def Union(self, attrs):
     def UNION_DECL(self, cursor):
         name = cursor.displayname
-        if name is None:
-            raise ValueError('could try get_usr()')
+        if name == '': # anonymous is spelling == ''
             name = MAKE_NAME( cursor.get_usr() )
         bases = [] # FIXME: support CXX
         align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
@@ -519,33 +573,28 @@ class Clang_Parser(object):
         name = cursor.displayname
 ##        if name.startswith("__") and not name.endswith("__"):
 ##            print "INVALID FIELD NAME", name
-        # bits = attrs.get("bits", None)
-        # offset = attrs.get("offset")
-        # FIXME
-        #typ = cursor.type.get_canonical().kind.name
+
         t = cursor.type.get_canonical().kind
         if t in clang_ctypes_names:
             # goto self.FundamentalType
             typ = self.FundamentalType(cursor)
-        elif t == TypeKind.POINTER: 
-            typ = self.PointerType(cursor)
-        else: # if record ?
-            typ = cursor.get_usr() 
-            log.warning( 'unknown field type %s %s %s'%(cursor.kind.name, cursor.type.kind.name, cursor.type.get_canonical().kind.name))
-            print cursor.displayname, cursor.location
-            
-            #getattr(self, )
-        ##print 'found a field with type', t.name, cursor.type.kind.name, cursor.spelling #clang_ctypes_names[cursor.type] 
-        #print 'found', cursor.get_definition().location
+        else:
+            mth = getattr(self, t.name)
+            if mth is None:
+                raise TypeError('unhandled Field TypeKind %s'%(next.kind))
+            typ  = mth(cursor)
+
+        # FIXME
+        # bits = attrs.get("bits", None)
         bits = None
         offset = clang.cindex._clang_getRecordFieldOffset(self.tu, cursor)
 
         return typedesc.Field(name, typ, bits, offset)
 
     def _fixup_Field(self, f):
-        #print 'before fixup, field f.typ:',f.typ
-        cb=getattr(self, '_fixup_%s'%(type(f.typ).__name__))
-        cb(f)
+        #print 'fixup field', f.typ
+        mth = getattr(self, '_fixup_%s'%(type(f.typ).__name__))
+        mth(f)
         pass
 
     ################
@@ -604,8 +653,17 @@ class Clang_Parser(object):
         
         remove = []
         for n, i in self.all.items():
+            #if hasattr(i, 'typ') and 'Node' in n:
+            #    pass
+            #    #print n,i, i.typ
+            #elif hasattr(i, 'members') and 'Node' in n:
+            #    print n,i, i.members
+            #elif 'Node' in n:
+            #    print n,i
             location = getattr(i, "location", None)
+            #print location
             if location:
+                #print location
                 i.location = location.file.name, location.line
             #else:
             #    #print 'null location on ', n, i.name
