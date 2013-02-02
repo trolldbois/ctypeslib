@@ -423,12 +423,12 @@ class Generator(object):
             "int64_t": "c_int64",
             }
         self._typedefs += 1
-        if type(tp.typ) == typedesc.FundamentalType \
-           and tp.name in sized_types:
-            print >> self.stream, "%s = %s" % \
-                  (tp.name, sized_types[tp.name])
-            self.names.add(tp.name)
-            return
+        #if type(tp.typ) == typedesc.FundamentalType \
+        #   and tp.name in sized_types:
+        #    print >> self.stream, "%s = %s" % \
+        #          (tp.name, sized_types[tp.name])
+        #    self.names.add(tp.name)
+        #    return
         if type(tp.typ) in (typedesc.Structure, typedesc.Union):
             self.generate(tp.typ.get_head())
             self.more.add(tp.typ)
@@ -774,6 +774,7 @@ class Generator(object):
         # to avoid infinite recursion, we have to mark it as done
         # before actually generating the code.
         self.done.add(item)
+
         mth(item)
 
     def generate_all(self, items):
@@ -817,6 +818,7 @@ class Generator(object):
                                        subsequent_indent="           ")
         for line in wrapper.wrap(text):
             print >> self.output, line
+
         return loops
 
     def print_stats(self, stream):
@@ -861,7 +863,7 @@ def generate_code(srcfile,
         from clangparser import parse
 
     items = parse(srcfile)
-
+    
     # filter symbols to generate
     todo = []
 

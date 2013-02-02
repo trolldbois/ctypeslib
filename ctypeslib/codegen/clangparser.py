@@ -295,12 +295,18 @@ class Clang_Parser(object):
     #def Typedef(self, attrs):
     def TYPEDEF_DECL(self, cursor):
         name = cursor.displayname
-        typ = cursor.get_usr() #cursor.type.get_canonical().kind.name
+        typ = cursor.type.get_canonical().kind
+        if typ in clang_ctypes_names:
+            ctypesname = clang_ctypes_names[typ]
+            typ = typedesc.FundamentalType( ctypesname, 0, 0 )
+        else:
+            typ = cursor.get_usr() #cursor.type.get_canonical().kind.name
         return typedesc.Typedef(name, typ)
 
     def _fixup_Typedef(self, t):
-        #print 'fixing typdef with self.all[%s]'%(t) 
-        t.typ = self.all[ t.typ]
+        #print 'fixing typdef %s name:%s with self.all[%s] = %s'%(id(t), t.name, t.typ, id(self.all[ t.typ])) 
+        if type(t.typ) == str: #typedesc.FundamentalType:
+            t.typ = self.all[ t.typ]
         pass
 
     def TYPE_REF(self, t):
@@ -403,8 +409,10 @@ class Clang_Parser(object):
         return typedesc.ArrayType(typ, size, size)
 
     def _fixup_ArrayType(self, a):
-        if type(a.typ) != typedesc.FundamentalType:
-            a.typ = self.all[a.typ]
+        # FIXME
+        #if type(a.typ) != typedesc.FundamentalType:
+        #    a.typ = self.all[a.typ]
+        pass
 
     def CvQualifiedType(self, attrs):
         # id, type, [const|volatile]
@@ -686,31 +694,14 @@ class Clang_Parser(object):
 
         self.get_macros(self.cpp_data.get("functions"))
         
-        #print 'self.all', self.all
-        
         remove = []
         for n, i in self.all.items():
-            #if hasattr(i, 'typ') and 'Node' in n:
-            #    pass
-            #    #print n,i, i.typ
-            #elif hasattr(i, 'members') and 'Node' in n:
-            #    print n,i, i.members
-            #elif 'Node' in n:
-            #    print n,i
             location = getattr(i, "location", None)
-            #print location
             if location:
-                #print location
                 i.location = location.file.name, location.line
-            #else:
-            #    #print 'null location on ', n, i.name
-            #    # DELETE  = self.all[fil].name, line
-            # link together all the nodes (the XML that gccxml generates uses this).
-            #print 'fixing ',n, type(i).__name__
             mth = getattr(self, "_fixup_" + type(i).__name__)
             try:
                 mth(i)
-                #FIXME
             except IOError,e:#KeyError,e: # XXX better exception catching
                 log.warning('function "%s" missing, err:%s, remove %s'%("_fixup_" + type(i).__name__, e, n) )
                 remove.append(n)
@@ -727,7 +718,6 @@ class Clang_Parser(object):
             name = getattr(i, "name", None)
             if name is not None:
                 namespace[name] = i
-
         self.get_aliases(self.cpp_data.get("aliases"), namespace)
 
         result = []
@@ -735,6 +725,10 @@ class Clang_Parser(object):
             if isinstance(i, interesting):
                 result.append(i)
 
+        #print 'self.all', self.all
+        #import code
+        #code.interact(local=locals())
+        
         #print 'clangparser get_result:',result
         return result
     
