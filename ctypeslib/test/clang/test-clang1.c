@@ -37,6 +37,11 @@ TWO,
 FOUR = 4 // no support exposed for now.
 };
 
+typedef struct
+{
+  long __val[2];
+} my__quad_t;
+
 //COREDUMP 
 //struct Anon;
 //struct Anon2;

@@ -67,9 +67,10 @@ clang_ctypes_names = {
 }
 
 def MAKE_NAME(name):
-    name = name.split('@')[-1]
     name = name.replace("$", "DOLLAR")
     name = name.replace(".", "DOT")
+    name = name.replace("@", "_")
+    name = name.replace(":", "_")
     if name.startswith("__"):
         return "_X" + name
     elif name[0] in "01234567879":
@@ -185,24 +186,20 @@ class Clang_Parser(object):
         root = self.tu.cursor
         self.context = []
         for node in root.get_children():
-            # if open
-            #self.startElement(node.kind, dict(node.children))
-            self.startElement(node ) #.kind, node.get_children() )
+            self.startElement( node )
 
-            #else: # xml close
-            #if node.text:
-            #    self.characters(node.text)
-            #self.endElement(node.tag)
-            #node.clear()
 
     def startElement(self, node ): #kind, attrs):
         if node is None:
             return
+
         # find and call the handler for this element
         mth = getattr(self, node.kind.name)
         if mth is None:
             return
+        
         #log.debug('Found a %s|%s|%s'%(node.kind.name, node.displayname, node.spelling))
+        
         result = mth(node)
         if result is None:
             return
@@ -216,8 +213,10 @@ class Clang_Parser(object):
         ## self.all[_id] should return the Typedesc object, so that type(x).__name__ is a local func to codegen object
         _id = node.get_usr()
         #print '++ startElement _id ', _id
-        if _id != '': # TYPE_REF, Ignore.        
+        if _id != '' and result is not None: # TYPE_REF, Ignore.        
             self.all[_id] = result
+        elif result is None:
+            log.debug('None result')
         
         # if this element has children, treat them.
         # if name in self.has_values:
@@ -256,28 +255,28 @@ class Clang_Parser(object):
     ################################
     # real element handlers
 
-    def CPP_DUMP(self, attrs):
-        name = attrs["name"]
-        # Insert a new list for each named section into self.cpp_data,
-        # and point self.cdata to it.  self.cdata will be set to None
-        # again at the end of each section.
-        self.cpp_data[name] = self.cdata = []
+    #def CPP_DUMP(self, attrs):
+    #    name = attrs["name"]
+    #    # Insert a new list for each named section into self.cpp_data,
+    #    # and point self.cdata to it.  self.cdata will be set to None
+    #    # again at the end of each section.
+    #    self.cpp_data[name] = self.cdata = []
 
-    def characters(self, content):
-        if self.cdata is not None:
-            self.cdata.append(content)
+    #def characters(self, content):
+    #    if self.cdata is not None:
+    #        self.cdata.append(content)
 
-    def File(self, attrs):
-        name = attrs["name"]
-        if sys.platform == "win32" and " " in name:
-            # On windows, convert to short filename if it contains blanks
-            from ctypes import windll, create_unicode_buffer, sizeof, WinError
-            buf = create_unicode_buffer(512)
-            if windll.kernel32.GetShortPathNameW(name, buf, sizeof(buf)):
-                name = buf.value
-        return typedesc.File(name)
-
-    def _fixup_File(self, f): pass
+    #def File(self, attrs):
+    #    name = attrs["name"]
+    #    if sys.platform == "win32" and " " in name:
+    #        # On windows, convert to short filename if it contains blanks
+    #        from ctypes import windll, create_unicode_buffer, sizeof, WinError
+    #        buf = create_unicode_buffer(512)
+    #        if windll.kernel32.GetShortPathNameW(name, buf, sizeof(buf)):
+    #            name = buf.value
+    #    return typedesc.File(name)
+    #
+    #def _fixup_File(self, f): pass
     
     # simple types and modifiers
 
@@ -305,7 +304,8 @@ class Clang_Parser(object):
         pass
 
     def TYPE_REF(self, t):
-        #t.get_definition().get_usr()
+        if not t.is_definition():
+            return
         # get the definition, create or reuse typedesc.
         next = t.get_definition()
         _id = next.get_usr()
@@ -315,8 +315,12 @@ class Clang_Parser(object):
         mth = getattr(self, next.kind.name)
         if mth is None:
             raise TypeError('unhandled Type_ref TypeKind %s'%(next.kind))
-        self.all[_id]  = mth(next)
-        return self.all[_id]
+        res = mth(next)
+        if res is not None:
+            self.all[_id] = res
+            return self.all[_id]
+        log.error('None on TYPE_REF')
+        return
         
         
     def FundamentalType(self, cursor):
@@ -369,15 +373,23 @@ class Clang_Parser(object):
         #print '*** Fixing up PointerType', p.typ
         #import code
         #code.interact(local=locals())
-        if type(p.typ.typ) != typedesc.FundamentalType:
-            p.typ.typ = self.all[p.typ.typ]
+        ##if type(p.typ.typ) != typedesc.FundamentalType:
+        ##    p.typ.typ = self.all[p.typ.typ]
+        if type(p.typ) != typedesc.FundamentalType:
+            p.typ = self.all[p.typ]
 
     ReferenceType = POINTER
     _fixup_ReferenceType = _fixup_PointerType
     OffsetType = POINTER
     _fixup_OffsetType = _fixup_PointerType
 
-    def ArrayType(self, attrs):
+    def CONSTANTARRAY(self, cursor):
+        print 'DEBUG constant array'
+        import code
+        code.interact(local=locals())
+        log.warning('unsupported CONSTANTARRAY %s %s'%(cursor.displayname, cursor.location))
+        return
+        ## ConstantArrayType::getSize , ArrayType::getElementType
         # type, min?, max?
         typ = attrs["type"]
         min = attrs["min"]
@@ -470,9 +482,9 @@ class Clang_Parser(object):
         # id, name
         #print '** ENUMERATION', cursor.displayname
         name = cursor.displayname
-        if name == '':
-            #raise ValueError('could try get_usr()')
-            name = MAKE_NAME( cursor.get_usr() )
+        #if name == '':
+        #    #raise ValueError('could try get_usr()')
+        #    name = MAKE_NAME( cursor.get_usr() )
         align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
         size = clang.cindex._clang_getRecordSize( self.tu, cursor) # 
         #print align, size
@@ -485,7 +497,7 @@ class Clang_Parser(object):
         #code.interact(local=locals())
 
         name = cursor.displayname
-        print name
+        #print name
         # FIXME: need token support in clang.py
         # if no val 
         parent = self.all[self.context[-1].get_usr()]
@@ -518,18 +530,27 @@ class Clang_Parser(object):
             raise TypeError('unhandled Record TypeKind %s'%(next.kind))
         ## if next == CursorKind.TYPE_REF: # defer
         ## if next == CursorKind.UNION_DECL: # create
-        ## if next == CursorKind.STRUCT_DECL: # create
+        ## if next == CursorKind.g: # create
         
-        import code
-        code.interact(local=locals())
+        #import code
+        #code.interact(local=locals())
 
         return mth(next)
 
     def STRUCT_DECL(self, cursor):
+
+        #import code
+        #code.interact(local=locals())
+        
+        if not cursor.is_definition():
+            return
+        
         # id, name, members
         name = cursor.displayname
         if name == '': # anonymous is spelling == ''
             name = MAKE_NAME( cursor.get_usr() )
+            #import code
+            #code.interact(local=locals())
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
         # should be in MAKE_NAME
@@ -549,8 +570,15 @@ class Clang_Parser(object):
 
     def _fixup_Structure(self, s):
         #print 'before', s.members
-        s.members = [self.all[m] for m in s.members if type(self.all[m]) == typedesc.Field]
-        #print 'after', s.members
+        #for m in s.members:
+        #    if m not in self.all:
+        #        print s.name,s.location
+        s.members = [self.all[m] for m in s.members if m in self.all and type(self.all[m]) == typedesc.Field ]
+        #print 'after', [m.typ for m in s.members], len(s.members )
+        #if s.members[0] is None:
+        #    s.members = []
+        #print len(s.members), type(s.members[0])
+        #print 'after', [m.typ for m in s.members]
         #s.bases = [self.all[b] for b in s.bases]
         pass
     _fixup_Union = _fixup_Structure
@@ -581,8 +609,11 @@ class Clang_Parser(object):
         else:
             mth = getattr(self, t.name)
             if mth is None:
-                raise TypeError('unhandled Field TypeKind %s'%(next.kind))
+                raise TypeError('unhandled Field TypeKind %s'%(t.name))
             typ  = mth(cursor)
+            if typ is None:
+                return None
+                #raise TypeError('Field can not be None %s %s'%(name, t.name))   
 
         # FIXME
         # bits = attrs.get("bits", None)
@@ -593,8 +624,9 @@ class Clang_Parser(object):
 
     def _fixup_Field(self, f):
         #print 'fixup field', f.typ
-        mth = getattr(self, '_fixup_%s'%(type(f.typ).__name__))
-        mth(f)
+        if f.typ is not None:
+            mth = getattr(self, '_fixup_%s'%(type(f.typ).__name__))
+            mth(f.typ)
         pass
 
     ################
@@ -673,7 +705,8 @@ class Clang_Parser(object):
             mth = getattr(self, "_fixup_" + type(i).__name__)
             try:
                 mth(i)
-            except KeyError,e: # XXX better exception catching
+                #FIXME
+            except IOError,e:#KeyError,e: # XXX better exception catching
                 log.warning('function "%s" missing, err:%s, remove %s'%("_fixup_" + type(i).__name__, e, n) )
                 remove.append(n)
 
