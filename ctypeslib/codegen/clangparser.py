@@ -323,9 +323,10 @@ class Clang_Parser(object):
         return
         
         
-    def FundamentalType(self, cursor):
-        t = cursor.type.get_canonical().kind
-        ctypesname = clang_ctypes_names[t]
+    def FundamentalType(self, typ):
+        #print cursor.displayname
+        #t = cursor.type.get_canonical().kind
+        ctypesname = clang_ctypes_names[typ]
         if ctypesname == "None":
             size = 0
         else:
@@ -384,22 +385,26 @@ class Clang_Parser(object):
     _fixup_OffsetType = _fixup_PointerType
 
     def CONSTANTARRAY(self, cursor):
-        print 'DEBUG constant array'
-        import code
-        code.interact(local=locals())
-        log.warning('unsupported CONSTANTARRAY %s %s'%(cursor.displayname, cursor.location))
-        return
-        ## ConstantArrayType::getSize , ArrayType::getElementType
-        # type, min?, max?
-        typ = attrs["type"]
-        min = attrs["min"]
-        max = attrs["max"]
-        if max == "ffffffffffffffff":
-            max = "-1"
-        return typedesc.ArrayType(typ, min, max)
+        size = str( cursor.type.get_array_size() )
+        typ = cursor.type.get_array_element_type().get_canonical().kind
+        if typ in clang_ctypes_names:
+            typ = self.FundamentalType( typ )
+        else:
+            mth = getattr(self, typ.name)
+            if mth is None:
+                raise TypeError('unhandled Field TypeKind %s'%(t.name))
+            typ  = mth(cursor)
+            if typ is None:
+                return None
+
+        #import code
+        #code.interact(local=locals())
+        
+        return typedesc.ArrayType(typ, size, size)
 
     def _fixup_ArrayType(self, a):
-        a.typ = self.all[a.typ]
+        if type(a.typ) != typedesc.FundamentalType:
+            a.typ = self.all[a.typ]
 
     def CvQualifiedType(self, attrs):
         # id, type, [const|volatile]
@@ -424,6 +429,8 @@ class Clang_Parser(object):
         returns = None
         attributes = None
         extern = None
+        # FIXME:
+        # cursor.get_arguments() or see def PARM_DECL()
         return typedesc.Function(name, returns, attributes, extern)
 
     def _fixup_Function(self, func):
@@ -471,10 +478,21 @@ class Clang_Parser(object):
         m.returns = self.all[m.returns]
         m.fixup_argtypes(self.all)
 
-    def Argument(self, attrs):
-        parent = self.context[-1]
-        if parent is not None:
-            parent.add_argument(typedesc.Argument(attrs["type"], attrs.get("name")))
+    # working, except for parent not being a Typedesc.
+    def PARM_DECL(self, p):
+    #    import code
+    #    code.interact(local=locals())
+    #    parent = self.context[-1]
+    #    if parent is not None:
+    #        parent.add_argument(typedesc.Argument(p.type.get_canonical(), p.name))
+        return
+
+    # Just ignore it.
+    def INTEGER_LITERAL(self, i):
+        #print ' im a integer i'
+        #import code
+        #code.interact(local=locals())
+        return
 
     # enumerations
 
@@ -485,30 +503,17 @@ class Clang_Parser(object):
         #if name == '':
         #    #raise ValueError('could try get_usr()')
         #    name = MAKE_NAME( cursor.get_usr() )
-        align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
-        size = clang.cindex._clang_getRecordSize( self.tu, cursor) # 
+        align = clang.cindex.conf.lib.clang_getRecordAlignment( self.tu, cursor) # 
+        size = clang.cindex.conf.lib.clang_getRecordSize( self.tu, cursor) # 
         #print align, size
         return typedesc.Enumeration(name, size, align)
 
     def _fixup_Enumeration(self, e): pass
 
     def ENUM_CONSTANT_DECL(self, cursor):
-        #import code
-        #code.interact(local=locals())
-
         name = cursor.displayname
-        #print name
-        # FIXME: need token support in clang.py
-        # if no val 
-        parent = self.all[self.context[-1].get_usr()]
-        if len(parent.values) == 0:
-            value = 0
-        else:
-            last_val = parent.values[-1]
-            value = last_val.value+1
-        ## If val
-        # cursor.get_children()[0]
-        
+        value = cursor.enum_value
+        parent = self.all[self.context[-1].get_usr()]        
         v = typedesc.EnumValue(name, value, parent)
         parent.add_value(v)
         return v
@@ -561,8 +566,8 @@ class Clang_Parser(object):
         #bases = attrs.get("bases", "").split() # that for cpp ?
         bases = [] # FIXME: support CXX
 
-        align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) 
-        size = clang.cindex._clang_getRecordSize( self.tu, cursor) 
+        align = clang.cindex.conf.lib.clang_getRecordAlignment( self.tu, cursor) 
+        size = clang.cindex.conf.lib.clang_getRecordSize( self.tu, cursor) 
 
         members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
         #print 'found %d members'%( len(members))
@@ -588,8 +593,8 @@ class Clang_Parser(object):
         if name == '': # anonymous is spelling == ''
             name = MAKE_NAME( cursor.get_usr() )
         bases = [] # FIXME: support CXX
-        align = clang.cindex._clang_getRecordAlignment( self.tu, cursor) # 
-        size = clang.cindex._clang_getRecordSize( self.tu, cursor) # 
+        align = clang.cindex.conf.lib.clang_getRecordAlignment( self.tu, cursor) # 
+        size = clang.cindex.conf.lib.clang_getRecordSize( self.tu, cursor) # 
         members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
         return typedesc.Union(name, align, members, bases, size)
 
@@ -605,7 +610,7 @@ class Clang_Parser(object):
         t = cursor.type.get_canonical().kind
         if t in clang_ctypes_names:
             # goto self.FundamentalType
-            typ = self.FundamentalType(cursor)
+            typ = self.FundamentalType(t)
         else:
             mth = getattr(self, t.name)
             if mth is None:
@@ -618,7 +623,7 @@ class Clang_Parser(object):
         # FIXME
         # bits = attrs.get("bits", None)
         bits = None
-        offset = clang.cindex._clang_getRecordFieldOffset(self.tu, cursor)
+        offset = clang.cindex.conf.lib.clang_getRecordFieldOffset(self.tu, cursor)
 
         return typedesc.Field(name, typ, bits, offset)
 
