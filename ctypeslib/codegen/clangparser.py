@@ -279,18 +279,42 @@ class Clang_Parser(object):
     #def _fixup_File(self, f): pass
     
     # simple types and modifiers
-
-    def Variable(self, attrs):
-        name = attrs["name"]
+    # FIXME, token is bad, ar_ref is bad
+    def VAR_DECL(self, cursor):
+        import code
+        #code.interact(local=locals())
+        
+        name = cursor.displayname
         if name.startswith("cpp_sym_"):
             # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx fix me!
             name = name[len("cpp_sym_"):]
-        init = attrs.get("init", None)
-        typ = attrs["type"]
+        # I dont have the value... 
+        init = None
+        for c in cursor.get_children():
+            for t in c.get_tokens():
+                init = t.spelling
+                break
+            break
+            #print init
+        #print 'VAR_DECL init', init
+        try:
+            int(init)
+        except:
+            init = None
+        # now get the type
+        typ = cursor.type.get_canonical().kind
+        if typ in clang_ctypes_names:
+            ctypesname = clang_ctypes_names[typ]
+            typ = typedesc.FundamentalType( ctypesname, 0, 0 )
+        else:
+            typ = cursor.get_usr() #cursor.type.get_canonical().kind.name
+
+        #print typ.__class__.__name__
         return typedesc.Variable(name, typ, init)
 
     def _fixup_Variable(self, t):
-        t.typ = self.all[t.typ]
+        if type(t.typ) == str: #typedesc.FundamentalType:
+            t.typ = self.all[t.typ]
 
     #def Typedef(self, attrs):
     def TYPEDEF_DECL(self, cursor):

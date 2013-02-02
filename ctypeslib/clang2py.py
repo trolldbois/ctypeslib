@@ -136,6 +136,9 @@ def main(argv=None):
                       help="Limit cursor expansion to depth N",
                       metavar="N", type=int, default=None)
 
+    parser.epilog = '''About clang-args:     You can pass modifier to clang after your file name.
+    For example, try -m64 or -m32 as the last argument to change the target CPU arch.''' 
+    
     parser.disable_interspersed_args()
     (options, args) = parser.parse_args()
 
@@ -198,6 +201,10 @@ def main(argv=None):
                    }[char]
             types.extend(typ)
         options.kind = tuple(types)
+
+    # check the file...
+    with file(args[0],'r'):
+        pass
 
     generate_code(args, stream,
                   symbols=options.symbols,
