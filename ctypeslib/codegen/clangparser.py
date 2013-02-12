@@ -535,8 +535,8 @@ class Clang_Parser(object):
         #if name == '':
         #    #raise ValueError('could try get_usr()')
         #    name = MAKE_NAME( cursor.get_usr() )
-        align = cursor.get_record_alignment() 
-        size = cursor.get_record_size() 
+        align = cursor.type.get_record_alignment() 
+        size = cursor.type.get_record_size() 
         #print align, size
         return typedesc.Enumeration(name, size, align)
 
@@ -598,8 +598,8 @@ class Clang_Parser(object):
         #bases = attrs.get("bases", "").split() # that for cpp ?
         bases = [] # FIXME: support CXX
 
-        align = cursor.get_record_alignment() 
-        size = cursor.get_record_size()  
+        align = cursor.type.get_record_alignment() 
+        size = cursor.type.get_record_size()  
 
         members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
         #print 'found %d members'%( len(members))
@@ -625,8 +625,8 @@ class Clang_Parser(object):
         if name == '': # anonymous is spelling == ''
             name = MAKE_NAME( cursor.get_usr() )
         bases = [] # FIXME: support CXX
-        align = cursor.get_record_alignment()
-        size = cursor.get_record_size() 
+        align = cursor.type.get_record_alignment()
+        size = cursor.type.get_record_size() 
         members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
         return typedesc.Union(name, align, members, bases, size)
 
