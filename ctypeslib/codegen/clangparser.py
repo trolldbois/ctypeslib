@@ -33,7 +33,7 @@ clang_ctypes_names = {
     TypeKind.UINT : 'c_uint' ,
     TypeKind.ULONG : 'c_ulong' ,
     TypeKind.ULONGLONG : 'c_ulonglong' ,
-    TypeKind.UINT128 : 'c_uin128' , #FIXME
+    TypeKind.UINT128 : 'c_uint128' , #FIXME
     TypeKind.CHAR_S : 'c_byte' ,
     TypeKind.SCHAR : 'c_byte' ,
     TypeKind.WCHAR : 'c_wchar' ,
@@ -278,6 +278,23 @@ class Clang_Parser(object):
     #
     #def _fixup_File(self, f): pass
     
+    def get_token(self, cursor):
+        init = None
+        for c in cursor.get_children():
+            print c.displayname
+            for t in c.get_tokens():
+                init = t.spelling
+                print init
+                break
+            break
+            #print init
+        #print 'VAR_DECL init', init
+        try:
+            int(init)
+        except:
+            init = None
+        return init
+    
     # simple types and modifiers
     # FIXME, token is bad, ar_ref is bad
     def VAR_DECL(self, cursor):
@@ -296,7 +313,9 @@ class Clang_Parser(object):
                 break
             break
             #print init
-        #print 'VAR_DECL init', init
+        
+            print 'VAR_DECL init', init
+        
         try:
             int(init)
         except:
@@ -520,8 +539,12 @@ class Clang_Parser(object):
         return
 
     # Just ignore it.
-    def INTEGER_LITERAL(self, i):
-        #print ' im a integer i'
+    def INTEGER_LITERAL(self, cursor):
+        # FIXME : unhandled constant values.
+        #print 'INTEGER_LITERAL'
+        #import code
+        #code.interact(local=locals())
+        #print ' im a integer i=', self.get_token(cursor)
         #import code
         #code.interact(local=locals())
         return
@@ -529,20 +552,22 @@ class Clang_Parser(object):
     # enumerations
 
     def ENUM_DECL(self, cursor):
+        ''' Get the enumeration type'''
         # id, name
         #print '** ENUMERATION', cursor.displayname
         name = cursor.displayname
         #if name == '':
         #    #raise ValueError('could try get_usr()')
         #    name = MAKE_NAME( cursor.get_usr() )
-        align = cursor.type.get_record_alignment() 
-        size = cursor.type.get_record_size() 
+        align = cursor.type.get_align() 
+        size = cursor.type.get_size() 
         #print align, size
         return typedesc.Enumeration(name, size, align)
 
     def _fixup_Enumeration(self, e): pass
 
     def ENUM_CONSTANT_DECL(self, cursor):
+        ''' Get the enumeration values'''
         name = cursor.displayname
         value = cursor.enum_value
         parent = self.all[self.context[-1].get_usr()]        
@@ -598,8 +623,8 @@ class Clang_Parser(object):
         #bases = attrs.get("bases", "").split() # that for cpp ?
         bases = [] # FIXME: support CXX
 
-        align = cursor.type.get_record_alignment() 
-        size = cursor.type.get_record_size()  
+        align = cursor.type.get_align() 
+        size = cursor.type.get_size()  
 
         members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
         #print 'found %d members'%( len(members))
@@ -625,8 +650,8 @@ class Clang_Parser(object):
         if name == '': # anonymous is spelling == ''
             name = MAKE_NAME( cursor.get_usr() )
         bases = [] # FIXME: support CXX
-        align = cursor.type.get_record_alignment()
-        size = cursor.type.get_record_size() 
+        align = cursor.type.get_align()
+        size = cursor.type.get_size() 
         members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
         return typedesc.Union(name, align, members, bases, size)
 
@@ -652,10 +677,11 @@ class Clang_Parser(object):
                 return None
                 #raise TypeError('Field can not be None %s %s'%(name, t.name))   
 
-        # FIXME
-        # bits = attrs.get("bits", None)
+        # bitfields
         bits = None
-        offset = cursor.get_record_field_offset() 
+        if cursor.is_bitfield():
+            bits = cursor.get_bitfield_width()
+        offset = cursor.semantic_parent.type.get_offset('name') 
 
         return typedesc.Field(name, typ, bits, offset)
 

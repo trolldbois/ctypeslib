@@ -34,13 +34,22 @@ struct Node2 {
 enum myEnum {
 ONE,
 TWO,
-FOUR = 4 // no support exposed for now.
+FOUR = 4 
 };
 
 typedef struct
 {
   long __val[2];
 } my__quad_t;
+
+typedef struct
+{
+  long a:3;
+  long b:4;
+  uint64_t c:3;
+  uint64_t d:3;
+  long f:2
+} my_bitfield;
 
 //COREDUMP 
 //struct Anon;

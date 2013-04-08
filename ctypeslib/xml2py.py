@@ -187,8 +187,7 @@ def main(argv=None):
                    }[char]
             types.extend(typ)
         options.kind = tuple(types)
-    
-    from gccxmlparser import parse
+
     generate_code(files[0], stream,
                   symbols=options.symbols,
                   expressions=options.expressions,
@@ -198,8 +197,7 @@ def main(argv=None):
                   known_symbols=known_symbols,
                   searched_dlls=dlls,
                   preloaded_dlls=options.preload,
-                  types=options.kind, 
-                  parser = parse)
+                  types=options.kind)
 
 
 if __name__ == "__main__":

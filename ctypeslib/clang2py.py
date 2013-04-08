@@ -137,7 +137,7 @@ def main(argv=None):
                       metavar="N", type=int, default=None)
 
     parser.epilog = '''About clang-args:     You can pass modifier to clang after your file name.
-    For example, try -m64 or -m32 as the last argument to change the target CPU arch.''' 
+    For example, try "-target x86_64" or "-target i386-linux" as the last argument to change the target CPU arch.''' 
     
     parser.disable_interspersed_args()
     (options, args) = parser.parse_args()
