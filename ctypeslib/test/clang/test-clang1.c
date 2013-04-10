@@ -8,7 +8,7 @@ struct structName
   uint32_t member3;
   uint32_t member4;
   uint32_t member5;
-}__attribute__((packed));
+}; /*__attribute__((packed));*/
 
 struct structName2
 {
@@ -48,7 +48,7 @@ typedef struct
   long b:4;
   uint64_t c:3;
   uint64_t d:3;
-  long f:2
+  long f:2;
 } my_bitfield;
 
 //COREDUMP 

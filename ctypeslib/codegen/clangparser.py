@@ -13,7 +13,26 @@ import sys
 import re
 
 log = logging.getLogger('clangparser')
-logging.basicConfig(level=logging.DEBUG)
+
+def decorator(dec):
+    def new_decorator(f):
+        g = dec(f)
+        g.__name__ = f.__name__
+        g.__doc__ = f.__doc__
+        g.__dict__.update(f.__dict__)
+        return g
+    new_decorator.__name__ = dec.__name__
+    new_decorator.__doc__ = dec.__doc__
+    new_decorator.__dict__.update(dec.__dict__)
+    return new_decorator
+
+@decorator
+def log_entity(func):
+    def fn(*args, **kwargs):
+        log.debug("%s: spelling:'%s'"%(func.__name__, args[1].spelling))
+        #print 'calling {}'.format(func.__name__)
+        return func(*args, **kwargs)
+    return fn
 
 # TODO:
 # ignore packing method.
@@ -90,53 +109,7 @@ def CHECK_NAME(name):
 works.
 
 TODO: need more info on records.
-in RecordLayoutBuidler:
-        const ASTRecordLayout & ASTContext::getASTRecordLayout(const RecordDecl *D) const {
-can give us the information.
-
-So I need to 
-a) export that function.
-b) have an ASTContext object - OK
-
-ASTUnit->getASTContext()
-
-CIndex.cpp:56 
-MakeCXTranslationUnit makes a CXTranslationUnit
-CXTranslationUnit->TUData is a ASTUnit
-
-CIndex.cpp:2536
-clang_parseTranslationUnit take args in args.
-and return the CXTranslationUnit
-
-Donc dans 
-    tu = index.parse(None, args)
-tu.obj nous donne le pointer vers CXTranslationUnit
-iil faudrait que cindex.py donne aces a un getASTUnit
-
-struct CXTranslationUnitImpl {
-  void *CIdx;
-  void *TUData;
-  void *StringPool;
-  void *Diagnostics;
-  void *OverridenCursorsPool;
-  void *FormatContext;
-  unsigned FormatInMemoryUniqueId;
-};
-
-So I could do ( preferably in C plutot )
-    CXTranslationUnitImpl(Structure)
-    ASTUnit(Structure) #on TUData
-    ASTContext(Structure)
-    then
-    ADTUnit_getContext() restype ASTContext
-    ASTContext_getASTRecordLayout( RecordDecl ) restype ASTRecordLayout
-    ( also _align )
-
-Best solution, 
-add getASTRecordLayout infos into 
-
-How to get a RecordDecl ?
-
+done
 ##########################################################
 
 TODO TEST
@@ -244,8 +217,8 @@ class Clang_Parser(object):
     def Ellipsis(self, attrs): pass
     def OperatorMethod(self, attrs): pass
 
+    @log_entity
     def UNEXPOSED_ATTR(self, cursor): 
-        #log.debug('Found UNEXPOSED_ATTR %s %s'%(cursor.kind.name, cursor.kind.value))
         parent = self.context[-1]
         #print 'parent is',parent.displayname, parent.location, parent.extent
         # TODO until attr is exposed by clang:
@@ -297,6 +270,7 @@ class Clang_Parser(object):
     
     # simple types and modifiers
     # FIXME, token is bad, ar_ref is bad
+    @log_entity
     def VAR_DECL(self, cursor):
         import code
         #code.interact(local=locals())
@@ -336,6 +310,7 @@ class Clang_Parser(object):
             t.typ = self.all[t.typ]
 
     #def Typedef(self, attrs):
+    @log_entity
     def TYPEDEF_DECL(self, cursor):
         name = cursor.displayname
         typ = cursor.type.get_canonical().kind
@@ -352,6 +327,7 @@ class Clang_Parser(object):
             t.typ = self.all[ t.typ]
         pass
 
+    @log_entity
     def TYPE_REF(self, t):
         if not t.is_definition():
             return
@@ -385,6 +361,7 @@ class Clang_Parser(object):
 
     def _fixup_FundamentalType(self, t): pass
 
+    @log_entity
     def POINTER(self, cursor):
         # we shortcut to canonical defs
         typ = cursor.type.get_pointee().get_canonical().kind
@@ -433,6 +410,7 @@ class Clang_Parser(object):
     OffsetType = POINTER
     _fixup_OffsetType = _fixup_PointerType
 
+    @log_entity
     def CONSTANTARRAY(self, cursor):
         size = str( cursor.type.get_array_size() )
         typ = cursor.type.get_array_element_type().get_canonical().kind
@@ -470,6 +448,7 @@ class Clang_Parser(object):
     # callables
     
     #def Function(self, attrs):
+    @log_entity
     def FUNCTION_DECL(self, cursor):
         # name, returns, extern, attributes
         #name = attrs["name"]
@@ -500,6 +479,7 @@ class Clang_Parser(object):
         func.returns = self.all[func.returns]
         func.fixup_argtypes(self.all)
 
+    @log_entity
     def OperatorFunction(self, attrs):
         # name, returns, extern, attributes
         name = attrs["name"]
@@ -510,6 +490,7 @@ class Clang_Parser(object):
         func.returns = self.all[func.returns]
 
     def _Ignored(self, attrs):
+        log.debug("_Ignored: name:'%s' "%(cursor.spelling))
         name = attrs.get("name", None)
         if not name:
             name = attrs["mangled"]
@@ -539,6 +520,7 @@ class Clang_Parser(object):
         return
 
     # Just ignore it.
+    @log_entity
     def INTEGER_LITERAL(self, cursor):
         # FIXME : unhandled constant values.
         #print 'INTEGER_LITERAL'
@@ -551,6 +533,7 @@ class Clang_Parser(object):
 
     # enumerations
 
+    @log_entity
     def ENUM_DECL(self, cursor):
         ''' Get the enumeration type'''
         # id, name
@@ -566,6 +549,7 @@ class Clang_Parser(object):
 
     def _fixup_Enumeration(self, e): pass
 
+    @log_entity
     def ENUM_CONSTANT_DECL(self, cursor):
         ''' Get the enumeration values'''
         name = cursor.displayname
@@ -579,6 +563,7 @@ class Clang_Parser(object):
 
     # structures, unions, classes
 
+    @log_entity
     def RECORD(self, cursor):
         # either Union, Struct, Enum(?) in Ref or in Decl.
         ## TypeKind RECORD = cursor.type.get_canonical().kind
@@ -599,6 +584,7 @@ class Clang_Parser(object):
 
         return mth(next)
 
+    @log_entity
     def STRUCT_DECL(self, cursor):
 
         #import code
@@ -631,6 +617,7 @@ class Clang_Parser(object):
         return typedesc.Structure(name, align, members, bases, size)
 
     def _fixup_Structure(self, s):
+        log.debug('RECORD_FIX: %s '%(s.name))
         #print 'before', s.members
         #for m in s.members:
         #    if m not in self.all:
@@ -645,6 +632,7 @@ class Clang_Parser(object):
         pass
     _fixup_Union = _fixup_Structure
 
+    @log_entity
     def UNION_DECL(self, cursor):
         name = cursor.displayname
         if name == '': # anonymous is spelling == ''
@@ -658,6 +646,7 @@ class Clang_Parser(object):
     Class = STRUCT_DECL
     _fixup_Class = _fixup_Structure
 
+    @log_entity
     def FIELD_DECL(self, cursor):
         # name, type
         name = cursor.displayname
