@@ -171,7 +171,7 @@ class Clang_Parser(object):
         if mth is None:
             return
         
-        #log.debug('Found a %s|%s|%s'%(node.kind.name, node.displayname, node.spelling))
+        log.debug('Found a %s|%s|%s'%(node.kind.name, node.displayname, node.spelling))
         
         result = mth(node)
         if result is None:
@@ -217,9 +217,21 @@ class Clang_Parser(object):
     def Ellipsis(self, attrs): pass
     def OperatorMethod(self, attrs): pass
 
+
+    ###########################################
+    # ATTRIBUTES
+    
     @log_entity
     def UNEXPOSED_ATTR(self, cursor): 
-        parent = self.context[-1]
+        parent = self.context[-1] # cursor.semantic_parent
+        #print 'parent is',parent.displayname, parent.location, parent.extent
+        # TODO until attr is exposed by clang:
+        # readlines()[extent] .split(' ') | grep {inline,packed}
+        pass
+
+    @log_entity
+    def PACKED_ATTR(self, cursor): 
+        parent = self.context[-1] # cursor.semantic_parent
         #print 'parent is',parent.displayname, parent.location, parent.extent
         # TODO until attr is exposed by clang:
         # readlines()[extent] .split(' ') | grep {inline,packed}
@@ -288,7 +300,7 @@ class Clang_Parser(object):
             break
             #print init
         
-            print 'VAR_DECL init', init
+            log.debug('VAR_DECL init:%s'%(init))
         
         try:
             int(init)
@@ -612,9 +624,16 @@ class Clang_Parser(object):
         align = cursor.type.get_align() 
         size = cursor.type.get_size()  
 
-        members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
+        members = []
+        packed = False
+        for child in cursor.get_children():
+            if child.kind == clang.cindex.CursorKind.FIELD_DECL:
+                members.append( child.get_usr())
+                continue
+            if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
+                packed = True
         #print 'found %d members'%( len(members))
-        return typedesc.Structure(name, align, members, bases, size)
+        return typedesc.Structure(name, align, members, bases, size, packed=packed)
 
     def _fixup_Structure(self, s):
         log.debug('RECORD_FIX: %s '%(s.name))

@@ -162,9 +162,7 @@ def main(argv=None):
     level=logging.INFO
     if options.debug:
         level=logging.DEBUG
-        print '***OUT DEBUG'
     logging.basicConfig(level=level, stream=sys.stdout)
-    log.debug('logged')
     
     if options.output == "-":
         stream = sys.stdout

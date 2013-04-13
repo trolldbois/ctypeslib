@@ -1,22 +1,21 @@
 
-#include <inttypes.h>
 
 struct structName
 {
-  int16_t member1;
-  int32_t member2;
-  uint32_t member3;
-  uint32_t member4;
-  uint32_t member5;
-}; /*__attribute__((packed));*/
+  short member1;
+  int member2;
+  unsigned int member3;
+  unsigned int member4;
+  unsigned int member5;
+} __attribute__((packed));
 
 struct structName2
 {
-  int16_t member1;
-  int32_t member2;
-  uint32_t member3;
-  uint32_t member4;
-  uint32_t member5;
+  short member1;
+  int member2;
+  unsigned int member3;
+  unsigned int member4;
+  unsigned int member5;
 };
 
 struct Node {
@@ -46,10 +45,15 @@ typedef struct
 {
   long a:3;
   long b:4;
-  uint64_t c:3;
-  uint64_t d:3;
+  unsigned long long c:3;
+  unsigned long long d:3;
   long f:2;
 } my_bitfield;
+
+typedef struct __attribute__((packed)) {
+    int a;
+    char c;
+} mystruct;
 
 //COREDUMP 
 //struct Anon;

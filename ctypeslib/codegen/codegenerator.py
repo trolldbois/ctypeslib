@@ -399,6 +399,8 @@ class Generator(object):
                 print >> self.stream, "class %s(Structure):" % head.struct.name
             elif type(head.struct) == typedesc.Union:
                 print >> self.stream, "class %s(Union):" % head.struct.name
+        if head.struct.packed:
+            print >> self.stream, "    _pack_ = True"
         print >> self.stream, "    pass"
         self.names.add(head.struct.name)
 
@@ -807,7 +809,7 @@ class Generator(object):
                                           for preloaded_dll
                                           in  self.preloaded_dlls])
         loops = self.generate_items(items)
-
+        
         self.output.write(self.imports.getvalue())
         self.output.write("\n\n")
         self.output.write(self.stream.getvalue())

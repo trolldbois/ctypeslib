@@ -138,7 +138,8 @@ class _Struct_Union_Base(object):
         return self.struct_head
 
 class Structure(_Struct_Union_Base):
-    def __init__(self, name, align, members, bases, size, artificial=None):
+    def __init__(self, name, align, members, bases, size, packed=False, 
+                 artificial=None):
         self.name = name
         self.align = int(align)
         self.members = members
@@ -148,6 +149,7 @@ class Structure(_Struct_Union_Base):
             self.size = int(size)
         else:
             self.size = None
+        self.packed = packed
         self.struct_body = StructureBody(self)
         self.struct_head = StructureHead(self)
 
