@@ -168,11 +168,13 @@ class Union(_Struct_Union_Base):
         self.struct_head = StructureHead(self)
 
 class Field(object):
-    def __init__(self, name, typ, bits, offset):
+    ''' Change bits if its a bitfield'''
+    def __init__(self, name, typ, typesize, offset, bits=None):
         self.name = name
-        self.typ = typ
-        self.bits = bits
+        self.type = typ
+        self.size = typesize
         self.offset = int(offset)
+        self.bits = bits
 
 class CvQualifiedType(object):
     def __init__(self, typ, const, volatile):

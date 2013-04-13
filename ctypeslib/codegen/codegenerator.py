@@ -79,61 +79,7 @@ def storage(t):
         return s * (int(t.max) - int(t.min) + 1), a
     return int(t.size), int(t.align)
 
-class PackingError(Exception):
-    pass
 
-def _calc_packing(struct, fields, pack, isStruct):
-    # Try a certain packing, raise PackingError if field offsets,
-    # total size ot total alignment is wrong.
-    if struct.size is None: # incomplete struct
-        return -1
-    if struct.name in dont_assert_size:
-        return None
-    if struct.bases:
-        size = struct.bases[0].size
-        total_align = struct.bases[0].align
-    else:
-        size = 0
-        total_align = 8 # in bits
-    for i, f in enumerate(fields):
-        if f.bits: # this code cannot handle bit field sizes.
-##            print "##XXX FIXME"
-            return -2 # XXX FIXME
-        s, a = storage(f.typ)
-        if pack is not None:
-            a = min(pack, a)
-        if size % a:
-            size += a - size % a
-        if isStruct:
-            if size != f.offset: 
-                raise PackingError, "field %s offset (%s/%s)" % (f.name, size, f.offset)
-            size += s
-        else:
-            size = max(size, s)
-        total_align = max(total_align, a)
-    if total_align != struct.align:
-        raise PackingError, "total alignment (%s/%s)" % (total_align, struct.align)
-    a = total_align
-    if pack is not None:
-        a = min(pack, a)
-    if size % a:
-        size += a - size % a
-    if size != struct.size:
-        raise PackingError, "total size (%s/%s)" % (size, struct.size)
-
-def calc_packing(struct, fields):
-    # try several packings, starting with unspecified packing
-    isStruct = isinstance(struct, typedesc.Structure)
-    for pack in [None, 16*8, 8*8, 4*8, 2*8, 1*8]:
-        try:
-            _calc_packing(struct, fields, pack, isStruct)
-        except PackingError, details:
-            continue
-        else:
-            if pack is None:
-                return None
-            return pack/8
-    raise PackingError, "PACKING FAILED: %s" % details
 
 def get_real_type(tp):
     if type(tp) is typedesc.Typedef:
@@ -317,7 +263,7 @@ class Generator(object):
                         self.need_WSTRING()
                         return "WSTRING"
 
-            result = "POINTER(%s)" % self.type_name(t.typ, generate)
+            result = "POINTER%d(%s)" %(t.size*8, self.type_name(t.typ, generate))
             # XXX Better to inspect t.typ!
             if result.startswith("POINTER(WINFUNCTYPE"):
                 return result[len("POINTER("):-1]
@@ -380,7 +326,7 @@ class Generator(object):
         except SyntaxError:
             print >> self.stream, "#", code
         else:
-            print >> self.stream, code
+            print >> self.stream, code, '# Macro'
             self.names.add(macro.name)
 
     def StructureHead(self, head):
@@ -399,9 +345,7 @@ class Generator(object):
                 print >> self.stream, "class %s(Structure):" % head.struct.name
             elif type(head.struct) == typedesc.Union:
                 print >> self.stream, "class %s(Union):" % head.struct.name
-        if head.struct.packed:
-            print >> self.stream, "    _pack_ = True"
-        print >> self.stream, "    pass"
+        print >> self.stream, "    pass\n"
         self.names.add(head.struct.name)
 
     _structures = 0
@@ -546,9 +490,9 @@ class Generator(object):
         for m in body.struct.members:
             if type(m) is typedesc.Field:
                 fields.append(m)
-                if type(m.typ) is typedesc.Typedef:
-                    self.generate(get_real_type(m.typ))
-                self.generate(m.typ)
+                if type(m.type) is typedesc.Typedef:
+                    self.generate(get_real_type(m.type))
+                self.generate(m.type)
             elif type(m) is typedesc.Method:
                 methods.append(m)
                 self.generate(m.returns)
@@ -561,22 +505,12 @@ class Generator(object):
             # we emit any code for them?
             pass
         else:
+            # ???
             # we don't need _pack_ on Unions (I hope, at least), and not
             # on COM interfaces.
-            try:
-                # gccxml reports a non-zero size on structures that
-                # have no fields.  The packing would fail, but it is
-                # unneeded anyway so we skip it.
-                if fields:
-                    #pack = 0 #FIXME #
-                    pack = calc_packing(body.struct, fields)
-                    if pack is not None:
-                        print >> self.stream, "%s._pack_ = %s" % (body.struct.name, pack)
-            except PackingError, details:
-                # if packing fails, write a warning comment to the output.
-                import warnings
-                message = "Structure %s: %s" % (body.struct.name, details)
-                # FIXME warnings.warn(message, UserWarning)
+            if fields:
+                if body.struct.packed:
+                    print >> self.stream, "%s._pack_ = True" % (body.struct.name)
 
         if body.struct.bases:
             #print body, type(body.struct).__name__, body.struct.name, len(body.struct.bases)
@@ -590,14 +524,14 @@ class Generator(object):
         # Before we generate them, we need to 'import' everything they need.
         # So, call type_name for each field once,
         for f in fields:
-            self.type_name(f.typ)
+            self.type_name(f.type)
 
         # unnamed fields get autogenerated names "_0", "_1", "_2", "_3", ...
         unnamed_fields = {}
         for f in fields:
             # _anonymous_ fields are fields of type Structure or Union,
             # that have no name.
-            if not f.name and isinstance(f.typ, (typedesc.Structure, typedesc.Union)):
+            if not f.name and isinstance(f.type, (typedesc.Structure, typedesc.Union)):
                 unnamed_fields[f] = "_%d" % len(unnamed_fields)
         if unnamed_fields:
             print >> self.stream, "%s._anonymous_ = %r" % \
@@ -612,10 +546,10 @@ class Generator(object):
               fieldname = unnamed_fields.get(f, f.name)
               if f.bits is None:
                   print >> self.stream, "    ('%s', %s)," % \
-                     (fieldname, self.type_name(f.typ))
+                     (fieldname, self.type_name(f.type))
               else:
                   print >> self.stream, "    ('%s', %s, %s)," % \
-                        (fieldname, self.type_name(f.typ), f.bits)
+                        (fieldname, self.type_name(f.type), f.bits)
           print >> self.stream, "]"
         # disable size checks because they are not portable across
         # platforms:
@@ -784,11 +718,11 @@ class Generator(object):
             self.generate(item)
 
     def cmpitems(a, b):
-	a = getattr(a, "location", None)
-	b = getattr(b, "location", None)
-	if a is None: return -1
-	if b is None: return 1
-	return cmp(a[0],b[0]) or cmp(int(a[1]),int(b[1]))
+        a = getattr(a, "location", None)
+        b = getattr(b, "location", None)
+        if a is None: return -1
+        if b is None: return 1
+        return cmp(a[0],b[0]) or cmp(int(a[1]),int(b[1]))
     cmpitems = staticmethod(cmpitems)
 
     def generate_items(self, items):
@@ -804,7 +738,12 @@ class Generator(object):
         return loops
 
     def generate_code(self, items):
-        print >> self.imports, "from ctypes import *"
+        print >> self.imports, '''try:
+    import archtypes
+    archtypes.import_canonical_types(__name__)
+except ImportError,e:
+    from ctypes import *'''
+        # change ctypes for arch dependent definition
         print >> self.imports, "\n".join(["CDLL('%s', RTLD_GLOBAL)" % preloaded_dll
                                           for preloaded_dll
                                           in  self.preloaded_dlls])
