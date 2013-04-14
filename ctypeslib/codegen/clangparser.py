@@ -83,25 +83,31 @@ class Clang_Parser(object):
         TypeKind.UCHAR : 'c_ubyte' ,
         TypeKind.CHAR16 : 'c_wchar' ,
         TypeKind.CHAR32 : 'c_wchar*2' ,
-        TypeKind.USHORT : 'c_ushort' ,
-        TypeKind.UINT : 'c_uint' ,
+        TypeKind.USHORT : 'TBD' ,
+        TypeKind.UINT : 'TBD' ,
         TypeKind.ULONG : 'TBD' ,
-        TypeKind.ULONGLONG : 'c_ulonglong' ,
+        TypeKind.ULONGLONG : 'TBD' ,
+        TypeKind.UINT128 : 'c_uint128' ,
         TypeKind.CHAR_S : 'c_byte' ,
         TypeKind.SCHAR : 'c_byte' ,
         TypeKind.WCHAR : 'c_wchar' ,
-        TypeKind.SHORT : 'c_short' ,
-        TypeKind.INT : 'c_int' ,
+        TypeKind.SHORT : 'TBD' ,
+        TypeKind.INT : 'TBD' ,
         TypeKind.LONG : 'TBD' ,
-        TypeKind.LONGLONG : 'c_longlong' ,
-        TypeKind.FLOAT : 'c_float' ,
-        TypeKind.DOUBLE : 'c_double' ,
+        TypeKind.LONGLONG : 'TBD' ,
+        TypeKind.INT128 : 'c_int128' ,
+        TypeKind.FLOAT : 'c_float' , # FIXME
+        TypeKind.DOUBLE : 'c_double' , # FIXME
         TypeKind.LONGDOUBLE : 'TBD' ,
     }
+    records={}
+    fields={}
     def __init__(self, *args):
         #self.args = *args
         self.context = []
         self.all = {}
+        self.records = {}
+        self.fields = {}
         self.cpp_data = {}
         self._unhandled = []
         self.tu = None
@@ -162,18 +168,39 @@ class Clang_Parser(object):
     # clang types to ctypes
     def make_ctypes_convertor(self):
         tu = util.get_tu('''
-typedef long c_long;
-typedef unsigned long c_ulong;
-typedef long double c_longdouble;''')
-        c = util.get_cursor(tu, 'c_long')
-        self.ctypes_typename[TypeKind.LONG] = c.type.get_size()
+typedef short short_t;
+typedef int int_t;
+typedef long long_t;
+typedef long long longlong_t;
+typedef float float_t;
+typedef double double_t;
+typedef long double longdouble_t;''')
+        size = util.get_cursor(tu, 'short_t').type.get_size()*8
+        self.ctypes_typename[TypeKind.SHORT] = 'c_int%d'%(size)
+        self.ctypes_typename[TypeKind.USHORT] = 'c_uint%d'%(size)
 
-        c = util.get_cursor(tu, 'c_ulong')
-        self.ctypes_typename[TypeKind.ULONG] = c.type.get_size()
+        size = util.get_cursor(tu, 'int_t').type.get_size()*8
+        self.ctypes_typename[TypeKind.INT] = 'c_int%d'%(size)
+        self.ctypes_typename[TypeKind.UINT] = 'c_uint%d'%(size)
 
-        c = util.get_cursor(tu, 'c_longdouble')
-        self.ctypes_typename[TypeKind.LONGDOUBLE] = c.type.get_size()
-        log.debug('ARCH sizes: long:%d longdouble:%d'%(
+        size = util.get_cursor(tu, 'long_t').type.get_size()*8
+        self.ctypes_typename[TypeKind.LONG] = 'c_int%d'%(size)
+        self.ctypes_typename[TypeKind.ULONG] = 'c_uint%d'%(size)
+
+        size = util.get_cursor(tu, 'longlong_t').type.get_size()*8
+        self.ctypes_typename[TypeKind.LONGLONG] = 'c_int%d'%(size)
+        self.ctypes_typename[TypeKind.ULONGLONG] = 'c_uint%d'%(size)
+        
+        #FIXME : Float && http://en.wikipedia.org/wiki/Long_double
+        size0 = util.get_cursor(tu, 'float_t').type.get_size()*8
+        size1 = util.get_cursor(tu, 'double_t').type.get_size()*8
+        size2 = util.get_cursor(tu, 'longdouble_t').type.get_size()*8
+        if size1 != size2:
+            self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_double%d'%(size2)
+        else:
+            self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_double'
+
+        log.debug('ARCH sizes: long:%s longdouble:%s'%(
                 self.ctypes_typename[TypeKind.LONG],
                 self.ctypes_typename[TypeKind.LONGDOUBLE]))
     
@@ -310,38 +337,51 @@ typedef long double c_longdouble;''')
     @log_entity
     def TYPEDEF_DECL(self, cursor):
         name = cursor.displayname
+        log.debug("TYPEDEF_DECL: name:%s"%(name))
         typ = cursor.type.get_canonical()
+        log.debug("TYPEDEF_DECL: typ:%s"%(typ.kind.spelling))
         # FIXME feels weird not to call self.fundamental
         if self.is_fundamental_type(typ):
-            ctypesname = self.convert_to_ctypes(typ)
+            ctypesname = self.convert_to_ctypes(typ.kind)
             typ = typedesc.FundamentalType( ctypesname, 0, 0 )
+            log.debug("TYPEDEF_DECL: fundamental typ:%s"%(typ))
         else:
-            typ = cursor.get_usr() #cursor.type.get_canonical().kind.name
+            typ = name
+            log.debug("TYPEDEF_DECL: complex typ:%s"%(typ))
         return typedesc.Typedef(name, typ)
 
     def _fixup_Typedef(self, t):
         #print 'fixing typdef %s name:%s with self.all[%s] = %s'%(id(t), t.name, t.typ, id(self.all[ t.typ])) 
+        log.debug("_fixup_Typedef: t:'%s' t.typ:'%s' t.name:'%s'"%(t, t.typ, t.name))
         if type(t.typ) == str: #typedesc.FundamentalType:
-            t.typ = self.all[ t.typ]
+            t.typ = self.all[t.name]
         pass
 
     @log_entity
     def TYPE_REF(self, t):
-        if not t.is_definition():
-            return
+        # Should probably never get here.
+        #if not t.is_definition():
+        #    log.debug('TYPE_REF: if not t.is_definition()')
+        #    return
         # get the definition, create or reuse typedesc.
-        next = t.get_definition()
+        next = t.type.get_declaration()
         _id = next.get_usr()
+        log.debug('TYPE_REF: next:%s id:%s'%(next, _id))
         ##print '** _id is ', _id
         if _id in self.all:
+            log.debug('TYPE_REF: _id in self.all')
             return self.all[_id]
         mth = getattr(self, next.kind.name)
         if mth is None:
+            log.debug('TYPE_REF: mth is None')
             raise TypeError('unhandled Type_ref TypeKind %s'%(next.kind))
+        log.debug('TYPE_REF: mth is %s'%(mth.__name__))
         res = mth(next)
+        log.debug('TYPE_REF: res is %s'%(res.name))
         if res is not None:
-            self.all[_id] = res
-            return self.all[_id]
+            log.debug('TYPE_REF: self.all[%s] = %s'%(res.name, res))
+            self.all[res.name] = res
+            return self.all[res.name]
         log.error('None on TYPE_REF')
         return
         
@@ -366,16 +406,19 @@ typedef long double c_longdouble;''')
         align = cursor.type.get_align() 
         # we shortcut to canonical defs
         typ = cursor.type.get_pointee().get_canonical()
-
+        log.debug("POINTER: size:%d align:%d typ:%s"%(size, align, typ))
         if self.is_fundamental_type(typ):
             p_type = self.FundamentalType(typ)
         elif typ.kind == TypeKind.RECORD:
             children = [c for c in cursor.get_children()]
-            assert(len(children) == 1, 'There is %d children - not expected in PointerType'%(len(children)))
-            assert(children[0].kind == CursorKind.TYPE_REF, 'Wasnt expecting a %s in PointerType'%(children[0].kind))
+            assert len(children) == 1 # 'There is %d children - not expected in PointerType'%(len(children)))
+            assert children[0].kind == CursorKind.TYPE_REF#, 'Wasnt expecting a %s in PointerType'%(children[0].kind))
             p_type = children[0].get_definition().get_usr()
+            if p_type in self.all:
+                p_type = self.all[p_type]
         else:
             raise TypeError('Unknown scenario in PointerType - %s'%(typ))
+        log.debug("POINTER: p_type:'%s'"%(p_type.name))
         # return the pointer        
         return typedesc.PointerType( p_type, size, align)
 
@@ -386,7 +429,7 @@ typedef long double c_longdouble;''')
         #code.interact(local=locals())
         ##if type(p.typ.typ) != typedesc.FundamentalType:
         ##    p.typ.typ = self.all[p.typ.typ]
-        if type(p.typ) != typedesc.FundamentalType:
+        if type(p.typ) == str:
             p.typ = self.all[p.typ]
 
     ReferenceType = POINTER
@@ -538,6 +581,7 @@ typedef long double c_longdouble;''')
         ''' Get the enumeration values'''
         name = cursor.displayname
         value = cursor.enum_value
+        # FIXME obselete context by semantic_parent
         parent = self.all[self.context[-1].get_usr()]        
         v = typedesc.EnumValue(name, value, parent)
         parent.add_value(v)
@@ -549,40 +593,21 @@ typedef long double c_longdouble;''')
 
     @log_entity
     def RECORD(self, cursor):
-        # either Union, Struct, Enum(?) in Ref or in Decl.
-        ## TypeKind RECORD = cursor.type.get_canonical().kind
-        children = [c for c in cursor.get_children()]
-        if len(children) != 1:
-            raise ValueError('There is %d children - not expected in a record type '%(len(children)))
-
-        next = children[0]
-        mth = getattr(self, next.kind.name)
-        if mth is None:
-            raise TypeError('unhandled Record TypeKind %s'%(next.kind))
+        # I'm a field. ?
+        return self.records[cursor.type.get_declaration().spelling]
         ## if next == CursorKind.TYPE_REF: # defer
         ## if next == CursorKind.UNION_DECL: # create
-        ## if next == CursorKind.g: # create
-        
-        #import code
-        #code.interact(local=locals())
+        ## if next == CursorKind.STRUCT_DECL: # create
 
-        return mth(next)
 
     @log_entity
     def STRUCT_DECL(self, cursor):
-
-        #import code
-        #code.interact(local=locals())
-        
         if not cursor.is_definition():
             return
-        
         # id, name, members
         name = cursor.displayname
         if name == '': # anonymous is spelling == ''
             name = MAKE_NAME( cursor.get_usr() )
-            #import code
-            #code.interact(local=locals())
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
         # should be in MAKE_NAME
@@ -600,12 +625,18 @@ typedef long double c_longdouble;''')
         packed = False
         for child in cursor.get_children():
             if child.kind == clang.cindex.CursorKind.FIELD_DECL:
-                members.append( child.get_usr())
+                members.append( child.get_usr()) #FIXME: recurse HERE.
                 continue
             if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
                 packed = True
         #print 'found %d members'%( len(members))
-        return typedesc.Structure(name, align, members, bases, size, packed=packed)
+        obj = typedesc.Structure(name, align, members, bases, size, packed=packed)
+        self.records[name] = obj
+
+        #import code
+        #code.interact(local=locals())
+
+        return obj
 
     def _fixup_Structure(self, s):
         log.debug('RECORD_FIX: %s '%(s.name))
@@ -622,8 +653,10 @@ typedef long double c_longdouble;''')
         for m in s.members:
             if m not in self.all or type(self.all[m]) != typedesc.Field:
                 log.debug('Fixup_struct: Member unexpected : %s'%(m))
+
                 import code
-                code.interact(local=locals())
+                #code.interact(local=locals())
+
                 continue
             member = self.all[m]
             log.debug('Fixup_struct: Member at offset:%d expecting offset:%d'%(member.offset,offset))
@@ -633,8 +666,10 @@ typedef long double c_longdouble;''')
                 members.append(typedesc.Field('PADDING_%d'%padding_nb, 
                                 pad_typ(length), 1, offset))
                 padding_nb+=1
+            if member.type is None:
+                log.error('FIXUP_STRUCT: %s.type is None'%(member.name))
             members.append(member)
-            offset = member.offset + member.size
+            offset = member.offset + member.size*8
                 
         s.members = members
         #print 'after', [m.typ for m in s.members], len(s.members )
@@ -664,25 +699,37 @@ typedef long double c_longdouble;''')
     def FIELD_DECL(self, cursor):
         # name, type
         name = cursor.displayname
-        t = cursor.type.get_canonical()
-        if self.is_fundamental_type(t):
-            # goto self.FundamentalType
-            typ = self.FundamentalType(t)
-        else:
-            mth = getattr(self, t.kind.name)
-            if mth is None:
-                raise TypeError('unhandled Field TypeKind %s'%(t.name))
-            typ  = mth(cursor)
-            if typ is None:
-                return None
-                #raise TypeError('Field can not be None %s %s'%(name, t.nacursor.semantic_parent.typeme))   
-
         offset = cursor.semantic_parent.type.get_offset(name) 
         # bitfield
         bits = None
         if cursor.is_bitfield():
             bits = cursor.get_bitfield_width()
         typesize = cursor.type.get_size()
+        # try to get a representation of the type
+        t = cursor.type.get_canonical()
+        typ = None
+        if self.is_fundamental_type(t):
+            typ = self.FundamentalType(t)
+        elif t.kind == TypeKind.RECORD or t.kind == TypeKind.POINTER:
+            # need to get the type
+            mth = getattr(self, t.kind.name)
+            if mth is None:
+                raise TypeError('unhandled Field TypeKind %s'%(t.name))
+            typ = mth(cursor)
+            
+            if typ is None:
+                
+                print '669'
+                import code, sys
+                #code.interact(local=locals())
+                
+                return None
+                #raise TypeError('Field can not be None %s %s'%(name, t.nacursor.semantic_parent.typeme))   
+        else:
+            log.debug("FIELD_DECL: TypeKind:'%s'"%(t.kind.name))
+            import code, sys
+            code.interact(local=locals())
+
         return typedesc.Field(name, typ, typesize, offset, bits)
 
     def _fixup_Field(self, f):
@@ -776,10 +823,10 @@ typedef long double c_longdouble;''')
                 result.append(i)
 
         #print 'self.all', self.all
-        #import code
+        import code
         #code.interact(local=locals())
         
-        #print 'clangparser get_result:',result
+        print 'clangparser get_result:',result
         return result
     
     #catch-all

@@ -351,6 +351,7 @@ class Generator(object):
     _structures = 0
     def Structure(self, struct):
         self._structures += 1
+        log.debug('Structure: .get_head():%s .get_body():%s'%(struct.get_head(), struct.get_body()))
         self.generate(struct.get_head())
         self.generate(struct.get_body())
 
@@ -686,7 +687,6 @@ class Generator(object):
     def generate(self, item):
         if item in self.done:
             return
-        
         n=''
         if hasattr(item, 'name'):
             n = item.name
