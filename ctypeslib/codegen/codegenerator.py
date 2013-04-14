@@ -74,8 +74,6 @@ def storage(t):
       return storage(t.typ)
     elif isinstance(t, typedesc.ArrayType):
         s, a = storage(t.typ)
-        if t.max.lower() == GCCXML_NOSIZE:
-            return 0, a
         return s * (int(t.max) - int(t.min) + 1), a
     return int(t.size), int(t.align)
 
@@ -273,9 +271,7 @@ class Generator(object):
                 return "c_void_p"
             return result
         elif isinstance(t, typedesc.ArrayType):
-            if t.max.lower() == GCCXML_NOSIZE or t.max == "":
-                return "%s * 0" % (self.type_name(t.typ, generate),)
-            return "%s * %s" % (self.type_name(t.typ, generate), int(t.max)+1)
+            return "%s * %s" % (self.type_name(t.typ, generate), t.size)
         elif isinstance(t, typedesc.FunctionType):
             args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
             if "__stdcall__" in t.attributes:
@@ -351,7 +347,6 @@ class Generator(object):
     _structures = 0
     def Structure(self, struct):
         self._structures += 1
-        log.debug('Structure: .get_head():%s .get_body():%s'%(struct.get_head(), struct.get_body()))
         self.generate(struct.get_head())
         self.generate(struct.get_body())
 
@@ -505,13 +500,12 @@ class Generator(object):
             # XXX we have parsed the COM interface methods but should
             # we emit any code for them?
             pass
-        else:
-            # ???
-            # we don't need _pack_ on Unions (I hope, at least), and not
-            # on COM interfaces.
-            if fields:
-                if body.struct.packed:
-                    print >> self.stream, "%s._pack_ = True" % (body.struct.name)
+        # we pack all the time, to compensate for unknown align strategy
+        # of the current arch.
+        if fields:
+            if body.struct.packed:
+                print >> self.stream, "# attribute(packed) in source"
+            print >> self.stream, "%s._pack_ = True" % (body.struct.name)
 
         if body.struct.bases:
             #print body, type(body.struct).__name__, body.struct.name, len(body.struct.bases)
