@@ -654,18 +654,22 @@ typedef long double longdouble_t;''')
 
         return obj
 
-    def _make_padding(self, length):
+    def _make_padding(self, name, offset, length):
         log.debug("_make_padding: for %d bits"%(length))
         if (length % 8) != 0:
             # FIXME
             log.warning('_make_padding: FIXME we need sub-bytes padding definition')
         if length > 8:
             bytes = length/8
-            return typedesc.ArrayType(
-                    typedesc.FundamentalType(
-                      self.ctypes_typename[TypeKind.CHAR_U], length, 1 ),
-                    bytes)
-        return typedesc.FundamentalType( self.ctypes_typename[TypeKind.CHAR_U], 1, 1 )
+            return typedesc.Field(name,
+                     typedesc.ArrayType(
+                       typedesc.FundamentalType(
+                         self.ctypes_typename[TypeKind.CHAR_U], length, 1 ),
+                       bytes),
+                     offset, length)
+        return typedesc.Field(name,
+                 typedesc.FundamentalType( self.ctypes_typename[TypeKind.CHAR_U], 1, 1 ),
+                 offset, length)
 
     def _fixup_Structure(self, s):
         log.debug('RECORD_FIX: %s '%(s.name))
@@ -679,34 +683,38 @@ typedef long double longdouble_t;''')
         # create padding fields
         for m in s.members:
             if m not in self.all or type(self.all[m]) != typedesc.Field:
-                log.debug('Fixup_struct: Member unexpected : %s'%(m))
-
                 import code
+                log.warning('Fixup_struct: Member unexpected : %s'%(m.name))
+                #continue
                 #code.interact(local=locals())
-
-                continue
+                raise TypeError('Fixup_struct: Member unexpected : %s'%(m))
             member = self.all[m]
-            log.debug('Fixup_struct: Member at offset:%d expecting offset:%d'%(member.offset,offset))
+            log.debug('Fixup_struct: Member:%s offset:%d-%d expecting offset:%d'%(
+                    member.name, member.offset, member.offset + member.bits, offset))
             if member.offset > offset:
                 #create padding
                 length = member.offset - offset
                 log.debug('Fixup_struct: create padding for %d bits %d bytes'%(length, length/8))
-                padding = self._make_padding(length)
-                members.append(typedesc.Field('PADDING_%d'%padding_nb, 
-                                padding, 2, offset))
+                p_name = 'PADDING_%d'%padding_nb
+                padding = self._make_padding(p_name, offset, length)
+                members.append(padding)
                 padding_nb+=1
             if member.type is None:
                 log.error('FIXUP_STRUCT: %s.type is None'%(member.name))
             members.append(member)
-            offset = member.offset + member.size*8
-                
+            offset = member.offset + member.bits
+        # tail padding
+        if s.size*8 != offset:
+            length = s.size*8 - offset
+            log.debug('Fixup_struct: create tail padding for %d bits %d bytes'%(length, length/8))
+            p_name = 'PADDING_%d'%padding_nb
+            padding = self._make_padding(p_name, offset, length)
+            members.append(padding)
+        offset = members[-1].offset + members[-1].bits
+        # go
         s.members = members
-        #print 'after', [m.typ for m in s.members], len(s.members )
-        #if s.members[0] is None:
-        #    s.members = []
-        #print len(s.members), type(s.members[0])
-        #print 'after', [m.typ for m in s.members]
-        #s.bases = [self.all[b] for b in s.bases]
+        log.debug("FIXUP_STRUCT: size:%d offset:%d"%(s.size*8, offset))
+        assert offset == s.size*8 #, assert that the last field stop at the size limit
         pass
     _fixup_Union = _fixup_Structure
 
@@ -733,7 +741,8 @@ typedef long double longdouble_t;''')
         bits = None
         if cursor.is_bitfield():
             bits = cursor.get_bitfield_width()
-        typesize = cursor.type.get_size()
+        else:
+            bits = cursor.type.get_size() * 8
         # try to get a representation of the type
         t = cursor.type.get_canonical()
         typ = None
@@ -760,13 +769,13 @@ typedef long double longdouble_t;''')
         #    import code, sys
         #    code.interact(local=locals())
 
-        return typedesc.Field(name, typ, typesize, offset, bits)
+        return typedesc.Field(name, typ, offset, bits, is_bitfield=cursor.is_bitfield())
 
     def _fixup_Field(self, f):
         #print 'fixup field', f.type
-        if f.type is not None:
-            mth = getattr(self, '_fixup_%s'%(type(f.type).__name__))
-            mth(f.type)
+        #if f.type is not None:
+        #    mth = getattr(self, '_fixup_%s'%(type(f.type).__name__))
+        #    mth(f.type)
         pass
 
     ################

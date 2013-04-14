@@ -539,7 +539,7 @@ class Generator(object):
           index = 0
           for f in fields:
               fieldname = unnamed_fields.get(f, f.name)
-              if f.bits is None:
+              if f.is_bitfield is False:
                   print >> self.stream, "    ('%s', %s)," % \
                      (fieldname, self.type_name(f.type))
               else:
