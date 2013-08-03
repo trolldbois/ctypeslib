@@ -16,11 +16,7 @@ if sys.version_info < (2, 7):
 else:
   import unittest
 
-from run_src_app import run_app_test
-from run_src_app import makeTests
-
 def alltests():
-  makeTests()
   ret = unittest.TestLoader().discover('test/')
   return ret
 

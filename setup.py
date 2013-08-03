@@ -24,8 +24,8 @@ setup(
     packages = ['ctypeslib',
                 'ctypeslib.codegen',
                 'ctypeslib.contrib',
-                'ctypeslib.util',
-                'ctypeslib.test'],
+                'ctypeslib.util'
+               ],
     scripts = ['scripts/clang2py'],
     install_requires = ["clang"],
     test_suite= "test.alltests",
