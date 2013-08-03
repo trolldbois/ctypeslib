@@ -9,7 +9,7 @@ except ImportError:
 
 import ctypes
 from ctypes.util import find_library
-from ctypeslib import h2xml
+from ctypeslib import clang2py
 from ctypeslib.codegen.codegenerator import generate_code
 
 def mktemp(suffix):

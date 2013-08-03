@@ -1,0 +1,71 @@
+ctypeslib with libclang
+-----------------------
+
+This fork of ctypeslib is mainly about using the libclang1>=3.2 python bindings
+to generate python code from C source code.
+
+ctypeslib contains these packages:
+ - ``ctypeslib.codegen``       - a code generator
+ - ``ctypeslib.contrib``       - various contributed modules
+ - ``ctypeslib.util``          - assorted small helper functions
+ - ``ctypeslib.test``          - unittests
+
+This fork of ctypeslib is heavily patched for clang.
+https://github.com/trolldbois/ctypeslib is based on 
+ rev77594 of the original ctypeslib.
+git-svn-id: http://svn.python.org/projects/ctypes/trunk/ctypeslib@77594 
+ 6015fed2-1504-0410-9fe1-9d1591cc4771
+
+The original ctypeslib is written by
+author="Thomas Heller",
+author_email="theller@ctypes.org",
+
+
+Usage
+-----
+Usage: clang2py [options] {filename} [clang-args*]
+
+Options:
+  -h, --help          show this help message and exit
+  -c                  include source file location in comments
+  -d                  include docstrings containing C prototype and source
+                      file location
+  -k TYPEKIND         kind of type descriptions to include: d = #defines, e =
+                      enumerations, f = functions, s = structures, t =
+                      typedefs
+  -l DLLS             libraries to search for exported functions
+  -o OUTPUT           output filename (if not specified, standard output will
+                      be used)
+  -r EXPRESSION       regular expression for symbols to include (if neither
+                      symbols nor expressions are specified,everything will be
+                      included)
+  -s SYMBOL           symbol to include (if neither symbols nor expressions
+                      are specified,everything will be included)
+  -v                  verbose output
+  -w                  add all standard windows dlls to the searched dlls list
+  -m module           Python module(s) containing symbols which will be
+                      imported instead of generated
+  --preload=DLL       dlls to be loaded before all others (to resolve symbols)
+  --show-ids=SHOWIDS  Don't compute cursor IDs (very slow)
+  --max-depth=N       Limit cursor expansion to depth N
+
+About clang-args:     You can pass modifier to clang after your file name.
+For example, try -m64 or -m32 as the last argument to change the target CPU 
+arch.
+
+Inner workings for memo
+-----------------------
+clang2py is a script that calls ctypeslib/ctypeslib/clang2py.py
+clang2py.py is mostly the old xml2py.py module forked to use libclang.
+clang2py.py calls ctypeslib/ctypeslib/codegen/codegenerator.py
+codegenerator.py calls ctypeslib/ctypeslib/codegen/clangparser.py
+clangparser.py uses libclang's python binding to access the clang internal 
+ representation of the C source code. 
+ It then translate each child of the AST tree to python objects as listed in 
+ typedesc.
+codegenerator.py then uses these python object to generate ctypes-based python
+ source code.
+ 
+Because clang is capable to handle different target architecture, this fork 
+ {is/should be} able to produce cross-platform memory representation if needed.
+ 
