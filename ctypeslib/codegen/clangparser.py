@@ -12,59 +12,31 @@ import typedesc
 import sys
 import re
 
-log = logging.getLogger('clangparser')
-logging.basicConfig(level=logging.DEBUG)
+from . import util
 
-# TODO:
-# ignore packing method.
-# clang does a better job.
+log = logging.getLogger('clangparser')
+
+def decorator(dec):
+    def new_decorator(f):
+        g = dec(f)
+        g.__name__ = f.__name__
+        g.__doc__ = f.__doc__
+        g.__dict__.update(f.__dict__)
+        return g
+    new_decorator.__name__ = dec.__name__
+    new_decorator.__doc__ = dec.__doc__
+    new_decorator.__dict__.update(dec.__dict__)
+    return new_decorator
+
+@decorator
+def log_entity(func):
+    def fn(*args, **kwargs):
+        log.debug("%s: spelling:'%s'"%(func.__name__, args[1].spelling))
+        #print 'calling {}'.format(func.__name__)
+        return func(*args, **kwargs)
+    return fn
 
 ################################################################
-clang_ctypes_names = {
-    #TypeKind.INVALID : 'None' ,
-    #TypeKind.UNEXPOSED : 'c_' ,
-    TypeKind.VOID : 'None' ,
-    TypeKind.BOOL : 'c_bool' ,
-    TypeKind.CHAR_U : 'c_ubyte' ,
-    TypeKind.UCHAR : 'c_ubyte' ,
-    TypeKind.CHAR16 : 'c_wchar' ,
-    TypeKind.CHAR32 : 'c_wchar*2' , # FIXME
-    TypeKind.USHORT : 'c_ushort' ,
-    TypeKind.UINT : 'c_uint' ,
-    TypeKind.ULONG : 'c_ulong' ,
-    TypeKind.ULONGLONG : 'c_ulonglong' ,
-    TypeKind.UINT128 : 'c_uin128' , #FIXME
-    TypeKind.CHAR_S : 'c_byte' ,
-    TypeKind.SCHAR : 'c_byte' ,
-    TypeKind.WCHAR : 'c_wchar' ,
-    TypeKind.SHORT : 'c_short' ,
-    TypeKind.INT : 'c_int' ,
-    TypeKind.LONG : 'c_long' ,
-    TypeKind.LONGLONG : 'c_longlong' ,
-    TypeKind.INT128 : 'c_int128' , # FIXME
-    TypeKind.FLOAT : 'c_float' ,
-    TypeKind.DOUBLE : 'c_double' ,
-    TypeKind.LONGDOUBLE : 'c_longdouble' ,
-    #TypeKind.NULLPTR : 'c_void_p' , #FIXME
-    #TypeKind.OVERLOAD : 'c_' ,
-    #TypeKind.DEPENDENT : 'c_' ,
-    #TypeKind.OBJCID : 'c_' ,
-    #TypeKind.OBJCCLASS : 'c_' ,
-    #TypeKind.OBJCSEL : 'c_' ,
-    #TypeKind.COMPLEX : 'c_' ,
-    #TypeKind.POINTER : 'c_void_p' ,
-    #TypeKind.BLOCKPOINTER : 'c_void_p' ,
-    #TypeKind.LVALUEREFERENCE : 'c_' ,
-    #TypeKind.RVALUEREFERENCE : 'c_' ,
-    #TypeKind.RECORD : 'c_' ,
-    #TypeKind.ENUM : 'c_' ,
-    #TypeKind.TYPEDEF : 'c_' ,
-    #TypeKind.OBJCINTERFACE : 'c_' ,
-    #TypeKind.OBJCOBJECTPOINTER : 'c_' ,
-    #TypeKind.FUNCTIONNOPROTO : 'c_' ,
-    #TypeKind.FUNCTIONPROTO : 'c_' ,
-    #TypeKind.CONSTANTARRAY : 'c_' ,
-}
 
 def MAKE_NAME(name):
     name = name.replace("$", "DOLLAR")
@@ -85,72 +57,8 @@ def CHECK_NAME(name):
     return None
 
 ''' 
--fdump-record-layouts
-~/Compil/llvm/clang$ clang -cc1 -fdump-record-layouts test/CodeGenCXX/override-layout.cpp
-works.
-
-TODO: need more info on records.
-in RecordLayoutBuidler:
-        const ASTRecordLayout & ASTContext::getASTRecordLayout(const RecordDecl *D) const {
-can give us the information.
-
-So I need to 
-a) export that function.
-b) have an ASTContext object - OK
-
-ASTUnit->getASTContext()
-
-CIndex.cpp:56 
-MakeCXTranslationUnit makes a CXTranslationUnit
-CXTranslationUnit->TUData is a ASTUnit
-
-CIndex.cpp:2536
-clang_parseTranslationUnit take args in args.
-and return the CXTranslationUnit
-
-Donc dans 
-    tu = index.parse(None, args)
-tu.obj nous donne le pointer vers CXTranslationUnit
-iil faudrait que cindex.py donne aces a un getASTUnit
-
-struct CXTranslationUnitImpl {
-  void *CIdx;
-  void *TUData;
-  void *StringPool;
-  void *Diagnostics;
-  void *OverridenCursorsPool;
-  void *FormatContext;
-  unsigned FormatInMemoryUniqueId;
-};
-
-So I could do ( preferably in C plutot )
-    CXTranslationUnitImpl(Structure)
-    ASTUnit(Structure) #on TUData
-    ASTContext(Structure)
-    then
-    ADTUnit_getContext() restype ASTContext
-    ASTContext_getASTRecordLayout( RecordDecl ) restype ASTRecordLayout
-    ( also _align )
-
-Best solution, 
-add getASTRecordLayout infos into 
-
-How to get a RecordDecl ?
-
-##########################################################
-
-TODO TEST
-cross-arch native in clang:
--m64 or "-cc1" "-triple" "x86_64-pc-linux-gnu"
--m32 or "-cc1" "-triple" "i386-pc-linux-gnu"
-ex: 
-clang -\#\#\# -m64 test/CodeGenCXX/override-layout.cpp 
-clang -\#\#\# -m32 test/CodeGenCXX/override-layout.cpp
-
-clang -cc1 -triple "x86_64-pc-linux-gnu" -fdump-record-layouts test/CodeGenCXX/override-layout.cpp 
-clang -cc1 -triple "i386-pc-linux-gnu" -fdump-record-layouts test/CodeGenCXX/override-layout.cpp 
-
-==> cross arch ctypes definition. BIG WIN.
+clang2py test1.cpp -triple "x86_64-pc-linux-gnu" 
+clang2py test1.cpp -triple i386-pc-linux-gnu
 
 '''
 class Clang_Parser(object):
@@ -168,13 +76,41 @@ class Clang_Parser(object):
                       "Destructor", "OperatorMethod",
                       "Converter"])
 
+    ctypes_typename = {
+        TypeKind.VOID : 'void' ,
+        TypeKind.BOOL : 'c_bool' ,
+        TypeKind.CHAR_U : 'c_ubyte' ,
+        TypeKind.UCHAR : 'c_ubyte' ,
+        TypeKind.CHAR16 : 'c_wchar' ,
+        TypeKind.CHAR32 : 'c_wchar*2' ,
+        TypeKind.USHORT : 'TBD' ,
+        TypeKind.UINT : 'TBD' ,
+        TypeKind.ULONG : 'TBD' ,
+        TypeKind.ULONGLONG : 'TBD' ,
+        TypeKind.UINT128 : 'c_uint128' ,
+        TypeKind.CHAR_S : 'c_byte' ,
+        TypeKind.SCHAR : 'c_byte' ,
+        TypeKind.WCHAR : 'c_wchar' ,
+        TypeKind.SHORT : 'TBD' ,
+        TypeKind.INT : 'TBD' ,
+        TypeKind.LONG : 'TBD' ,
+        TypeKind.LONGLONG : 'TBD' ,
+        TypeKind.INT128 : 'c_int128' ,
+        TypeKind.FLOAT : 'c_float' , # FIXME
+        TypeKind.DOUBLE : 'c_double' , # FIXME
+        TypeKind.LONGDOUBLE : 'TBD' ,
+    }
+    records={}
+    fields={}
     def __init__(self, *args):
         #self.args = *args
-        self.context = []
         self.all = {}
+        self.records = {}
+        self.fields = {}
         self.cpp_data = {}
         self._unhandled = []
         self.tu = None
+        self.make_ctypes_convertor()
 
     def parse(self, args):
         index = Index.create()
@@ -184,7 +120,6 @@ class Clang_Parser(object):
             return
         
         root = self.tu.cursor
-        self.context = []
         for node in root.get_children():
             self.startElement( node )
 
@@ -198,7 +133,7 @@ class Clang_Parser(object):
         if mth is None:
             return
         
-        #log.debug('Found a %s|%s|%s'%(node.kind.name, node.displayname, node.spelling))
+        log.debug('Found a %s|%s|%s'%(node.kind.name, node.displayname, node.spelling))
         
         result = mth(node)
         if result is None:
@@ -215,17 +150,71 @@ class Clang_Parser(object):
         #print '++ startElement _id ', _id
         if _id != '' and result is not None: # TYPE_REF, Ignore.        
             self.all[_id] = result
-        elif result is None:
-            log.debug('None result')
         
         # if this element has children, treat them.
         # if name in self.has_values:
 
-        self.context.append( node )
         for child in node.get_children():
             self.startElement( child )          
-        self.context.pop()
         return result
+
+    def register(self, name, obj):
+        if name in self.all:
+            log.debug('register: %s already existed %s|%s'%(self.all[name],obj))
+        self.all[name]=obj
+        return obj
+
+    def is_registered(self, name):
+        if name not in self.all:
+            return None
+        return self.all[name]
+
+    ########################################################################
+    # clang types to ctypes
+    def make_ctypes_convertor(self):
+        tu = util.get_tu('''
+typedef short short_t;
+typedef int int_t;
+typedef long long_t;
+typedef long long longlong_t;
+typedef float float_t;
+typedef double double_t;
+typedef long double longdouble_t;''')
+        size = util.get_cursor(tu, 'short_t').type.get_size()*8
+        self.ctypes_typename[TypeKind.SHORT] = 'c_int%d'%(size)
+        self.ctypes_typename[TypeKind.USHORT] = 'c_uint%d'%(size)
+
+        size = util.get_cursor(tu, 'int_t').type.get_size()*8
+        self.ctypes_typename[TypeKind.INT] = 'c_int%d'%(size)
+        self.ctypes_typename[TypeKind.UINT] = 'c_uint%d'%(size)
+
+        size = util.get_cursor(tu, 'long_t').type.get_size()*8
+        self.ctypes_typename[TypeKind.LONG] = 'c_int%d'%(size)
+        self.ctypes_typename[TypeKind.ULONG] = 'c_uint%d'%(size)
+
+        size = util.get_cursor(tu, 'longlong_t').type.get_size()*8
+        self.ctypes_typename[TypeKind.LONGLONG] = 'c_int%d'%(size)
+        self.ctypes_typename[TypeKind.ULONGLONG] = 'c_uint%d'%(size)
+        
+        #FIXME : Float && http://en.wikipedia.org/wiki/Long_double
+        size0 = util.get_cursor(tu, 'float_t').type.get_size()*8
+        size1 = util.get_cursor(tu, 'double_t').type.get_size()*8
+        size2 = util.get_cursor(tu, 'longdouble_t').type.get_size()*8
+        if size1 != size2:
+            self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_double%d'%(size2)
+        else:
+            self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_double'
+
+        log.debug('ARCH sizes: long:%s longdouble:%s'%(
+                self.ctypes_typename[TypeKind.LONG],
+                self.ctypes_typename[TypeKind.LONGDOUBLE]))
+    
+    def is_fundamental_type(self, t):
+        return t.kind in self.ctypes_typename.keys()
+
+    def convert_to_ctypes(self, typ):
+        return self.ctypes_typename[typ]
+        
 
     ################################
     # do-nothing element handlers
@@ -244,9 +233,21 @@ class Clang_Parser(object):
     def Ellipsis(self, attrs): pass
     def OperatorMethod(self, attrs): pass
 
+
+    ###########################################
+    # ATTRIBUTES
+    
+    @log_entity
     def UNEXPOSED_ATTR(self, cursor): 
-        #log.debug('Found UNEXPOSED_ATTR %s %s'%(cursor.kind.name, cursor.kind.value))
-        parent = self.context[-1]
+        parent = cursor.semantic_parent
+        #print 'parent is',parent.displayname, parent.location, parent.extent
+        # TODO until attr is exposed by clang:
+        # readlines()[extent] .split(' ') | grep {inline,packed}
+        pass
+
+    @log_entity
+    def PACKED_ATTR(self, cursor): 
+        parent = cursor.semantic_parent
         #print 'parent is',parent.displayname, parent.location, parent.extent
         # TODO until attr is exposed by clang:
         # readlines()[extent] .split(' ') | grep {inline,packed}
@@ -278,8 +279,26 @@ class Clang_Parser(object):
     #
     #def _fixup_File(self, f): pass
     
+    def get_token(self, cursor):
+        init = None
+        for c in cursor.get_children():
+            print c.displayname
+            for t in c.get_tokens():
+                init = t.spelling
+                print init
+                break
+            break
+            #print init
+        #print 'VAR_DECL init', init
+        try:
+            int(init)
+        except:
+            init = None
+        return init
+    
     # simple types and modifiers
     # FIXME, token is bad, ar_ref is bad
+    @log_entity
     def VAR_DECL(self, cursor):
         import code
         #code.interact(local=locals())
@@ -296,15 +315,18 @@ class Clang_Parser(object):
                 break
             break
             #print init
-        #print 'VAR_DECL init', init
+        
+            log.debug('VAR_DECL init:%s'%(init))
+        
         try:
             int(init)
         except:
             init = None
         # now get the type
-        typ = cursor.type.get_canonical().kind
-        if typ in clang_ctypes_names:
-            ctypesname = clang_ctypes_names[typ]
+        typ = cursor.type.get_canonical()
+        # FIXME - feels weird
+        if self.is_fundamental_type(typ):
+            ctypesname = self.convert_to_ctypes(typ)
             typ = typedesc.FundamentalType( ctypesname, 0, 0 )
         else:
             typ = cursor.get_usr() #cursor.type.get_canonical().kind.name
@@ -317,38 +339,60 @@ class Clang_Parser(object):
             t.typ = self.all[t.typ]
 
     #def Typedef(self, attrs):
+    @log_entity
     def TYPEDEF_DECL(self, cursor):
         name = cursor.displayname
-        typ = cursor.type.get_canonical().kind
-        if typ in clang_ctypes_names:
-            ctypesname = clang_ctypes_names[typ]
+        log.debug("TYPEDEF_DECL: name:%s"%(name))
+        typ = cursor.type.get_canonical()
+        log.debug("TYPEDEF_DECL: typ:%s"%(typ.kind.spelling))
+        # FIXME feels weird not to call self.fundamental
+        if self.is_fundamental_type(typ):
+            ctypesname = self.convert_to_ctypes(typ.kind)
             typ = typedesc.FundamentalType( ctypesname, 0, 0 )
-        else:
-            typ = cursor.get_usr() #cursor.type.get_canonical().kind.name
-        return typedesc.Typedef(name, typ)
+            log.debug("TYPEDEF_DECL: fundamental typ:%s"%(typ))
+        else: # make typ or get it from self.all
+            _id = cursor.get_definition().type.get_declaration().get_usr()
+            if _id in self.all:
+                typ = self.all[_id]
+            else:
+                typ = name
+            #typ = cursor.get_definition().get_usr()
+            log.debug("TYPEDEF_DECL: complex name:%s typ:%s id:%s"%(name,typ, _id))
+        return self.register(name, typedesc.Typedef(name, typ))
 
     def _fixup_Typedef(self, t):
         #print 'fixing typdef %s name:%s with self.all[%s] = %s'%(id(t), t.name, t.typ, id(self.all[ t.typ])) 
+        log.debug("_fixup_Typedef: t:'%s' t.typ:'%s' t.name:'%s'"%(t, t.typ, t.name))
+        #print self.all.keys()
         if type(t.typ) == str: #typedesc.FundamentalType:
-            t.typ = self.all[ t.typ]
+            t.typ = self.all[t.name]
         pass
 
+    @log_entity
     def TYPE_REF(self, t):
-        if not t.is_definition():
-            return
+        # Should probably never get here.
+        #if not t.is_definition():
+        #    log.debug('TYPE_REF: if not t.is_definition()')
+        #    return
         # get the definition, create or reuse typedesc.
-        next = t.get_definition()
+        next = t.type.get_declaration()
         _id = next.get_usr()
+        log.debug('TYPE_REF: next:%s id:%s'%(next, _id))
         ##print '** _id is ', _id
         if _id in self.all:
+            log.debug('TYPE_REF: _id in self.all')
             return self.all[_id]
         mth = getattr(self, next.kind.name)
         if mth is None:
+            log.debug('TYPE_REF: mth is None')
             raise TypeError('unhandled Type_ref TypeKind %s'%(next.kind))
+        log.debug('TYPE_REF: mth is %s'%(mth.__name__))
         res = mth(next)
+        log.debug('TYPE_REF: res is %s'%(res.name))
         if res is not None:
-            self.all[_id] = res
-            return self.all[_id]
+            log.debug('TYPE_REF: self.all[%s] = %s'%(res.name, res))
+            self.all[res.name] = res
+            return self.all[res.name]
         log.error('None on TYPE_REF')
         return
         
@@ -356,48 +400,47 @@ class Clang_Parser(object):
     def FundamentalType(self, typ):
         #print cursor.displayname
         #t = cursor.type.get_canonical().kind
-        ctypesname = clang_ctypes_names[typ]
-        if ctypesname == "None":
-            size = 0
+        ctypesname = self.convert_to_ctypes(typ.kind)
+        if typ.kind == TypeKind.VOID:
+            size = align = 1
         else:
-            size = 0 # ctypes.sizeof(getattr(ctypes, ctypesname))
-        align = self.all[ self.context[-1].get_usr() ].align
+            size = typ.get_size()
+            align = typ.get_align()
         return typedesc.FundamentalType( ctypesname, size, align )
 
     def _fixup_FundamentalType(self, t): pass
 
+    @log_entity
     def POINTER(self, cursor):
+        # get pointer size
+        size = cursor.type.get_size() # not size of pointee
+        align = cursor.type.get_align() 
         # we shortcut to canonical defs
-        typ = cursor.type.get_pointee().get_canonical().kind
-
-        #import code
-        #code.interact(local=locals())
-
-        if typ in clang_ctypes_names:
-            ctypesname = clang_ctypes_names[typ]
-            if ctypesname == "None":
-                size = 0
-            else:
-                size = 0 #ctypes.sizeof(getattr(ctypes, ctypesname))
-            align = self.all[ self.context[-1].get_usr() ].align
-            typ = typedesc.FundamentalType( ctypesname, size, align )
-        elif typ == TypeKind.RECORD:
+        typ = cursor.type.get_pointee().get_canonical()
+        log.debug("POINTER: size:%d align:%d typ:%s"%(size, align, typ))
+        if self.is_fundamental_type(typ):
+            p_type = self.FundamentalType(typ)
+        elif typ.kind == TypeKind.RECORD:
             children = [c for c in cursor.get_children()]
-            if len(children) != 1:
-                raise ValueError('There is %d children - not expected in PointerType'%(len(children)))
-            if children[0].kind != CursorKind.TYPE_REF:
-                raise TypeError('Wasnt expecting a %s in PointerType'%(children[0].kind))
-            typ = children[0].get_definition().get_usr()
+            assert len(children) == 1 # 'There is %d children - not expected in PointerType'%(len(children)))
+            assert children[0].kind == CursorKind.TYPE_REF#, 'Wasnt expecting a %s in PointerType'%(children[0].kind))
+            p_type = children[0].get_definition().get_usr()
+            if p_type in self.all:
+                p_type = self.all[p_type]
+            else: # forward declaration 
+                child = children[0].type.get_declaration()
+                mth = getattr(self, child.kind.name)
+                if mth is None:
+                    log.debug('POINTER: mth is None')
+                    raise TypeError('unhandled POINTER TypeKind %s'%(child.kind))
+                log.debug('POINTER: mth is %s'%(mth.__name__))
+                res = mth(child)
+                p_type = res
         else:
             raise TypeError('Unknown scenario in PointerType - %s'%(typ))
-
-        #print typ
-        # FIXME, size should be given by clang. Here we restrict size to local arch
-        size = ctypes.sizeof(ctypes.c_void_p)
-        #
-        align = self.all[ self.context[-1].get_usr() ].align
-        
-        return typedesc.PointerType( typ, size, align)
+        log.debug("POINTER: p_type:'%s'"%(p_type.name))
+        # return the pointer        
+        return typedesc.PointerType( p_type, size, align)
 
 
     def _fixup_PointerType(self, p):
@@ -406,7 +449,7 @@ class Clang_Parser(object):
         #code.interact(local=locals())
         ##if type(p.typ.typ) != typedesc.FundamentalType:
         ##    p.typ.typ = self.all[p.typ.typ]
-        if type(p.typ) != typedesc.FundamentalType:
+        if type(p.typ) == str:
             p.typ = self.all[p.typ]
 
     ReferenceType = POINTER
@@ -414,13 +457,14 @@ class Clang_Parser(object):
     OffsetType = POINTER
     _fixup_OffsetType = _fixup_PointerType
 
+    @log_entity
     def CONSTANTARRAY(self, cursor):
-        size = str( cursor.type.get_array_size() )
-        typ = cursor.type.get_array_element_type().get_canonical().kind
-        if typ in clang_ctypes_names:
-            typ = self.FundamentalType( typ )
+        size = cursor.type.get_array_size()
+        typ = cursor.type.get_array_element_type().get_canonical()
+        if self.is_fundamental_type(typ):
+            typ = self.FundamentalType(typ)
         else:
-            mth = getattr(self, typ.name)
+            mth = getattr(self, typ.kind.name)
             if mth is None:
                 raise TypeError('unhandled Field TypeKind %s'%(t.name))
             typ  = mth(cursor)
@@ -430,7 +474,7 @@ class Clang_Parser(object):
         #import code
         #code.interact(local=locals())
         
-        return typedesc.ArrayType(typ, size, size)
+        return typedesc.ArrayType(typ, size)
 
     def _fixup_ArrayType(self, a):
         # FIXME
@@ -451,6 +495,7 @@ class Clang_Parser(object):
     # callables
     
     #def Function(self, attrs):
+    @log_entity
     def FUNCTION_DECL(self, cursor):
         # name, returns, extern, attributes
         #name = attrs["name"]
@@ -481,6 +526,7 @@ class Clang_Parser(object):
         func.returns = self.all[func.returns]
         func.fixup_argtypes(self.all)
 
+    @log_entity
     def OperatorFunction(self, attrs):
         # name, returns, extern, attributes
         name = attrs["name"]
@@ -491,6 +537,7 @@ class Clang_Parser(object):
         func.returns = self.all[func.returns]
 
     def _Ignored(self, attrs):
+        log.debug("_Ignored: name:'%s' "%(cursor.spelling))
         name = attrs.get("name", None)
         if not name:
             name = attrs["mangled"]
@@ -512,40 +559,49 @@ class Clang_Parser(object):
 
     # working, except for parent not being a Typedesc.
     def PARM_DECL(self, p):
-    #    import code
-    #    code.interact(local=locals())
-    #    parent = self.context[-1]
-    #    if parent is not None:
-    #        parent.add_argument(typedesc.Argument(p.type.get_canonical(), p.name))
+        parent = cursor.semantic_parent
+        #    if parent is not None:
+        #        parent.add_argument(typedesc.Argument(p.type.get_canonical(), p.name))
         return
 
     # Just ignore it.
-    def INTEGER_LITERAL(self, i):
-        #print ' im a integer i'
+    @log_entity
+    def INTEGER_LITERAL(self, cursor):
+        # FIXME : unhandled constant values.
+        #print 'INTEGER_LITERAL'
+        #import code
+        #code.interact(local=locals())
+        #print ' im a integer i=', self.get_token(cursor)
         #import code
         #code.interact(local=locals())
         return
 
     # enumerations
 
+    @log_entity
     def ENUM_DECL(self, cursor):
+        ''' Get the enumeration type'''
         # id, name
         #print '** ENUMERATION', cursor.displayname
         name = cursor.displayname
         #if name == '':
         #    #raise ValueError('could try get_usr()')
         #    name = MAKE_NAME( cursor.get_usr() )
-        align = cursor.get_record_alignment() 
-        size = cursor.get_record_size() 
+        align = cursor.type.get_align() 
+        size = cursor.type.get_size() 
         #print align, size
         return typedesc.Enumeration(name, size, align)
 
     def _fixup_Enumeration(self, e): pass
 
+    @log_entity
     def ENUM_CONSTANT_DECL(self, cursor):
+        ''' Get the enumeration values'''
         name = cursor.displayname
         value = cursor.enum_value
-        parent = self.all[self.context[-1].get_usr()]        
+        # FIXME obselete context by semantic_parent
+        parent = self.all[cursor.semantic_parent.get_usr()]
+        #parent = self.all[self.context[-1].get_usr()]        
         v = typedesc.EnumValue(name, value, parent)
         parent.add_value(v)
         return v
@@ -554,40 +610,23 @@ class Clang_Parser(object):
 
     # structures, unions, classes
 
+    @log_entity
     def RECORD(self, cursor):
-        # either Union, Struct, Enum(?) in Ref or in Decl.
-        ## TypeKind RECORD = cursor.type.get_canonical().kind
-        children = [c for c in cursor.get_children()]
-        if len(children) != 1:
-            raise ValueError('There is %d children - not expected in a record type '%(len(children)))
-
-        next = children[0]
-        mth = getattr(self, next.kind.name)
-        if mth is None:
-            raise TypeError('unhandled Record TypeKind %s'%(next.kind))
+        # I'm a field. ?
+        return self.records[cursor.type.get_declaration().spelling]
         ## if next == CursorKind.TYPE_REF: # defer
         ## if next == CursorKind.UNION_DECL: # create
-        ## if next == CursorKind.g: # create
-        
-        #import code
-        #code.interact(local=locals())
+        ## if next == CursorKind.STRUCT_DECL: # create
 
-        return mth(next)
 
+    @log_entity
     def STRUCT_DECL(self, cursor):
-
-        #import code
-        #code.interact(local=locals())
-        
         if not cursor.is_definition():
             return
-        
         # id, name, members
         name = cursor.displayname
         if name == '': # anonymous is spelling == ''
             name = MAKE_NAME( cursor.get_usr() )
-            #import code
-            #code.interact(local=locals())
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
         # should be in MAKE_NAME
@@ -598,72 +637,145 @@ class Clang_Parser(object):
         #bases = attrs.get("bases", "").split() # that for cpp ?
         bases = [] # FIXME: support CXX
 
-        align = cursor.get_record_alignment() 
-        size = cursor.get_record_size()  
+        align = cursor.type.get_align() 
+        size = cursor.type.get_size()  
 
-        members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
-        #print 'found %d members'%( len(members))
-        return typedesc.Structure(name, align, members, bases, size)
+        members = []
+        packed = False # 
+        for child in cursor.get_children():
+            if child.kind == clang.cindex.CursorKind.FIELD_DECL:
+                members.append( child.get_usr())
+                continue
+            if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
+                packed = True
+        obj = typedesc.Structure(name, align, members, bases, size, packed=packed)
+        #obj = typedesc.Structure(name, align, members, bases, size)
+        self.records[name] = obj
+
+        return obj
+
+    def _make_padding(self, name, offset, length):
+        log.debug("_make_padding: for %d bits"%(length))
+        if (length % 8) != 0:
+            # FIXME
+            log.warning('_make_padding: FIXME we need sub-bytes padding definition')
+        if length > 8:
+            bytes = length/8
+            return typedesc.Field(name,
+                     typedesc.ArrayType(
+                       typedesc.FundamentalType(
+                         self.ctypes_typename[TypeKind.CHAR_U], length, 1 ),
+                       bytes),
+                     offset, length)
+        return typedesc.Field(name,
+                 typedesc.FundamentalType( self.ctypes_typename[TypeKind.CHAR_U], 1, 1 ),
+                 offset, length)
 
     def _fixup_Structure(self, s):
+        log.debug('RECORD_FIX: %s '%(s.name))
         #print 'before', s.members
         #for m in s.members:
         #    if m not in self.all:
         #        print s.name,s.location
-        s.members = [self.all[m] for m in s.members if m in self.all and type(self.all[m]) == typedesc.Field ]
-        #print 'after', [m.typ for m in s.members], len(s.members )
-        #if s.members[0] is None:
-        #    s.members = []
-        #print len(s.members), type(s.members[0])
-        #print 'after', [m.typ for m in s.members]
-        #s.bases = [self.all[b] for b in s.bases]
+        members = []
+        offset = 0
+        padding_nb = 0
+        # create padding fields
+        for m in s.members:
+            if m not in self.all or type(self.all[m]) != typedesc.Field:
+                import code
+                log.warning('Fixup_struct: Member unexpected : %s'%(m.name))
+                #continue
+                #code.interact(local=locals())
+                raise TypeError('Fixup_struct: Member unexpected : %s'%(m))
+            member = self.all[m]
+            log.debug('Fixup_struct: Member:%s offset:%d-%d expecting offset:%d'%(
+                    member.name, member.offset, member.offset + member.bits, offset))
+            if member.offset > offset:
+                #create padding
+                length = member.offset - offset
+                log.debug('Fixup_struct: create padding for %d bits %d bytes'%(length, length/8))
+                p_name = 'PADDING_%d'%padding_nb
+                padding = self._make_padding(p_name, offset, length)
+                members.append(padding)
+                padding_nb+=1
+            if member.type is None:
+                log.error('FIXUP_STRUCT: %s.type is None'%(member.name))
+            members.append(member)
+            offset = member.offset + member.bits
+        # tail padding
+        if s.size*8 != offset:
+            length = s.size*8 - offset
+            log.debug('Fixup_struct: create tail padding for %d bits %d bytes'%(length, length/8))
+            p_name = 'PADDING_%d'%padding_nb
+            padding = self._make_padding(p_name, offset, length)
+            members.append(padding)
+        offset = members[-1].offset + members[-1].bits
+        # go
+        s.members = members
+        log.debug("FIXUP_STRUCT: size:%d offset:%d"%(s.size*8, offset))
+        assert offset == s.size*8 #, assert that the last field stop at the size limit
         pass
     _fixup_Union = _fixup_Structure
 
+    @log_entity
     def UNION_DECL(self, cursor):
         name = cursor.displayname
         if name == '': # anonymous is spelling == ''
             name = MAKE_NAME( cursor.get_usr() )
         bases = [] # FIXME: support CXX
-        align = cursor.get_record_alignment()
-        size = cursor.get_record_size() 
+        align = cursor.type.get_align()
+        size = cursor.type.get_size() 
         members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
         return typedesc.Union(name, align, members, bases, size)
 
     Class = STRUCT_DECL
     _fixup_Class = _fixup_Structure
 
+    @log_entity
     def FIELD_DECL(self, cursor):
         # name, type
         name = cursor.displayname
-##        if name.startswith("__") and not name.endswith("__"):
-##            print "INVALID FIELD NAME", name
-
-        t = cursor.type.get_canonical().kind
-        if t in clang_ctypes_names:
-            # goto self.FundamentalType
-            typ = self.FundamentalType(t)
+        offset = cursor.semantic_parent.type.get_offset(name) 
+        # bitfield
+        bits = None
+        if cursor.is_bitfield():
+            bits = cursor.get_bitfield_width()
         else:
-            mth = getattr(self, t.name)
+            bits = cursor.type.get_size() * 8
+        # try to get a representation of the type
+        t = cursor.type.get_canonical()
+        typ = None
+        if self.is_fundamental_type(t):
+            typ = self.FundamentalType(t)
+        else: # t.kind == TypeKind.RECORD or t.kind == TypeKind.POINTER and others
+            # need to get the type
+            log.debug("FIELD_DECL: TypeKind:'%s'"%(t.kind.name))
+            mth = getattr(self, t.kind.name)
             if mth is None:
                 raise TypeError('unhandled Field TypeKind %s'%(t.name))
-            typ  = mth(cursor)
+            typ = mth(cursor)
+            
             if typ is None:
+                
+                print '669'
+                import code, sys
+                #code.interact(local=locals())
+                
                 return None
-                #raise TypeError('Field can not be None %s %s'%(name, t.name))   
+                #raise TypeError('Field can not be None %s %s'%(name, t.nacursor.semantic_parent.typeme))   
+        #else:
+        #    log.debug("FIELD_DECL: TypeKind:'%s'"%(t.kind.name))
+        #    import code, sys
+        #    code.interact(local=locals())
 
-        # FIXME
-        # bits = attrs.get("bits", None)
-        bits = None
-        offset = cursor.get_record_field_offset() 
-
-        return typedesc.Field(name, typ, bits, offset)
+        return typedesc.Field(name, typ, offset, bits, is_bitfield=cursor.is_bitfield())
 
     def _fixup_Field(self, f):
-        #print 'fixup field', f.typ
-        if f.typ is not None:
-            mth = getattr(self, '_fixup_%s'%(type(f.typ).__name__))
-            mth(f.typ)
+        #print 'fixup field', f.type
+        #if f.type is not None:
+        #    mth = getattr(self, '_fixup_%s'%(type(f.type).__name__))
+        #    mth(f.type)
         pass
 
     ################
@@ -721,7 +833,8 @@ class Clang_Parser(object):
         remove = []
         for n, i in self.all.items():
             location = getattr(i, "location", None)
-            if location:
+            # FIXME , why do we get different lcation types
+            if location and hasattr(location, 'file'):
                 i.location = location.file.name, location.line
             mth = getattr(self, "_fixup_" + type(i).__name__)
             try:
@@ -750,7 +863,7 @@ class Clang_Parser(object):
                 result.append(i)
 
         #print 'self.all', self.all
-        #import code
+        import code
         #code.interact(local=locals())
         
         #print 'clangparser get_result:',result

@@ -1,8 +1,14 @@
 #!/usr/bin/python -E
-import sys, re, os
+import logging
+import os
+import re
+import sys
+
 from optparse import OptionParser
 from ctypeslib.codegen.codegenerator import generate_code
 from ctypeslib.codegen import typedesc
+
+log = logging.getLogger('clang2py')
 
 ################################################################
 windows_dll_names = """\
@@ -44,6 +50,12 @@ def main(argv=None):
         parser.values.dlls.extend(windows_dll_names)
 
     parser = OptionParser("usage: %prog [options] {filename} [clang-args*]")
+    parser.add_option("--debug",
+                      action="store_true",
+                      dest="debug",
+                      help="activate debug",
+                      default=False)
+
     parser.add_option("-c",
                       action="store_true",
                       dest="generate_comments",
@@ -137,7 +149,7 @@ def main(argv=None):
                       metavar="N", type=int, default=None)
 
     parser.epilog = '''About clang-args:     You can pass modifier to clang after your file name.
-    For example, try -m64 or -m32 as the last argument to change the target CPU arch.''' 
+    For example, try "-target x86_64" or "-target i386-linux" as the last argument to change the target CPU arch.''' 
     
     parser.disable_interspersed_args()
     (options, args) = parser.parse_args()
@@ -147,6 +159,11 @@ def main(argv=None):
         parser.error("Exactly one input file must be specified")
     #options, files = parser.parse_args(argv[1:])
 
+    level=logging.INFO
+    if options.debug:
+        level=logging.DEBUG
+    logging.basicConfig(level=level, stream=sys.stdout)
+    
     if options.output == "-":
         stream = sys.stdout
     else:

@@ -114,10 +114,9 @@ class Typedef(object):
 
 class ArrayType(object):
     location = None
-    def __init__(self, typ, min, max):
+    def __init__(self, typ, size):
         self.typ = typ
-        self.min = min.rstrip("ul")
-        self.max = max.rstrip("ul")
+        self.size = size
 
 class StructureHead(object):
     location = None
@@ -138,16 +137,14 @@ class _Struct_Union_Base(object):
         return self.struct_head
 
 class Structure(_Struct_Union_Base):
-    def __init__(self, name, align, members, bases, size, artificial=None):
+    def __init__(self, name, align, members, bases, size, artificial=None, packed=False):
         self.name = name
         self.align = int(align)
         self.members = members
         self.bases = bases
         self.artificial = artificial
-        if size is not None:
-            self.size = int(size)
-        else:
-            self.size = None
+        self.size = size
+        self.packed = packed
         self.struct_body = StructureBody(self)
         self.struct_head = StructureHead(self)
 
@@ -166,11 +163,13 @@ class Union(_Struct_Union_Base):
         self.struct_head = StructureHead(self)
 
 class Field(object):
-    def __init__(self, name, typ, bits, offset):
+    ''' Change bits if its a bitfield'''
+    def __init__(self, name, typ, offset, bits, is_bitfield=False):
         self.name = name
-        self.typ = typ
+        self.type = typ
+        self.offset = offset
         self.bits = bits
-        self.offset = int(offset)
+        self.is_bitfield = is_bitfield
 
 class CvQualifiedType(object):
     def __init__(self, typ, const, volatile):

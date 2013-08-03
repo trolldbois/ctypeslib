@@ -1,28 +1,24 @@
-
+/* padding */
 
 struct structName
 {
   short member1;
   int member2;
-  unsigned int member3;
-  unsigned int member4;
-  unsigned int member5;
+  long long member3;
 } __attribute__((packed));
 
 struct structName2
 {
   short member1;
   int member2;
-  unsigned int member3;
-  unsigned int member4;
-  unsigned int member5;
+  long long member3;
 };
 
 struct Node {
   unsigned int val1;
   void * ptr2;
   int * ptr3;
-  struct Node2 * ptr4;
+  unsigned char val4;
 };
 
 struct Node2 {
@@ -30,17 +26,25 @@ struct Node2 {
   struct Node * m2;
 };
 
-enum myEnum {
-ONE,
-TWO,
-FOUR = 4 
+struct Node3 {
+  unsigned char m1;
+  struct Node m2;
+  unsigned char m3;
 };
 
-typedef struct
-{
-  long __val[2];
-} my__quad_t;
+struct Node4 {
+  unsigned char m1;
+  unsigned short m2;
+  struct Node * m3;
+};
 
+struct Node5 {
+  unsigned int m1;
+  unsigned short m2;
+};
+
+
+/* padding in bitfields */
 typedef struct
 {
   long a:3;
@@ -50,12 +54,4 @@ typedef struct
   long f:2;
 } my_bitfield;
 
-typedef struct __attribute__((packed)) {
-    int a;
-    char c;
-} mystruct;
-
-//COREDUMP 
-//struct Anon;
-//struct Anon2;
 
