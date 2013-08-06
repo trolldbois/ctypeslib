@@ -39,10 +39,10 @@ def log_entity(func):
 ################################################################
 
 def MAKE_NAME(name):
-    name = name.replace("$", "DOLLAR")
-    name = name.replace(".", "DOT")
-    name = name.replace("@", "_")
-    name = name.replace(":", "_")
+    for k, v in [('<','_'), ('>','_'), ('::','__'), (',',''), (' ',''),
+                 ("$", "DOLLAR"), (".", "DOT"), ("@", "_"), (":", "_")]:
+        if k in name: # template
+            name = name.replace(k,v)
     if name.startswith("__"):
         return "_X" + name
     elif name[0] in "01234567879":
@@ -160,7 +160,7 @@ class Clang_Parser(object):
 
     def register(self, name, obj):
         if name in self.all:
-            log.debug('register: %s already existed %s|%s'%(self.all[name],obj))
+            log.debug('register: %s already existed %s|%s'%(name,self.all[name],obj))
         self.all[name]=obj
         return obj
 
@@ -612,8 +612,23 @@ typedef long double longdouble_t;''')
 
     @log_entity
     def RECORD(self, cursor):
+        ''' a record is a NOT a declaration ? '''
         # I'm a field. ?
-        return self.records[cursor.type.get_declaration().spelling]
+        _type = cursor.type.get_declaration() 
+        name = _type.spelling
+        if name == '': 
+            name = MAKE_NAME( cursor.get_usr() )
+        kind = _type.kind
+        if name in self.records:
+            return self.records[name]
+        import code
+        code.interact(local=locals())
+        log.debug("RECORD: TypeKind:'%s'"%(kind.name))
+        mth = getattr(self, kind.name)
+        if mth is None:
+            raise TypeError('unhandled Record TypeKind %s'%(kind.name))
+        self.records[name] = mth(cursor)
+        return self.records[name]
         ## if next == CursorKind.TYPE_REF: # defer
         ## if next == CursorKind.UNION_DECL: # create
         ## if next == CursorKind.STRUCT_DECL: # create
@@ -629,10 +644,6 @@ typedef long double longdouble_t;''')
             name = MAKE_NAME( cursor.get_usr() )
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
-        # should be in MAKE_NAME
-        for k, v in [('<','_'), ('>','_'), ('::','__'), (',',''), (' ',''), ]:
-          if k in name: # template
-            name = name.replace(k,v)
         # FIXME: lets ignore bases for now.
         #bases = attrs.get("bases", "").split() # that for cpp ?
         bases = [] # FIXME: support CXX
@@ -646,8 +657,9 @@ typedef long double longdouble_t;''')
             if child.kind == clang.cindex.CursorKind.FIELD_DECL:
                 members.append( child.get_usr())
                 continue
-            if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
-                packed = True
+            # FIXME LLVM-CLANG, patch http://lists.cs.uiuc.edu/pipermail/cfe-commits/Week-of-Mon-20130415/078445.html
+            #if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
+            #    packed = True
         obj = typedesc.Structure(name, align, members, bases, size, packed=packed)
         #obj = typedesc.Structure(name, align, members, bases, size)
         self.records[name] = obj
@@ -727,7 +739,9 @@ typedef long double longdouble_t;''')
         align = cursor.type.get_align()
         size = cursor.type.get_size() 
         members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
-        return typedesc.Union(name, align, members, bases, size)
+        obj = typedesc.Union(name, align, members, bases, size)
+        self.records[name] = obj
+        return obj
 
     Class = STRUCT_DECL
     _fixup_Class = _fixup_Structure

@@ -27,6 +27,6 @@ setup(
                 'ctypeslib.util'
                ],
     scripts = ['scripts/clang2py'],
-    install_requires = ["clang>=3.2"],
+    install_requires = ["clang>=3.3"],
     test_suite= "test.alltests",
 )

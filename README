@@ -68,4 +68,21 @@ codegenerator.py then uses these python object to generate ctypes-based python
  
 Because clang is capable to handle different target architecture, this fork 
  {is/should be} able to produce cross-platform memory representation if needed.
+
+
+Setting up clang>=3.3
+---------------------
+wget http://launchpadlibrarian.net/146336115/libllvm3.3_3.3-3ubuntu1_amd64.deb
+wget http://launchpadlibrarian.net/146336111/libclang1-3.3_3.3-3ubuntu1_amd64.deb
+wget http://launchpadlibrarian.net/146336113/libclang-3.3-dev_3.3-3ubuntu1_amd64.deb
+wget http://launchpadlibrarian.net/146336114/libclang-common-3.3-dev_3.3-3ubuntu1_amd64.deb
+sudo dpkg -i libclang1-3.3_3.3-3ubuntu1_amd64.deb libclang-3.3-dev_3.3-3ubuntu1_amd64.deb libclang-common-3.3-dev_3.3-3ubuntu1_amd64.deb libllvm3.3_3.3-3ubuntu1_amd64.deb
+sudo echo `echo "/usr/lib/llvm-3.3/lib/" >> /etc/ld.so.conf.d/llvm-3.3.conf`
+sudo ldconfig -n
+
+
+
+
+
+
  
