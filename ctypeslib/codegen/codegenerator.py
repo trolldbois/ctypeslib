@@ -500,12 +500,11 @@ class Generator(object):
             # XXX we have parsed the COM interface methods but should
             # we emit any code for them?
             pass
-        # we pack all the time, to compensate for unknown align strategy
-        # of the current arch.
+        # LXJ: we pack all the time, because clang gives a precise field offset 
+        # per target architecture. No need to defer to ctypes logic for that.
         if fields:
-            if body.struct.packed:
-                print >> self.stream, "# attribute(packed) in source"
-            print >> self.stream, "%s._pack_ = True" % (body.struct.name)
+            print >> self.stream, "%s._pack_ = True # source:%s" % (body.struct.name,
+                                                             body.struct.packed)
 
         if body.struct.bases:
             #print body, type(body.struct).__name__, body.struct.name, len(body.struct.bases)

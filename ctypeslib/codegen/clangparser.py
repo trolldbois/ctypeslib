@@ -621,8 +621,8 @@ typedef long double longdouble_t;''')
         kind = _type.kind
         if name in self.records:
             return self.records[name]
-        import code
-        code.interact(local=locals())
+        #import code
+        #code.interact(local=locals())
         log.debug("RECORD: TypeKind:'%s'"%(kind.name))
         mth = getattr(self, kind.name)
         if mth is None:
@@ -685,6 +685,8 @@ typedef long double longdouble_t;''')
 
     def _fixup_Structure(self, s):
         log.debug('RECORD_FIX: %s '%(s.name))
+        import code
+        #code.interact(local=locals())
         #print 'before', s.members
         #for m in s.members:
         #    if m not in self.all:
@@ -716,9 +718,11 @@ typedef long double longdouble_t;''')
             members.append(member)
             offset = member.offset + member.bits
         # tail padding
+        # FIXME: this isn't right. Why does Union.size returns 1.
+        # Probably because of sizeof returning standard size instead of real size
         if s.size*8 != offset:
             length = s.size*8 - offset
-            log.debug('Fixup_struct: create tail padding for %d bits %d bytes'%(length, length/8))
+            log.debug('Fixup_struct: s:%d create tail padding for %d bits %d bytes'%(s.size, length, length/8))
             p_name = 'PADDING_%d'%padding_nb
             padding = self._make_padding(p_name, offset, length)
             members.append(padding)
