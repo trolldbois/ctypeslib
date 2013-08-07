@@ -1,10 +1,10 @@
 #!/usr/bin/python -E
+import argparse 
 import logging
 import os
 import re
 import sys
 
-from optparse import OptionParser
 from ctypeslib.codegen.codegenerator import generate_code
 from ctypeslib.codegen import typedesc
 
@@ -49,29 +49,17 @@ def main(argv=None):
     def windows_dlls(option, opt, value, parser):
         parser.values.dlls.extend(windows_dll_names)
 
-    parser = OptionParser("usage: %prog [options] {filename} [clang-args*]")
-    parser.add_option("--debug",
-                      action="store_true",
-                      dest="debug",
-                      help="activate debug",
-                      default=False)
-
-    parser.add_option("-c",
-                      action="store_true",
-                      dest="generate_comments",
-                      help="include source file location in comments",
-                      default=False)
-
-    parser.add_option("-d",
-                      action="store_true",
-                      dest="generate_docstrings",
-                      help="include docstrings containing C prototype and source file location",
-                      default=False)
-    
-    parser.add_option("-k",
-                      action="store",
-                      dest="kind",
-                      help="kind of type descriptions to include: "
+    parser = argparse.ArgumentParser(prog='clang2py', 
+                 description='generate python ABI code from C code')
+    parser.add_argument("--debug", dest="debug", action="store_const", 
+                 const=True, help='setLevel to DEBUG')
+    parser.add_argument("-c", dest="generate_comments", action="store_true", 
+                 help="include source file location in comments", default=False)
+    parser.add_argument("-d", dest="generate_docstrings", action="store_true",
+                 help="include docstrings containing C prototype and source file location",
+                 default=False)
+    parser.add_argument("-k", action="store",
+                      dest="kind", help="kind of type descriptions to include: "
                       "d = #defines, "
                       "e = enumerations, "
                       "f = functions, "
@@ -80,18 +68,18 @@ def main(argv=None):
                       metavar="TYPEKIND",
                       default=None)
 
-    parser.add_option("-l",
+    parser.add_argument("-l",
                       dest="dlls",
                       help="libraries to search for exported functions",
                       action="append",
                       default=[])
 
-    parser.add_option("-o",
+    parser.add_argument("-o",
                       dest="output",
                       help="output filename (if not specified, standard output will be used)",
                       default="-")
 
-    parser.add_option("-r",
+    parser.add_argument("-r",
                       dest="expressions",
                       metavar="EXPRESSION",
                       action="append",
@@ -100,7 +88,7 @@ def main(argv=None):
                       "everything will be included)",
                       default=None)
 
-    parser.add_option("-s",
+    parser.add_argument("-s",
                       dest="symbols",
                       metavar="SYMBOL",
                       action="append",
@@ -109,15 +97,15 @@ def main(argv=None):
                       "everything will be included)",
                       default=None)
 
-    parser.add_option("-v",
+    parser.add_argument("-v",
                       action="store_true",
                       dest="verbose",
                       help="verbose output",
                       default=False)
 
-    parser.add_option("-w",
-                      action="callback",
-                      callback=windows_dlls,
+    parser.add_argument("-w",
+                      action="store",
+                      default=windows_dlls,
                       help="add all standard windows dlls to the searched dlls list")
 
     if os.name in ("ce", "nt"):
@@ -125,7 +113,7 @@ def main(argv=None):
     else:
         default_modules = [ ] # ctypes is already imported
 
-    parser.add_option("-m",
+    parser.add_argument("-m",
                       dest="modules",
                       metavar="module",
                       help="Python module(s) containing symbols which will "
@@ -133,31 +121,35 @@ def main(argv=None):
                       action="append",
                       default=default_modules)
 
-    parser.add_option("--preload",
+    parser.add_argument("--preload",
                       dest="preload",
                       metavar="DLL",
                       help="dlls to be loaded before all others (to resolve symbols)",
                       action="append",
                       default=[])
 
-    parser.add_option("", "--show-ids", dest="showIDs",
+    parser.add_argument("--show-ids", dest="showIDs",
                       help="Don't compute cursor IDs (very slow)",
                       default=False)
 
-    parser.add_option("", "--max-depth", dest="maxDepth",
+    parser.add_argument("--max-depth", dest="maxDepth",
                       help="Limit cursor expansion to depth N",
                       metavar="N", type=int, default=None)
+
+    parser.add_argument("files", nargs="+",
+                      help="source filenames", type=argparse.FileType('r'))
+
+    #parser.add_argument("clang-opts", required=False, help="clang options", type=str)
+
 
     parser.epilog = '''About clang-args:     You can pass modifier to clang after your file name.
     For example, try "-target x86_64" or "-target i386-linux" as the last argument to change the target CPU arch.''' 
     
-    parser.disable_interspersed_args()
-    (options, args) = parser.parse_args()
-
-    if len(args) == 0:
-        parser.error('invalid number arguments')
-        parser.error("Exactly one input file must be specified")
-    #options, files = parser.parse_args(argv[1:])
+    options,clang_opts = parser.parse_known_args()
+    # FIXME, multiple filename is not handled by generate_code
+    args = [f.name for f in options.files] + clang_opts
+    import code
+    code.interact(local=locals())
 
     level=logging.INFO
     if options.debug:
@@ -219,10 +211,6 @@ def main(argv=None):
             types.extend(typ)
         options.kind = tuple(types)
 
-    # check the file...
-    with file(args[0],'r'):
-        pass
-
     generate_code(args, stream,
                   symbols=options.symbols,
                   expressions=options.expressions,
@@ -232,9 +220,9 @@ def main(argv=None):
                   known_symbols=known_symbols,
                   searched_dlls=dlls,
                   preloaded_dlls=options.preload,
-                  types=options.kind,
-                  use_clang=True)
+                  types=options.kind)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    #sys.exit(main())
+    main()

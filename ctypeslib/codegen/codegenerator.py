@@ -787,8 +787,8 @@ def generate_code(srcfile,
                   searched_dlls=None,
                   types=None,
                   preloaded_dlls=[],
-                  generate_docstrings=False,
-                  use_clang=False,): # TODO change to parser object
+                  generate_docstrings=False
+                  ): 
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
     from clangparser import parse
