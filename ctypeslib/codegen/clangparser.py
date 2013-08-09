@@ -31,7 +31,7 @@ def decorator(dec):
 @decorator
 def log_entity(func):
     def fn(*args, **kwargs):
-        log.debug("%s: spelling:'%s'"%(func.__name__, args[1].spelling))
+        log.debug("%s: displayname:'%s'"%(func.__name__, args[1].displayname))
         #print 'calling {}'.format(func.__name__)
         return func(*args, **kwargs)
     return fn
@@ -218,8 +218,8 @@ typedef long double longdouble_t;''', flags=_flags)
     def is_fundamental_type(self, t):
         return t.kind in self.ctypes_typename.keys()
 
-    def convert_to_ctypes(self, typ):
-        return self.ctypes_typename[typ]
+    def convert_to_ctypes(self, typekind):
+        return self.ctypes_typename[typekind]
         
 
     ################################
@@ -332,7 +332,7 @@ typedef long double longdouble_t;''', flags=_flags)
         typ = cursor.type.get_canonical()
         # FIXME - feels weird
         if self.is_fundamental_type(typ):
-            ctypesname = self.convert_to_ctypes(typ)
+            ctypesname = self.convert_to_ctypes(typ.kind)
             typ = typedesc.FundamentalType( ctypesname, 0, 0 )
         else:
             typ = cursor.get_usr() #cursor.type.get_canonical().kind.name
@@ -350,7 +350,7 @@ typedef long double longdouble_t;''', flags=_flags)
         name = cursor.displayname
         log.debug("TYPEDEF_DECL: name:%s"%(name))
         typ = cursor.type.get_canonical()
-        log.debug("TYPEDEF_DECL: typ:%s"%(typ.kind.spelling))
+        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(typ.kind.spelling))
         # FIXME feels weird not to call self.fundamental
         if self.is_fundamental_type(typ):
             ctypesname = self.convert_to_ctypes(typ.kind)
@@ -564,7 +564,7 @@ typedef long double longdouble_t;''', flags=_flags)
         m.fixup_argtypes(self.all)
 
     # working, except for parent not being a Typedesc.
-    def PARM_DECL(self, p):
+    def PARM_DECL(self, cursor):
         parent = cursor.semantic_parent
         #    if parent is not None:
         #        parent.add_argument(typedesc.Argument(p.type.get_canonical(), p.name))
@@ -642,8 +642,8 @@ typedef long double longdouble_t;''', flags=_flags)
 
     @log_entity
     def STRUCT_DECL(self, cursor):
-        if not cursor.is_definition():
-            return
+        if not cursor.kind.is_declaration():#definition():
+            raise TypeError('STRUCT_DECL is not declaration')
         # id, name, members
         name = cursor.displayname
         if name == '': # anonymous is spelling == ''
@@ -669,7 +669,6 @@ typedef long double longdouble_t;''', flags=_flags)
         obj = typedesc.Structure(name, align, members, bases, size, packed=packed)
         #obj = typedesc.Structure(name, align, members, bases, size)
         self.records[name] = obj
-
         return obj
 
     def _make_padding(self, name, offset, length):
