@@ -149,12 +149,12 @@ def main(argv=None):
     # FIXME, multiple filename is not handled by generate_code
     args = [f.name for f in options.files] + clang_opts
     import code
-    code.interact(local=locals())
+    #code.interact(local=locals())
 
     level=logging.INFO
     if options.debug:
         level=logging.DEBUG
-    logging.basicConfig(level=level, stream=sys.stdout)
+    logging.basicConfig(level=level, stream=sys.stderr)
     
     if options.output == "-":
         stream = sys.stdout

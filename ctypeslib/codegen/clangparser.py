@@ -118,7 +118,11 @@ class Clang_Parser(object):
         if not self.tu:
             log.warning("unable to load input")
             return
-        
+        if len(self.tu.diagnostics)>0:
+            for x in self.tu.diagnostics:
+                if x.severity > 2:
+                    log.warning("Source code has some error. Please fix.")
+                    break
         root = self.tu.cursor
         for node in root.get_children():
             self.startElement( node )
