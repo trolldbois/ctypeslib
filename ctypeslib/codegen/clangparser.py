@@ -115,8 +115,6 @@ class Clang_Parser(object):
 
     def parse(self, filename):
         index = Index.create()
-        import code
-        code.interact(local=locals())
         self.tu = index.parse(filename, self.flags)
         if not self.tu:
             log.warning("unable to load input")

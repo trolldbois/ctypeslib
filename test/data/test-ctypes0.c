@@ -4,7 +4,7 @@ struct s0
   unsigned int val2;
   unsigned int * me;
   unsigned int val2b;
-  unsigned int val1b;
+  unsigned long val1b;
 };
 
 struct s1 {
@@ -25,7 +25,7 @@ struct s2 {
 union u2 { 
   struct s1 val1;
   union u1 val2;
-};
+}
 
 int main(){
   return 0;
