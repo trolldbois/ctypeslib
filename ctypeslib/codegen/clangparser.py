@@ -155,7 +155,14 @@ class Clang_Parser(object):
         #print '++ startElement _id ', _id
         if _id != '' and result is not None: # TYPE_REF, Ignore.        
             self.all[_id] = result
-        
+        elif _id == '' and node.kind != CursorKind.TYPEDEF_DECL and node.kind != CursorKind.TYPE_REF:
+            # FIXME LLVM-CLANG
+            import code
+            code.interact(local=locals())
+            #raise ValueError('No node to save ?')
+            _id = node.semantic_parent.get_usr() + "@Ab"
+            self.all[_id] = result
+
         # if this element has children, treat them.
         # if name in self.has_values:
 
@@ -605,9 +612,7 @@ typedef long double longdouble_t;''', flags=_flags)
         ''' Get the enumeration values'''
         name = cursor.displayname
         value = cursor.enum_value
-        # FIXME obselete context by semantic_parent
         parent = self.all[cursor.semantic_parent.get_usr()]
-        #parent = self.all[self.context[-1].get_usr()]        
         v = typedesc.EnumValue(name, value, parent)
         parent.add_value(v)
         return v
@@ -642,6 +647,13 @@ typedef long double longdouble_t;''', flags=_flags)
 
     @log_entity
     def STRUCT_DECL(self, cursor):
+        return self._record_decl(typedesc.Structure, cursor)
+
+    @log_entity
+    def UNION_DECL(self, cursor):
+        return self._record_decl(typedesc.Union, cursor)
+
+    def _record_decl(self, _type, cursor):
         if not cursor.kind.is_declaration():#definition():
             raise TypeError('STRUCT_DECL is not declaration')
         # id, name, members
@@ -661,13 +673,18 @@ typedef long double longdouble_t;''', flags=_flags)
         packed = False # 
         for child in cursor.get_children():
             if child.kind == clang.cindex.CursorKind.FIELD_DECL:
-                members.append( child.get_usr())
+                # FIXME LLVM-CLANG, issue https://github.com/trolldbois/python-clang/issues/2
+                _cname = child.get_usr()
+                if _cname == '':
+                    _cname = cursor.get_usr() + "@Ab"
+                # END FIXME
+                members.append( _cname )
                 continue
             # FIXME LLVM-CLANG, patch http://lists.cs.uiuc.edu/pipermail/cfe-commits/Week-of-Mon-20130415/078445.html
             #if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
             #    packed = True
-        obj = typedesc.Structure(name, align, members, bases, size, packed=packed)
-        #obj = typedesc.Structure(name, align, members, bases, size)
+        obj = _type(name, align, members, bases, size, packed=packed)
+        #obj = _type(name, align, members, bases, size)
         self.records[name] = obj
         return obj
 
@@ -700,12 +717,12 @@ typedef long double longdouble_t;''', flags=_flags)
         offset = 0
         padding_nb = 0
         # create padding fields
-        for m in s.members:
+        for m in s.members: # s.members are strings
             if m not in self.all or type(self.all[m]) != typedesc.Field:
                 import code
-                log.warning('Fixup_struct: Member unexpected : %s'%(m.name))
+                code.interact(local=locals())
+                log.warning('Fixup_struct: Member unexpected : %s'%(m))
                 #continue
-                #code.interact(local=locals())
                 raise TypeError('Fixup_struct: Member unexpected : %s'%(m))
             member = self.all[m]
             log.debug('Fixup_struct: Member:%s offset:%d-%d expecting offset:%d'%(
@@ -739,19 +756,6 @@ typedef long double longdouble_t;''', flags=_flags)
         pass
     _fixup_Union = _fixup_Structure
 
-    @log_entity
-    def UNION_DECL(self, cursor):
-        name = cursor.displayname
-        if name == '': # anonymous is spelling == ''
-            name = MAKE_NAME( cursor.get_usr() )
-        bases = [] # FIXME: support CXX
-        align = cursor.type.get_align()
-        size = cursor.type.get_size() 
-        members = [ child.get_usr() for child in cursor.get_children() if child.kind == clang.cindex.CursorKind.FIELD_DECL ]
-        obj = typedesc.Union(name, align, members, bases, size)
-        self.records[name] = obj
-        return obj
-
     Class = STRUCT_DECL
     _fixup_Class = _fixup_Structure
 
@@ -764,8 +768,14 @@ typedef long double longdouble_t;''', flags=_flags)
         bits = None
         if cursor.is_bitfield():
             bits = cursor.get_bitfield_width()
+            if name == '': # TODO FIXME libclang, get_usr() should return != ''
+                log.warning("Cursor has no displayname - anonymous bitfield")
+                name = "anonymous_bitfield"
+                #cursor.get_usr = lambda : (cursor.semantic_parent.get_usr()+"@Ab")
         else:
             bits = cursor.type.get_size() * 8
+        if name == '': 
+            raise ValueError("Field has no displayname")
         # try to get a representation of the type
         t = cursor.type.get_canonical()
         typ = None
