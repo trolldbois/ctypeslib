@@ -5,6 +5,8 @@ import typedesc, sys, os
 import textwrap
 import struct, ctypes
 
+import clangparser
+
 import logging
 log=logging.getLogger('codegen')
 
@@ -538,6 +540,9 @@ class Generator(object):
           index = 0
           for f in fields:
               fieldname = unnamed_fields.get(f, f.name)
+              import code
+              #code.interact(local=locals())
+              print f.__dict__
               if f.is_bitfield is False:
                   print >> self.stream, "    ('%s', %s)," % \
                      (fieldname, self.type_name(f.type))
@@ -777,7 +782,7 @@ except ImportError,e:
 
 ################################################################
 
-def generate_code(srcfile,
+def generate_code(srcfiles,
                   outfile,
                   expressions=None,
                   symbols=None,
@@ -787,13 +792,16 @@ def generate_code(srcfile,
                   searched_dlls=None,
                   types=None,
                   preloaded_dlls=[],
-                  generate_docstrings=False
+                  generate_docstrings=False,
+                  flags=[]
                   ): 
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
-    from clangparser import parse
-
-    items = parse(srcfile)
+    parser = clangparser.Clang_Parser(flags)
+    items = []
+    for srcfile in srcfiles:
+        parser.parse(srcfile)
+        items += parser.get_result()
     
     # filter symbols to generate
     todo = []

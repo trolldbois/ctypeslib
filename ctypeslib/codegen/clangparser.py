@@ -102,19 +102,22 @@ class Clang_Parser(object):
     }
     records={}
     fields={}
-    def __init__(self, *args):
-        #self.args = *args
+    def __init__(self, flags):
         self.all = {}
         self.records = {}
         self.fields = {}
         self.cpp_data = {}
         self._unhandled = []
         self.tu = None
-        self.make_ctypes_convertor()
+        self.flags = flags
+        self.make_ctypes_convertor(flags)
+        
 
-    def parse(self, args):
+    def parse(self, filename):
         index = Index.create()
-        self.tu = index.parse(None, args)
+        import code
+        code.interact(local=locals())
+        self.tu = index.parse(filename, self.flags)
         if not self.tu:
             log.warning("unable to load input")
             return
@@ -174,8 +177,9 @@ class Clang_Parser(object):
         return self.all[name]
 
     ########################################################################
-    # clang types to ctypes
-    def make_ctypes_convertor(self):
+    ''' clang types to ctypes for architecture dependent size types
+    '''
+    def make_ctypes_convertor(self, _flags):
         tu = util.get_tu('''
 typedef short short_t;
 typedef int int_t;
@@ -183,7 +187,7 @@ typedef long long_t;
 typedef long long longlong_t;
 typedef float float_t;
 typedef double double_t;
-typedef long double longdouble_t;''')
+typedef long double longdouble_t;''', flags=_flags)
         size = util.get_cursor(tu, 'short_t').type.get_size()*8
         self.ctypes_typename[TypeKind.SHORT] = 'c_int%d'%(size)
         self.ctypes_typename[TypeKind.USHORT] = 'c_uint%d'%(size)
@@ -901,10 +905,4 @@ typedef long double longdouble_t;''')
                 self.startElement( child ) 
         return p
 
-################################################################
 
-def parse(args):
-    # parse an XML file into a sequence of type descriptions
-    parser = Clang_Parser()
-    parser.parse(args)
-    return parser.get_result()

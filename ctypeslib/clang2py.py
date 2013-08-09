@@ -146,10 +146,7 @@ def main(argv=None):
     For example, try "-target x86_64" or "-target i386-linux" as the last argument to change the target CPU arch.''' 
     
     options,clang_opts = parser.parse_known_args()
-    # FIXME, multiple filename is not handled by generate_code
-    args = [f.name for f in options.files] + clang_opts
-    import code
-    #code.interact(local=locals())
+    files = [f.name for f in options.files]
 
     level=logging.INFO
     if options.debug:
@@ -211,7 +208,7 @@ def main(argv=None):
             types.extend(typ)
         options.kind = tuple(types)
 
-    generate_code(args, stream,
+    generate_code(files, stream,
                   symbols=options.symbols,
                   expressions=options.expressions,
                   verbose=options.verbose,
@@ -220,7 +217,8 @@ def main(argv=None):
                   known_symbols=known_symbols,
                   searched_dlls=dlls,
                   preloaded_dlls=options.preload,
-                  types=options.kind)
+                  types=options.kind,
+                  flags=clang_opts)
 
 
 if __name__ == "__main__":
