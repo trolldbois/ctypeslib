@@ -39,6 +39,8 @@ def log_entity(func):
 ################################################################
 
 def MAKE_NAME(name):
+    ''' Transforms an USR into a valid python name.
+    '''
     for k, v in [('<','_'), ('>','_'), ('::','__'), (',',''), (' ',''),
                  ("$", "DOLLAR"), (".", "DOT"), ("@", "_"), (":", "_")]:
         if k in name: # template
@@ -58,8 +60,8 @@ def CHECK_NAME(name):
     return None
 
 ''' 
-clang2py test1.cpp -triple "x86_64-pc-linux-gnu" 
-clang2py test1.cpp -triple i386-pc-linux-gnu
+clang2py test1.cpp -target "x86_64-pc-linux-gnu" 
+clang2py test1.cpp -target i386-pc-linux-gnu
 
 '''
 class Clang_Parser(object):
@@ -115,6 +117,15 @@ class Clang_Parser(object):
         
 
     def parse(self, filename):
+        '''. reads 1 file
+        . if there is a compilation error, print a warning
+        . get root cursor and recurse
+        . for each STRUCT_DECL, register a new struct type
+        . for each UNION_DECL, register a new union type
+        . for each TYPEDEF_DECL, register a new alias/typdef to the underlying type
+            - underlying type is cursor.type.get_declaration() 
+        . for each STRUCT_DECL, register a new struct type
+        '''
         index = Index.create()
         self.tu = index.parse(filename, self.flags)
         if not self.tu:
@@ -348,24 +359,31 @@ typedef long double longdouble_t;''', flags=_flags)
     #def Typedef(self, attrs):
     @log_entity
     def TYPEDEF_DECL(self, cursor):
+        ''' At some point the target type is declared.
         '''
-        '''
-        # FIXME __builtin_va_list to handle
         name = cursor.displayname
         log.debug("TYPEDEF_DECL: name:%s"%(name))
-        typ = cursor.type.get_canonical()
+        _type = cursor.type.get_canonical()
         _id = cursor.get_usr()
-        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(typ.kind.spelling))
+        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind.spelling))
         # FIXME feels weird not to call self.fundamental
-        if self.is_fundamental_type(typ):
-            ctypesname = self.convert_to_ctypes(typ.kind)
-            typ = typedesc.FundamentalType( ctypesname, 0, 0 )
-            log.debug("TYPEDEF_DECL: fundamental typ:%s"%(typ))
-        elif self.is_pointer_type(typ):
-            typ = self.POINTER(cursor)
+        if self.is_fundamental_type(_type):
+            p_type = self.FundamentalType(_type)
+            #ctypesname = self.convert_to_ctypes(typ.kind)
+            #typ = typedesc.FundamentalType( ctypesname, 0, 0 )
+            #log.debug("TYPEDEF_DECL: fundamental typ:%s"%(typ))
+        elif self.is_pointer_type(_type):
+            p_type = self.POINTER(cursor)
             #import code
             #code.interact(local=locals())
-        else: # RECORD, functionpointer...
+        elif _type.kind == TypeKind.RECORD: 
+            decl = _type.get_declaration()
+            decl_name = decl.displayname
+            if decl_name == '':
+                decl_name = MAKE_NAME(decl.get_usr())
+            # Type is already defined OR will be defined later.
+            p_type = self.get_registered(decl_name) or decl_name
+            '''
             _id = cursor.get_definition().get_usr()
             obj = self.get_registered(name)
             #import code
@@ -378,8 +396,14 @@ typedef long double longdouble_t;''', flags=_flags)
                 return self.register(name, typedesc.Typedef(name, typ))
             else:
                 return obj
+            '''
+        else:
+            # _type.kind == TypeKind.CONSTANTARRAY or
+            #  _type.kind == TypeKind.FUNCTIONPROTO
+            pass
+            return None
         # final
-        return self.register(name, typedesc.Typedef(name, typ))
+        return self.register(name, typedesc.Typedef(name, p_type))
         
     def _fixup_Typedef(self, t):
         #print 'fixing typdef %s name:%s with self.all[%s] = %s'%(id(t), t.name, t.typ, id(self.all[ t.typ])) 
@@ -469,7 +493,7 @@ typedef long double longdouble_t;''', flags=_flags)
             decl = _type.get_declaration()
             decl_name = decl.displayname
             if decl_name == '':
-                decl_name = MAKE_NAME(decl.displayname)
+                decl_name = MAKE_NAME(decl.get_usr())
             # Type is already defined OR will be defined later.
             p_type = self.get_registered(decl_name) or decl_name
             #p_type = children[0].get_definition().get_usr()
