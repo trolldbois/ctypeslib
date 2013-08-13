@@ -83,6 +83,10 @@ def storage(t):
 
 def get_real_type(tp):
     if type(tp) is typedesc.Typedef:
+        if type(tp.typ) is typedesc.Typedef:
+            import code
+            code.interact(local=locals())
+            raise TypeError('Nested loop in Typedef %s'%(tp.name))
         return get_real_type(tp.typ)
     elif isinstance(tp, typedesc.CvQualifiedType):
         return get_real_type(tp.typ)
@@ -542,7 +546,7 @@ class Generator(object):
               fieldname = unnamed_fields.get(f, f.name)
               import code
               #code.interact(local=locals())
-              print f.__dict__
+              #print f.__dict__
               if f.is_bitfield is False:
                   print >> self.stream, "    ('%s', %s)," % \
                      (fieldname, self.type_name(f.type))
@@ -802,7 +806,9 @@ def generate_code(srcfiles,
     for srcfile in srcfiles:
         parser.parse(srcfile)
         items += parser.get_result()
-    
+    log.debug('Input was parsed')
+    import code
+    code.interact(local=locals())
     # filter symbols to generate
     todo = []
 
