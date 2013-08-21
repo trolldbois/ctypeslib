@@ -394,6 +394,7 @@ class Generator(object):
     _arraytypes = 0
     def ArrayType(self, tp):
         self._arraytypes += 1
+        print '***',tp, tp.typ
         self.generate(get_real_type(tp.typ))
         self.generate(tp.typ)
 
@@ -687,6 +688,7 @@ class Generator(object):
     ########
 
     def generate(self, item):
+        print item
         if item in self.done:
             return
         n=''
@@ -694,6 +696,8 @@ class Generator(object):
             n = item.name
         elif isinstance( item, (str,)):
             log.error( '** got an string item %s'%( item ) )
+            import code
+            code.interact(local=locals())
         
         if isinstance(item, typedesc.StructureHead):
             name = getattr(item.struct, "name", None)

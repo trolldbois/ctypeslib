@@ -123,8 +123,8 @@ class Clang_Parser(object):
         . for each STRUCT_DECL, register a new struct type
         . for each UNION_DECL, register a new union type
         . for each TYPEDEF_DECL, register a new alias/typdef to the underlying type
-            - underlying type is cursor.type.get_declaration() 
-        . for each STRUCT_DECL, register a new struct type
+            - underlying type is cursor.type.get_declaration() for Record
+        . for each TYPEREF ??
         '''
         index = Index.create()
         self.tu = index.parse(filename, self.flags)
@@ -539,24 +539,24 @@ typedef long double longdouble_t;''', flags=_flags)
 
     @log_entity
     def CONSTANTARRAY(self, cursor):
-        # FIXME
-        return typedesc.ArrayType('INT', 2)
+        # 
+        #return typedesc.ArrayType('INT', 2)
         size = cursor.type.get_array_size()
-        typ = cursor.type.get_array_element_type().get_canonical()
-        if self.is_fundamental_type(typ):
-            typ = self.FundamentalType(typ)
+        _type = cursor.type.get_array_element_type().get_canonical()
+        if self.is_fundamental_type(_type):
+            _type = self.FundamentalType(_type)
         else:
-            mth = getattr(self, typ.kind.name)
+            mth = getattr(self, _type.kind.name)
             if mth is None:
-                raise TypeError('unhandled Field TypeKind %s'%(typ.kind.name))
-            typ  = mth(cursor)
-            if typ is None:
+                raise TypeError('unhandled Field TypeKind %s'%(_type.kind.name))
+            _type  = mth(cursor)
+            if _type is None:
                 return None
 
         #import code
         #code.interact(local=locals())
         
-        return typedesc.ArrayType(typ, size)
+        return typedesc.ArrayType(_type, size)
 
     def _fixup_ArrayType(self, a):
         # FIXME
