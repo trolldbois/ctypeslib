@@ -402,6 +402,9 @@ typedef long double longdouble_t;''', flags=_flags)
             #  _type.kind == TypeKind.FUNCTIONPROTO
             pass
             return None
+        if p_type is None:
+            import code
+            code.interact(local=locals())
         # final
         return self.register(name, typedesc.Typedef(name, p_type))
         
@@ -508,17 +511,17 @@ typedef long double longdouble_t;''', flags=_flags)
             #    log.debug('POINTER: mth is %s'%(mth.__name__))
             #    res = mth(child)
             #    p_type = res
-        elif _type.kind == TypeKind.FUNCTIONPROTO:
-            log.error('TypeKind.FUNCTIONPROTO not implemented')
-            return None
+        #elif _type.kind == TypeKind.FUNCTIONPROTO:
+        #    log.error('TypeKind.FUNCTIONPROTO not implemented')
+        #    return None
         else:
             # 
             mth = getattr(self, _type.kind.name)
-            p_type = mth(cursor)
-            import code
-            code.interact(local=locals())
-            raise TypeError('Unknown scenario in PointerType - %s'%(_type))
-        log.debug("POINTER: p_type:'%s'"%(p_type.name))
+            p_type = mth(_type)
+            #import code
+            #code.interact(local=locals())
+            #raise TypeError('Unknown scenario in PointerType - %s'%(_type))
+        log.debug("POINTER: p_type:'%s'"%(p_type.__dict__))
         # return the pointer        
         return typedesc.PointerType( p_type, size, align)
 
@@ -598,10 +601,10 @@ typedef long double longdouble_t;''', flags=_flags)
         #func.fixup_argtypes(self.all)
         pass
 
-    def FunctionType(self, attrs):
+    def FUNCTIONPROTO(self, cursor):
         # id, returns, attributes
-        returns = attrs["returns"]
-        attributes = attrs.get("attributes", "").split()
+        returns = cursor.get_result()
+        attributes = [x for x in cursor.argument_types()]
         return typedesc.FunctionType(returns, attributes)
     
     def _fixup_FunctionType(self, func):

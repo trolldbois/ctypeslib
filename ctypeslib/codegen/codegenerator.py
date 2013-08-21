@@ -360,6 +360,7 @@ class Generator(object):
         
     _typedefs = 0
     def Typedef(self, tp):
+        print 'Typedef', tp.name, tp.typ
         sized_types = {
             "uint8_t":  "c_uint8",
             "uint16_t": "c_uint16",
@@ -394,7 +395,7 @@ class Generator(object):
     _arraytypes = 0
     def ArrayType(self, tp):
         self._arraytypes += 1
-        print '***',tp, tp.typ
+        print '***',tp.__class__.__name__, tp.typ.__dict__
         self.generate(get_real_type(tp.typ))
         self.generate(tp.typ)
 
@@ -688,7 +689,7 @@ class Generator(object):
     ########
 
     def generate(self, item):
-        print item
+        print item, item.__dict__
         if item in self.done:
             return
         n=''
