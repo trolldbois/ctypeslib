@@ -9,7 +9,7 @@ import struct, ctypes
 import clangparser
 
 import logging
-log=logging.getLogger('codegen')
+log = logging.getLogger('codegen')
 
 # This should be configurable
 ASSUME_STRINGS = True
@@ -496,8 +496,8 @@ class Generator(object):
         # LXJ: we pack all the time, because clang gives a precise field offset 
         # per target architecture. No need to defer to ctypes logic for that.
         if fields:
-            print >> self.stream, "%s._pack_ = True # source:%s" % (body.struct.name,
-                                                             body.struct.packed)
+            print >> self.stream, "%s._pack_ = True # source:%s" % (
+                        body.struct.name, 'PATCH NEEDED %s'%body.struct.packed)
 
         if body.struct.bases:
             #print body, type(body.struct).__name__, body.struct.name, len(body.struct.bases)
@@ -710,16 +710,11 @@ class Generator(object):
             self.generate(item)
 
     def cmpitems(a, b):
-        a = getattr(a, "location", None)
-        b = getattr(b, "location", None)
-        if a is None: return -1
-        if b is None: return 1
-        try:
-            return cmp(a[0],b[0]) or cmp(int(a[1]),int(b[1]))
-        except TypeError, e:
-            log.error('still have clang objects in here')
-            import code
-            code.interact(local=locals())
+        loc_a = getattr(a, "location", None)
+        loc_b = getattr(b, "location", None)
+        if loc_a is None: return -1
+        if loc_b is None: return 1
+        return cmp(loc_a[0],loc_b[0]) or cmp(int(loc_a[1]),int(loc_b[1]))
     cmpitems = staticmethod(cmpitems)
 
     def generate_items(self, items):

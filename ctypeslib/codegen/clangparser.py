@@ -165,7 +165,7 @@ class Clang_Parser(object):
             return
         # FIXME - types should be known
         if node.location.file is not None:
-            result.location = node.location
+            result.location = (node.location.file.name, node.location.line)
         # if this element has children, treat them.
         for child in node.get_children():
             self.startElement( child )          
@@ -810,6 +810,9 @@ typedef void* pointer_t;''', flags=_flags)
         #bases = attrs.get("bases", "").split() # that for cpp ?
         bases = [] # FIXME: support CXX
         align = cursor.type.get_align() 
+        if align < 0 :
+            log.error('invalid structure %s %s'%(name, cursor.location))
+            return None
         size = cursor.type.get_size()  
         members = []
         packed = False # 
@@ -1017,9 +1020,10 @@ typedef void* pointer_t;''', flags=_flags)
         remove = []
         for _id, _item in self.all.items():
             location = getattr(_item, "location", None)
-            # FIXME , why do we get different lcation types
+            # FIXME , why do we get different location types
             if location and hasattr(location, 'file'):
                 _item.location = location.file.name, location.line
+                log.error('%s %s came in with a SourceLocation'%(_id, _item))
             elif location is None:
                 log.warning('item %s has no location.'%(_id))
                 #import code
@@ -1034,9 +1038,6 @@ typedef void* pointer_t;''', flags=_flags)
             except IOError,e:#KeyError,e: # XXX better exception catching
                 log.warning('function "%s" missing, err:%s, remove %s'%("_fixup_" + type(_item).__name__, e, _id) )
                 remove.append(_id)
-            except AttributeError, e:
-                import code
-                code.interact(local=locals())
             
         for _x in remove:
             del self.all[_x]
@@ -1058,7 +1059,7 @@ typedef void* pointer_t;''', flags=_flags)
                 result.append(i)
 
         #print 'self.all', self.all
-        import code
+        #import code
         #code.interact(local=locals())
         
         #print 'clangparser get_result:',result

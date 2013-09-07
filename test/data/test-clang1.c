@@ -55,7 +55,6 @@ typedef struct __attribute__((packed)) {
     char c;
 } mystruct;
 
-//COREDUMP 
-//struct Anon;
-//struct Anon2;
+struct Anon;
+struct Anon2;
 
