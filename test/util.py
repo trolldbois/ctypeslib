@@ -101,13 +101,13 @@ class ADict(dict):
 
 class ArchTest(unittest.TestCase):
     word_size = None
-    flags = []
     def gen(self, fname, flags=None):
         ofi = StringIO()
         generate_code( [fname], ofi, flags=flags or []) 
         namespace = {}
         # DEBUG
-        print ofi.getvalue()
+        #print ofi.getvalue()
+        # DEBUG 
         exec ofi.getvalue() in namespace
         return ADict(namespace)
     

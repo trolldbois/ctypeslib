@@ -27,7 +27,7 @@ union u2 {
   union u1 val2;
 };
 
-union invalid1 { 
+union invalid1 {
   struct s1 val1;
   union u1 val2;
 }
