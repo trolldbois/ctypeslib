@@ -7,7 +7,7 @@
 import ctypes
 from ctypes import *
 class c_int128(Structure):
-    _fields_ = [('a', c_int64), ('b', c_int64)]
+    _fields_ = [('val', c_ubyte*16)]
     _packed_ = True
 
 c_uint128 = c_int128
