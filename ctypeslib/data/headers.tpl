@@ -6,11 +6,12 @@
 
 import ctypes
 from ctypes import *
-class c_int128(Structure):
-    _fields_ = [('val', c_ubyte*16)]
-    _packed_ = True
-
+c_int128 = c_ubyte*16
 c_uint128 = c_int128
+if sizeof(ctypes.c_longdouble) == __LONG_DOUBLE_SIZE__:
+    c_long_double_t = c_longdouble
+else:
+    c_long_double_t = c_ubyte*__LONG_DOUBLE_SIZE__
 void = None
 
 # if local wordsize is same as target, keep ctypes pointer function.
@@ -45,5 +46,4 @@ else:
                 raise TypeError('This is not a ctypes pointer. It is not instanciable.')
         _class = type('LP_%d_%s'%(__POINTER_SIZE__, clsname), (_T,),{}) 
         return _class
-
-
+# end headers

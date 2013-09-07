@@ -741,12 +741,14 @@ class Generator(object):
         # assuming a LONG also has the same sizeof than a pointer. 
         word_type = parser.get_ctypes_name(TypeKind.ULONG)
         word_char =  getattr(ctypes,word_type)._type_
+        long_double_size = str(parser.get_ctypes_size(TypeKind.LONGDOUBLE)/8)
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/headers.tpl')
         headers = headers.replace('__FLAGS__', str(parser.flags))
         headers = headers.replace('__POINTER_SIZE__', word_size)
         headers = headers.replace('__REPLACEMENT_TYPE__' , word_type)
         headers = headers.replace('__REPLACEMENT_TYPE_CHAR__', word_char)
+        headers = headers.replace('__LONG_DOUBLE_SIZE__', long_double_size)
 
         print >> self.imports, headers
         pass

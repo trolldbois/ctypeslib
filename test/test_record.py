@@ -15,10 +15,22 @@ class RecordTest(ArchTest):
         self.assertEquals(ctypes.sizeof(self.namespace.you_badaboum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.big_badaboum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.you_big_badaboum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.double_badaboum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.long_double_badaboum), 4)
+        self.assertEquals(ctypes.sizeof(self.namespace.double_badaboum), 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.long_double_badaboum), 12)
         self.assertEquals(ctypes.sizeof(self.namespace.float_badaboum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.ptr), 4)
+
+    def test_simple_x64(self):
+        flags = ['-target','x86_64-linux']
+        self.namespace = self.gen('test/data/test-clang0.c', flags)
+        self.assertEquals(ctypes.sizeof(self.namespace.badaboum), 4)
+        self.assertEquals(ctypes.sizeof(self.namespace.you_badaboum), 4)
+        self.assertEquals(ctypes.sizeof(self.namespace.big_badaboum), 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.you_big_badaboum), 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.double_badaboum), 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.long_double_badaboum), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.float_badaboum), 4)
+        self.assertEquals(ctypes.sizeof(self.namespace.ptr), 8)
 
     @unittest.skip('')
     def test_records_x32(self):
