@@ -146,7 +146,7 @@ class Clang_Parser(object):
         root = self.tu.cursor
         for node in root.get_children():
             self.startElement( node )
-
+        return
 
     def startElement(self, node ): #kind, attrs):
         if node is None:
@@ -174,6 +174,7 @@ class Clang_Parser(object):
     def register(self, name, obj):
         if name in self.all:
             log.debug('register: %s already existed: %s'%(name,obj.name))
+            raise RuntimeError('register: %s already existed: %s'%(name,obj.name))
         self.all[name]=obj
         return obj
 
@@ -181,6 +182,9 @@ class Clang_Parser(object):
         if name not in self.all:
             return None
         return self.all[name]
+
+    def is_registered(self, name):
+        return name in self.all
 
     ########################################################################
     ''' clang types to ctypes for architecture dependent size types
@@ -324,10 +328,10 @@ typedef void* pointer_t;''', flags=_flags)
     def get_token(self, cursor):
         init = None
         for c in cursor.get_children():
-            print c.displayname
+            #print c.displayname
             for t in c.get_tokens():
                 init = t.spelling
-                print init
+                #print init
                 break
             break
             #print init
@@ -415,6 +419,8 @@ typedef void* pointer_t;''', flags=_flags)
                 decl_name = MAKE_NAME(decl.get_usr())
             # Type is already defined OR will be defined later.
             p_type = self.get_registered(decl_name) or decl_name
+            #import code
+            #code.interact(local=locals())
             '''
             _id = cursor.get_definition().get_usr()
             obj = self.get_registered(name)
@@ -806,6 +812,8 @@ typedef void* pointer_t;''', flags=_flags)
             name = MAKE_NAME( _id )
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
+        if self.is_registered(name): # could be reached as child of a typedef
+            return None
         # FIXME: lets ignore bases for now.
         #bases = attrs.get("bases", "").split() # that for cpp ?
         bases = [] # FIXME: support CXX
@@ -852,7 +860,7 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _fixup_Structure(self, s):
         log.debug('Struct/Union_FIX: %s '%(s.name))
-        import code
+        #import code
         #code.interact(local=locals())
         #print 'before', s.members
         #for m in s.members:
@@ -1028,10 +1036,10 @@ typedef void* pointer_t;''', flags=_flags)
                 log.warning('item %s has no location.'%(_id))
                 #import code
                 #code.interact(local=locals())
-            elif not hasattr(location, 'file'):
-                log.warning('item %s location has no file.'%(_id))
-                #import code
-                #code.interact(local=locals())
+            #elif not hasattr(location, 'file'):
+            #    log.warning('item %s location has no file.'%(_id))
+            #    #import code
+            #    #code.interact(local=locals())
             mth = getattr(self, "_fixup_" + type(_item).__name__)
             try:
                 mth(_item)
@@ -1061,6 +1069,7 @@ typedef void* pointer_t;''', flags=_flags)
         #print 'self.all', self.all
         #import code
         #code.interact(local=locals())
+
         
         #print 'clangparser get_result:',result
         return result

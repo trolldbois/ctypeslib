@@ -321,14 +321,15 @@ class Generator(object):
         for struct in head.struct.bases:
             self.generate(struct.get_head())
             self.more.add(struct)
+        # verbose output with location.
         if self.generate_comments and head.struct.location:
             print >> self.stream, "# %s %s" % head.struct.location
         basenames = [self.type_name(b) for b in head.struct.bases]
         if basenames:
-###            method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
+            ### method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
             print >> self.stream, "class %s(%s):" % (head.struct.name, ", ".join(basenames))
         else:
-###            methods = [m for m in head.struct.members if type(m) is typedesc.Method]
+            ### methods = [m for m in head.struct.members if type(m) is typedesc.Method]
             if type(head.struct) == typedesc.Structure:
                 print >> self.stream, "class %s(Structure):" % head.struct.name
             elif type(head.struct) == typedesc.Union:
@@ -364,15 +365,17 @@ class Generator(object):
                   (tp.name, sized_types[tp.name])
             self.names.add(tp.name)
             return
-        if type(tp.typ) in (typedesc.Structure, typedesc.Union):
-            self.generate(tp.typ.get_head())
-            self.more.add(tp.typ)
-        else:
-            self.generate(tp.typ)
+        if tp.typ not in self.done:
+            if type(tp.typ) in (typedesc.Structure, typedesc.Union):
+                self.generate(tp.typ.get_head())
+                self.more.add(tp.typ)
+            else:
+                self.generate(tp.typ)
         if 0 and self.type_name(tp.typ) in self.known_symbols:
             stream = self.imports
         else:
             stream = self.stream
+        # generate actual typedef code.
         if tp.name != self.type_name(tp.typ):
             print >> stream, "%s = %s" % \
                   (tp.name, self.type_name(tp.typ))
@@ -674,21 +677,21 @@ class Generator(object):
     ########
 
     def generate(self, item):
-        #print item, item.__dict__
         if item in self.done:
             return
-        n=''
+        #print item, item.__dict__
+        name=''
         if hasattr(item, 'name'):
-            n = item.name
+            name = item.name
         elif isinstance( item, (str,)):
             log.error( '** got an string item %s'%( item ) )
             import code
             code.interact(local=locals())
         
-        if isinstance(item, typedesc.StructureHead):
-            name = getattr(item.struct, "name", None)
-        else:
-            name = getattr(item, "name", None)
+        #if isinstance(item, typedesc.StructureHead):
+        #    name = getattr(item.struct, "name", None)
+        #else:
+        #    name = getattr(item, "name", None)
         if name in self.known_symbols:
             log.debug('item is in known_symbols %s'% name )
             mod = self.known_symbols[name]
@@ -702,7 +705,7 @@ class Generator(object):
         # to avoid infinite recursion, we have to mark it as done
         # before actually generating the code.
         self.done.add(item)
-
+        # go to specific treatment
         mth(item)
 
     def generate_all(self, items):
