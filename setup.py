@@ -26,6 +26,7 @@ setup(
                 'ctypeslib.contrib',
                 'ctypeslib.util'
                ],
+    package_data={'ctypeslib': ['data/headers.tpl']},
     scripts = ['scripts/clang2py'],
     install_requires = ["clang>=3.3"],
     test_suite= "test.alltests",

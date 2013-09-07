@@ -251,8 +251,9 @@ class Generator(object):
                     elif x.name == "wchar_t":
                         self.need_WSTRING()
                         return "WSTRING"
-
-            result = "POINTER%d(%s)" %(t.size*8, self.type_name(t.typ, generate))
+            # Size of pointer is handled in headers now.
+            #result = "POINTER%d(%s)" %(t.size*8, self.type_name(t.typ, generate))
+            result = "POINTER_T(%s)" %(self.type_name(t.typ, generate))
             # XXX Better to inspect t.typ!
             if result.startswith("POINTER(WINFUNCTYPE"):
                 return result[len("POINTER("):-1]
@@ -345,7 +346,7 @@ class Generator(object):
         
     _typedefs = 0
     def Typedef(self, tp):
-        print 'Typedef', tp.name, tp.typ
+        #print 'Typedef', tp.name, tp.typ
         sized_types = {
             "uint8_t":  "c_uint8",
             "uint16_t": "c_uint16",
@@ -380,7 +381,7 @@ class Generator(object):
     _arraytypes = 0
     def ArrayType(self, tp):
         self._arraytypes += 1
-        print '***',tp.__class__.__name__, tp.typ.__dict__
+        #print '***',tp.__class__.__name__, tp.typ.__dict__
         self.generate(get_real_type(tp.typ))
         self.generate(tp.typ)
 
@@ -436,8 +437,7 @@ class Generator(object):
         try:
             value = self.initialize(tp.typ, tp.init)
         except (TypeError, ValueError, SyntaxError, NameError), detail:
-            print "Could not init", (tp.name, tp.init), detail
-##            raise
+            log.error("Could not init %s %s %s"% (tp.name, tp.init, detail))
             return
         print >> self.stream, \
               "%s = %r # Variable %s %r" % (tp.name,
@@ -674,7 +674,7 @@ class Generator(object):
     ########
 
     def generate(self, item):
-        print item, item.__dict__
+        #print item, item.__dict__
         if item in self.done:
             return
         n=''
@@ -690,7 +690,7 @@ class Generator(object):
         else:
             name = getattr(item, "name", None)
         if name in self.known_symbols:
-            print 'item is in known_symbols', name
+            log.debug('item is in known_symbols %s'% name )
             mod = self.known_symbols[name]
             print >> self.imports, "from %s import %s" % (mod, name)
             self.done.add(item)
@@ -734,15 +734,24 @@ class Generator(object):
             items -= self.done
         return loops
 
+    def generate_headers(self, parser):
+        import clang
+        from clang.cindex import TypeKind
+        word_size = str(parser.get_ctypes_size(TypeKind.POINTER)/8)
+        # assuming a LONG also has the same sizeof than a pointer. 
+        word_type = parser.get_ctypes_name(TypeKind.ULONG)
+        word_char =  getattr(ctypes,word_type)._type_
+        import pkgutil
+        headers = pkgutil.get_data('ctypeslib','data/headers.tpl')
+        headers = headers.replace('__FLAGS__', str(parser.flags))
+        headers = headers.replace('__POINTER_SIZE__', word_size)
+        headers = headers.replace('__REPLACEMENT_TYPE__' , word_type)
+        headers = headers.replace('__REPLACEMENT_TYPE_CHAR__', word_char)
+
+        print >> self.imports, headers
+        pass
+
     def generate_code(self, items):
-        print >> self.imports, '''
-from ctypes import *
-class c_int128(Structure):
-    _fields_ = [ ('a', c_int64),('b',c_int64)]
-    _packed_ = True
-c_uint128 = c_int128
-'''
-        # change ctypes for arch dependent definition
         print >> self.imports, "\n".join(["CDLL('%s', RTLD_GLOBAL)" % preloaded_dll
                                           for preloaded_dll
                                           in  self.preloaded_dlls])
@@ -801,6 +810,9 @@ def generate_code(srcfiles,
     parser = clangparser.Clang_Parser(flags)
     items = []
     for srcfile in srcfiles:
+        
+        with open(srcfile):
+            pass
         parser.parse(srcfile)
         items += parser.get_result()
     log.debug('Input was parsed')
@@ -820,7 +832,7 @@ def generate_code(srcfiles,
                 syms.remove(i.name)
 
         if syms:
-            print "symbols not found", list(syms)
+           log.warning( "symbols not found %s"%( [str(x) for x in list(syms)]))
 
     if expressions:
         for i in items:
@@ -843,6 +855,9 @@ def generate_code(srcfiles,
                     searched_dlls=searched_dlls,
                     preloaded_dlls=preloaded_dlls)
 
+    # change ctypes for arch dependent definition
+    gen.generate_headers(parser)
+    # make the structures
     loops = gen.generate_code(items)
     if verbose:
         gen.print_stats(sys.stderr)

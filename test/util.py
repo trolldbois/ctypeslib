@@ -4,6 +4,13 @@
 
 from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
+import unittest
+from ctypeslib.codegen.codegenerator import generate_code
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 
 def get_tu(source, lang='c', all_warnings=False, flags=[]):
     """Obtain a translation unit from source and language.
@@ -85,11 +92,29 @@ def get_cursors(source, spelling):
 
     return cursors
 
-    
+class ADict(dict):
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(name)    
+
+class ArchTest(unittest.TestCase):
+    word_size = None
+    flags = []
+    def gen(self, fname, flags=None):
+        ofi = StringIO()
+        generate_code( [fname], ofi, flags=flags or []) 
+        namespace = {}
+        # DEBUG
+        print ofi.getvalue()
+        exec ofi.getvalue() in namespace
+        return ADict(namespace)
     
 
 __all__ = [
     'get_cursor',
     'get_cursors',
     'get_tu',
+    'ArchTest',
 ]

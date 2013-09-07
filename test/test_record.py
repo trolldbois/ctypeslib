@@ -46,7 +46,7 @@ class X64Test(ArchTest):
 class RecordTestX32(X32Test):
     def test_simple_records(self):
         self.namespace = self.gen('test/data/test-ctypes0.c')
-        
+
         self.assertEquals(ctypes.sizeof(self.namespace.structName), 14)
         self.assertEquals(ctypes.sizeof(self.namespace.structName2), 16)
         self.assertEquals(ctypes.sizeof(self.namespace.Node), 16)
@@ -57,7 +57,7 @@ class RecordTestX32(X32Test):
         self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 16)
 
     def test_padding(self):
-        self.namespace = self.gen('test/clang/test-clang5.c')
+        self.namespace = self.gen('test/data/test-clang5.c')
         
         self.assertEquals(ctypes.sizeof(self.namespace.structName), 14)
         self.assertEquals(ctypes.sizeof(self.namespace.structName2), 16)

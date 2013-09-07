@@ -107,6 +107,7 @@ class Clang_Parser(object):
         TypeKind.FLOAT : 'c_float' , # FIXME
         TypeKind.DOUBLE : 'c_double' , # FIXME
         TypeKind.LONGDOUBLE : 'TBD' ,
+        TypeKind.POINTER : 'POINTER_T'
     }
     records={}
     fields={}
@@ -118,6 +119,7 @@ class Clang_Parser(object):
         self._unhandled = []
         self.tu = None
         self.flags = flags
+        self.ctypes_sizes = {}
         self.make_ctypes_convertor(flags)
         
 
@@ -191,22 +193,31 @@ typedef long long_t;
 typedef long long longlong_t;
 typedef float float_t;
 typedef double double_t;
-typedef long double longdouble_t;''', flags=_flags)
+typedef long double longdouble_t;
+typedef void* pointer_t;''', flags=_flags)
         size = util.get_cursor(tu, 'short_t').type.get_size()*8
         self.ctypes_typename[TypeKind.SHORT] = 'c_int%d'%(size)
         self.ctypes_typename[TypeKind.USHORT] = 'c_uint%d'%(size)
+        self.ctypes_sizes[TypeKind.SHORT] = size
+        self.ctypes_sizes[TypeKind.USHORT] = size
 
         size = util.get_cursor(tu, 'int_t').type.get_size()*8
         self.ctypes_typename[TypeKind.INT] = 'c_int%d'%(size)
         self.ctypes_typename[TypeKind.UINT] = 'c_uint%d'%(size)
+        self.ctypes_sizes[TypeKind.INT] = size
+        self.ctypes_sizes[TypeKind.UINT] = size
 
         size = util.get_cursor(tu, 'long_t').type.get_size()*8
         self.ctypes_typename[TypeKind.LONG] = 'c_int%d'%(size)
         self.ctypes_typename[TypeKind.ULONG] = 'c_uint%d'%(size)
+        self.ctypes_sizes[TypeKind.LONG] = size
+        self.ctypes_sizes[TypeKind.ULONG] = size
 
         size = util.get_cursor(tu, 'longlong_t').type.get_size()*8
         self.ctypes_typename[TypeKind.LONGLONG] = 'c_int%d'%(size)
         self.ctypes_typename[TypeKind.ULONGLONG] = 'c_uint%d'%(size)
+        self.ctypes_sizes[TypeKind.LONGLONG] = size
+        self.ctypes_sizes[TypeKind.ULONGLONG] = size
         
         #FIXME : Float && http://en.wikipedia.org/wiki/Long_double
         size0 = util.get_cursor(tu, 'float_t').type.get_size()*8
@@ -216,19 +227,35 @@ typedef long double longdouble_t;''', flags=_flags)
             self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_double%d'%(size2)
         else:
             self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_double'
+        
+        self.ctypes_sizes[TypeKind.FLOAT] = size0
+        self.ctypes_sizes[TypeKind.DOUBLE] = size1
+        self.ctypes_sizes[TypeKind.LONGDOUBLE] = size2
 
+        # save the target pointer size.
+        size = util.get_cursor(tu, 'pointer_t').type.get_size()*8
+        self.ctypes_sizes[TypeKind.POINTER] = size
+        
         log.debug('ARCH sizes: long:%s longdouble:%s'%(
                 self.ctypes_typename[TypeKind.LONG],
                 self.ctypes_typename[TypeKind.LONGDOUBLE]))
     
     def is_fundamental_type(self, t):
-        return t.kind in self.ctypes_typename.keys()
+        return (not self.is_pointer_type(t) and 
+                t.kind in self.ctypes_typename.keys())
 
     def is_pointer_type(self, t):
         return t.kind == TypeKind.POINTER
 
+    # deprecated
     def convert_to_ctypes(self, typekind):
         return self.ctypes_typename[typekind]
+
+    def get_ctypes_name(self, typekind):
+        return self.ctypes_typename[typekind]
+
+    def get_ctypes_size(self, typekind):
+        return self.ctypes_sizes[typekind]
         
 
     ################################
