@@ -43,7 +43,7 @@ class RecordTest(ArchTest):
         self.assertEquals(ctypes.sizeof(self.namespace.Node), 16)
         self.assertEquals(ctypes.sizeof(self.namespace.Node2), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.myEnum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.my__quad_t), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.my__quad_t), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 16)
         self.assertEquals(ctypes.sizeof(self.namespace.my_struct), 8)
 

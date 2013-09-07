@@ -5,7 +5,7 @@
 from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
 import unittest
-from ctypeslib.codegen.codegenerator import generate_code
+from ctypeslib.codegen import clangparser, codegenerator
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -103,10 +103,20 @@ class ArchTest(unittest.TestCase):
     word_size = None
     def gen(self, fname, flags=None):
         ofi = StringIO()
-        generate_code( [fname], ofi, flags=flags or []) 
+        # leave the new parser accessible for tests
+        self.parser = clangparser.Clang_Parser(flags)
+        with open(fname):
+            pass
+        self.parser.parse(fname)
+        items = self.parser.get_result()
+        # gen code
+        gen = codegenerator.Generator(ofi)
+        gen.generate_headers(self.parser)
+        gen.generate_code(items)
+        # load code 
         namespace = {}
         # DEBUG
-        #print ofi.getvalue()
+        print ofi.getvalue()
         # DEBUG 
         exec ofi.getvalue() in namespace
         return ADict(namespace)

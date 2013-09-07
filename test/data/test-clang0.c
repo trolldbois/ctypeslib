@@ -1,4 +1,8 @@
 /* very simple tests */
+typedef struct
+{
+  long __val[2];
+} my__quad_t;
 
 typedef int badaboum;
 typedef unsigned int you_badaboum;
