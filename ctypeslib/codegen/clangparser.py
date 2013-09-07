@@ -1,6 +1,6 @@
 """clangparser - use clang to get preprocess a source code."""
 
-import clang.cindex 
+import clang
 from clang.cindex import Index
 from clang.cindex import CursorKind, TypeKind
 import ctypes
@@ -65,6 +65,11 @@ clang2py test1.cpp -target i386-pc-linux-gnu
 
 '''
 class Clang_Parser(object):
+    '''clang2py test1.cpp -target "x86_64-pc-linux-gnu" 
+
+   clang2py test1.cpp -target i386-pc-linux-gnu
+
+    '''
     # clang.cindex.CursorKind
     ## Declarations: 1-39
     ## Reference: 40-49
@@ -90,7 +95,7 @@ class Clang_Parser(object):
         TypeKind.UINT : 'TBD' ,
         TypeKind.ULONG : 'TBD' ,
         TypeKind.ULONGLONG : 'TBD' ,
-        TypeKind.UINT128 : 'c_uint128' ,
+        TypeKind.UINT128 : 'c_uint128' , # FIXME
         TypeKind.CHAR_S : 'c_byte' ,
         TypeKind.SCHAR : 'c_byte' ,
         TypeKind.WCHAR : 'c_wchar' ,
@@ -98,7 +103,7 @@ class Clang_Parser(object):
         TypeKind.INT : 'TBD' ,
         TypeKind.LONG : 'TBD' ,
         TypeKind.LONGLONG : 'TBD' ,
-        TypeKind.INT128 : 'c_int128' ,
+        TypeKind.INT128 : 'c_int128' , # FIXME
         TypeKind.FLOAT : 'c_float' , # FIXME
         TypeKind.DOUBLE : 'c_double' , # FIXME
         TypeKind.LONGDOUBLE : 'TBD' ,
@@ -604,7 +609,22 @@ typedef long double longdouble_t;''', flags=_flags)
     def FUNCTIONPROTO(self, cursor):
         # id, returns, attributes
         returns = cursor.get_result()
-        attributes = [x for x in cursor.argument_types()]
+        if self.is_fundamental_type(returns):
+            returns = self.FundamentalType(returns)
+        attributes = []
+        for attr in iter(cursor.argument_types()):
+            if self.is_fundamental_type(attr):
+                attributes.append(self.FundamentalType(attr))
+            else:
+                #mth = getattr(self, attr.kind.name)
+                #if mth is None:
+                #    raise TypeError('unhandled Field TypeKind %s'%(_type.kind.name))
+                #_type  = mth(cursor)
+                #if _type is None:
+                #    return None
+                attributes.append(attr)
+        import code
+        code.interact(local=locals())    
         return typedesc.FunctionType(returns, attributes)
     
     def _fixup_FunctionType(self, func):
@@ -968,23 +988,31 @@ typedef long double longdouble_t;''', flags=_flags)
         self.get_macros(self.cpp_data.get("functions"))
         # fix all objects after that all are resolved
         remove = []
-        for n, i in self.all.items():
-            location = getattr(i, "location", None)
+        for _id, _item in self.all.items():
+            location = getattr(_item, "location", None)
             # FIXME , why do we get different lcation types
             if location and hasattr(location, 'file'):
-                i.location = location.file.name, location.line
-            mth = getattr(self, "_fixup_" + type(i).__name__)
+                _item.location = location.file.name, location.line
+            elif location is None:
+                log.warning('item %s has no location.'%(_id))
+                #import code
+                #code.interact(local=locals())
+            elif not hasattr(location, 'file'):
+                log.warning('item %s location has no file.'%(_id))
+                #import code
+                #code.interact(local=locals())
+            mth = getattr(self, "_fixup_" + type(_item).__name__)
             try:
-                mth(i)
+                mth(_item)
             except IOError,e:#KeyError,e: # XXX better exception catching
-                log.warning('function "%s" missing, err:%s, remove %s'%("_fixup_" + type(i).__name__, e, n) )
-                remove.append(n)
+                log.warning('function "%s" missing, err:%s, remove %s'%("_fixup_" + type(_item).__name__, e, _id) )
+                remove.append(_id)
             except AttributeError, e:
                 import code
                 code.interact(local=locals())
             
-        for n in remove:
-            del self.all[n]
+        for _x in remove:
+            del self.all[_x]
 
         # Now we can build the namespace.
         namespace = {}

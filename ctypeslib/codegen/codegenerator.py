@@ -1,5 +1,6 @@
-# Create ctypes wrapper code for abstract type descriptions.
-# Type descriptions are collections of typedesc instances.
+'''Create ctypes wrapper code for abstract type descriptions.
+Type descriptions are collections of typedesc instances.
+'''
 
 import typedesc, sys, os
 import textwrap
@@ -14,26 +15,10 @@ log=logging.getLogger('codegen')
 ASSUME_STRINGS = True
 
 try:
-    set
-except NameError:
-    from sets import Set as set
-
-try:
-    sorted
-except NameError:
-    def sorted(seq, cmp):
-        seq = list(seq)
-        seq.sort(cmp)
-        return seq
-
-try:
     import cStringIO as StringIO
 except ImportError:
     import StringIO
 
-# This is what GCCXML uses as size of varsized arrays in structure
-# field:
-GCCXML_NOSIZE = "0x" + "f" * ctypes.sizeof(ctypes.c_long) * 4
 
 # XXX Should this be in ctypes itself?
 ctypes_names = {
@@ -372,12 +357,12 @@ class Generator(object):
             "int64_t": "c_int64",
             }
         self._typedefs += 1
-        #if type(tp.typ) == typedesc.FundamentalType \
-        #   and tp.name in sized_types:
-        #    print >> self.stream, "%s = %s" % \
-        #          (tp.name, sized_types[tp.name])
-        #    self.names.add(tp.name)
-        #    return
+        if type(tp.typ) == typedesc.FundamentalType \
+           and tp.name in sized_types:
+            print >> self.stream, "%s = %s" % \
+                  (tp.name, sized_types[tp.name])
+            self.names.add(tp.name)
+            return
         if type(tp.typ) in (typedesc.Structure, typedesc.Union):
             self.generate(tp.typ.get_head())
             self.more.add(tp.typ)
@@ -729,7 +714,12 @@ class Generator(object):
         b = getattr(b, "location", None)
         if a is None: return -1
         if b is None: return 1
-        return cmp(a[0],b[0]) or cmp(int(a[1]),int(b[1]))
+        try:
+            return cmp(a[0],b[0]) or cmp(int(a[1]),int(b[1]))
+        except TypeError, e:
+            log.error('still have clang objects in here')
+            import code
+            code.interact(local=locals())
     cmpitems = staticmethod(cmpitems)
 
     def generate_items(self, items):
@@ -745,11 +735,13 @@ class Generator(object):
         return loops
 
     def generate_code(self, items):
-        print >> self.imports, '''try:
-    import archtypes
-    archtypes.import_canonical_types(__name__)
-except ImportError,e:
-    from ctypes import *'''
+        print >> self.imports, '''
+from ctypes import *
+class c_int128(Structure):
+    _fields_ = [ ('a', c_int64),('b',c_int64)]
+    _packed_ = True
+c_uint128 = c_int128
+'''
         # change ctypes for arch dependent definition
         print >> self.imports, "\n".join(["CDLL('%s', RTLD_GLOBAL)" % preloaded_dll
                                           for preloaded_dll
@@ -812,8 +804,8 @@ def generate_code(srcfiles,
         parser.parse(srcfile)
         items += parser.get_result()
     log.debug('Input was parsed')
-    import code
-    code.interact(local=locals())
+    #import code
+    #code.interact(local=locals())
     # filter symbols to generate
     todo = []
 

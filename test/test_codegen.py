@@ -36,7 +36,7 @@ class ConstantsTest(unittest.TestCase):
             
             #ofi = StringIO()
             ofi = sys.stdout
-            generate_code(args, ofi, use_clang=True) #, **kw)
+            generate_code(args, ofi)#, use_clang=True) #, **kw)
             namespace = {}
             #exec ofi.getvalue() in namespace
             ##            print ofi.getvalue()

@@ -26,17 +26,13 @@ class ArchTest(unittest.TestCase):
     word_size = None
     flags = []
     def gen(self, fname, flags=None):
-        args = [fname]
-        args.extend(self.flags)
-        if flags:
-            args.extend(flags)
             
         ofi = StringIO()
         #ofi = sys.stdout
-        generate_code(args, ofi, use_clang=True) #, **kw)
+        generate_code( [fname], ofi, flags=flags or []) 
         namespace = {}
+        print ofi.getvalue()
         exec ofi.getvalue() in namespace
-        #print ofi.getvalue()
         return ADict(namespace)
 
 
@@ -48,6 +44,18 @@ class X64Test(ArchTest):
     
     
 class RecordTestX32(X32Test):
+    def test_simple_records(self):
+        self.namespace = self.gen('test/data/test-ctypes0.c')
+        
+        self.assertEquals(ctypes.sizeof(self.namespace.structName), 14)
+        self.assertEquals(ctypes.sizeof(self.namespace.structName2), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.Node), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.Node2), 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.Node3), 12)
+        self.assertEquals(ctypes.sizeof(self.namespace.Node4), 12)
+        self.assertEquals(ctypes.sizeof(self.namespace.Node5), 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 16)
+
     def test_padding(self):
         self.namespace = self.gen('test/clang/test-clang5.c')
         
