@@ -114,12 +114,8 @@ class Clang_Parser(object):
         TypeKind.LONGDOUBLE : 'TBD' ,
         TypeKind.POINTER : 'POINTER_T'
     }
-    records={}
-    fields={}
     def __init__(self, flags):
         self.all = {}
-        self.records = {}
-        self.fields = {}
         self.cpp_data = {}
         self._unhandled = []
         self.tu = None
@@ -178,6 +174,8 @@ class Clang_Parser(object):
     def register(self, name, obj):
         if name in self.all:
             log.debug('register: %s already existed: %s'%(name,obj.name))
+            import code
+            code.interact(local=locals())
             raise RuntimeError('register: %s already existed: %s'%(name,obj.name))
         log.debug('register: %s '%(name))
         self.all[name]=obj
@@ -812,17 +810,17 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _record_decl(self, _type, cursor):
         ''' a structure and an union have the same handling.'''
-        if not cursor.kind.is_declaration():#definition():
-            raise TypeError('cursor is not pointing to a declaration')
-        # id, name, members
         name = cursor.displayname
+        # better name
         _id = cursor.get_usr()
         if name == '': # anonymous is spelling == ''
             name = MAKE_NAME( _id )
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
-        if self.is_registered(name): 
-            # STRUCT_DECL as a child of TYPEDEF_DECL for example
+        # TODO unittest: try redefinition.
+        # check for definition already parsed 
+        if (self.is_registered(name) and 
+            self.get_registered(name).members is not None):
             return True 
         # FIXME: lets ignore bases for now.
         #bases = attrs.get("bases", "").split() # that for cpp ?
@@ -832,9 +830,19 @@ typedef void* pointer_t;''', flags=_flags)
             log.error('invalid structure %s %s'%(name, cursor.location))
             return True
         size = cursor.type.get_size()
+        packed = False # FIXME
         log.debug('_record_decl: name: %s size:%d'%(name, size))
+        # Declaration vs Definition point
+        # when a struct decl happen before the definition, we have no members
+        # in the first declaration instance.
+        if not cursor.is_definition():
+            # juste save the spot, don't look at members == None
+            log.debug('XXX cursor %s is not on a definition'%(name))
+            obj = _type(name, align, None, bases, size, packed=packed)
+            return self.register(name, obj)
+        log.debug('XXX cursor %s is a definition'%(name))
+        # capture members declaration
         members = []
-        packed = False # 
         # Go and recurse through children to get this record member's _id
         # Members fields will not be "parsed" here, but later.
         for child in cursor.get_children():
@@ -850,10 +858,16 @@ typedef void* pointer_t;''', flags=_flags)
             # FIXME LLVM-CLANG, patch http://lists.cs.uiuc.edu/pipermail/cfe-commits/Week-of-Mon-20130415/078445.html
             #if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
             #    packed = True
-        obj = _type(name, align, members, bases, size, packed=packed)
-        self.records[name] = obj
-        self.register(name, obj)
-        self.set_location(obj, cursor)
+        obj = None
+        if self.is_registered(name): 
+            # STRUCT_DECL as a child of TYPEDEF_DECL for example
+            log.debug('%s was previously registered'%(name))
+            obj = self.get_registered(name)
+            obj.members = members
+        else:
+            obj = _type(name, align, members, bases, size, packed=packed)
+            self.register(name, obj)
+            self.set_location(obj, cursor)
         return obj
 
     def _make_padding(self, name, offset, length):
