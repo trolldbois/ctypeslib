@@ -31,7 +31,12 @@ def decorator(dec):
 @decorator
 def log_entity(func):
     def fn(*args, **kwargs):
-        log.debug("%s: displayname:'%s'"%(func.__name__, args[1].displayname))
+        name = args[1].displayname
+        if name == '':
+            parent = args[1].semantic_parent
+            if parent:
+                name = 'child of %s'%parent.displayname
+        log.debug("%s: displayname:'%s'"%(func.__name__, name))
         #print 'calling {}'.format(func.__name__)
         return func(*args, **kwargs)
     return fn
@@ -123,16 +128,17 @@ class Clang_Parser(object):
         self.make_ctypes_convertor(flags)
         
 
+    '''. reads 1 file
+    . if there is a compilation error, print a warning
+    . get root cursor and recurse
+    . for each STRUCT_DECL, register a new struct type
+    . for each UNION_DECL, register a new union type
+    . for each TYPEDEF_DECL, register a new alias/typdef to the underlying type
+        - underlying type is cursor.type.get_declaration() for Record
+    . for each VAR_DECL, register a Variable
+    . for each TYPEREF ??
+    '''
     def parse(self, filename):
-        '''. reads 1 file
-        . if there is a compilation error, print a warning
-        . get root cursor and recurse
-        . for each STRUCT_DECL, register a new struct type
-        . for each UNION_DECL, register a new union type
-        . for each TYPEDEF_DECL, register a new alias/typdef to the underlying type
-            - underlying type is cursor.type.get_declaration() for Record
-        . for each TYPEREF ??
-        '''
         index = Index.create()
         self.tu = index.parse(filename, self.flags)
         if not self.tu:
@@ -148,33 +154,32 @@ class Clang_Parser(object):
             self.startElement( node )
         return
 
-    def startElement(self, node ): #kind, attrs):
+    def startElement(self, node ): 
         if node is None:
             return
-
         # find and call the handler for this element
         mth = getattr(self, node.kind.name)
         if mth is None:
             return
-        
         log.debug('Found a %s|%s|%s'%(node.kind.name, node.displayname, node.spelling))
-        
-        result = mth(node)
-        # breaker.
-        if result is None:
-            return
-        # FIXME - types should be known
-        if node.location.file is not None:
-            result.location = (node.location.file.name, node.location.line)
-        # if this element has children, treat them.
+        # build stuff.
+        stop_recurse = mth(node)
+        # Signature of mth is:
+        # if the fn returns True, do not recurse into children.
+        # anything else will be ignored.
+        if stop_recurse is True:
+            return        
+        # if fn returns something, if this element has children, treat them.
         for child in node.get_children():
-            self.startElement( child )          
-        return result
+            self.startElement( child )
+        # startElement returns None.
+        return None
 
     def register(self, name, obj):
         if name in self.all:
             log.debug('register: %s already existed: %s'%(name,obj.name))
             raise RuntimeError('register: %s already existed: %s'%(name,obj.name))
+        log.debug('register: %s '%(name))
         self.all[name]=obj
         return obj
 
@@ -185,6 +190,11 @@ class Clang_Parser(object):
 
     def is_registered(self, name):
         return name in self.all
+
+    ''' Location is also used for codegeneration ordering.'''
+    def set_location(self, obj, cursor):
+        if cursor.location.file is not None:
+            obj.location = (cursor.location.file.name, cursor.location.line)
 
     ########################################################################
     ''' clang types to ctypes for architecture dependent size types
@@ -332,10 +342,14 @@ typedef void* pointer_t;''', flags=_flags)
     Example: the type of a token group in a Char_s or char variable.
     Counter example: The type of an integer literal to a (int) variable.'''
     @log_entity
-    def UNEXPOSED_EXPR(self, cursor): 
-        for child in node.get_children():
-            self.startElement( child ) 
-        pass
+    def UNEXPOSED_EXPR(self, cursor):
+        ret = []
+        for child in cursor.get_children():
+            mth = getattr(self, child.kind.name)
+            ret.append(mth(child))
+        if len(ret) == 1:
+            return ret[0]
+        return ret
 
     # References
 
@@ -385,8 +399,8 @@ typedef void* pointer_t;''', flags=_flags)
         assert( len(children) == 1 )
         literal_type = children[0].kind
         mth = getattr(self, literal_type.name)
-        import code
-        code.interact(local=locals())
+        #import code
+        #code.interact(local=locals())
         if mth is None:
             log.warning('%s children type is not exposed. Bailling out'%(name))
             return
@@ -394,9 +408,9 @@ typedef void* pointer_t;''', flags=_flags)
         # call recursively the children. As of clang 3.3, int literals are 
         # level 1 children where char_s literal are level 2, under 
         # an unexposed_expr.
-        init_value = mth(children[0], return_value=True)
-        import code
-        code.interact(local=locals())
+        init_value = mth(children[0])
+        #import code
+        #code.interact(local=locals())
         # Get the type
         _ctype = cursor.type.get_canonical()
         # FIXME - feels weird
@@ -421,7 +435,9 @@ typedef void* pointer_t;''', flags=_flags)
         log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s'%(name, 
                     _ctype.kind.name, _type.name, init_value))
         #print _type.__class__.__name__
-        return self.register(name, typedesc.Variable(name, _type, init_value) )
+        obj = self.register(name, typedesc.Variable(name, _type, init_value) )
+        self.set_location(obj, cursor)
+        return obj
 
     def _fixup_Variable(self, t):
         if type(t.typ) == str: #typedesc.FundamentalType:
@@ -455,8 +471,9 @@ typedef void* pointer_t;''', flags=_flags)
             p_type = self.POINTER(cursor)
             #import code
             #code.interact(local=locals())
-        elif _type.kind == TypeKind.RECORD: 
-            decl = _type.get_declaration()
+        elif _type.kind == TypeKind.RECORD:
+            # Typedef and struct_decl will have the same name. 
+            decl = _type.get_declaration() 
             decl_name = decl.displayname
             if decl_name == '':
                 decl_name = MAKE_NAME(decl.get_usr())
@@ -487,7 +504,9 @@ typedef void* pointer_t;''', flags=_flags)
             import code
             code.interact(local=locals())
         # final
-        return self.register(name, typedesc.Typedef(name, p_type))
+        obj = self.register(name, typedesc.Typedef(name, p_type))
+        self.set_location(obj, cursor)
+        return obj
         
     def _fixup_Typedef(self, t):
         #print 'fixing typdef %s name:%s with self.all[%s] = %s'%(id(t), t.name, t.typ, id(self.all[ t.typ])) 
@@ -556,7 +575,9 @@ typedef void* pointer_t;''', flags=_flags)
             #raise TypeError('Unknown scenario in PointerType - %s'%(_type))
         log.debug("POINTER: p_type:'%s'"%(p_type.__dict__))
         # return the pointer        
-        return typedesc.PointerType( p_type, size, align)
+        obj = typedesc.PointerType( p_type, size, align)
+        self.set_location(obj, cursor)
+        return obj
 
 
     def _fixup_PointerType(self, p):
@@ -592,7 +613,9 @@ typedef void* pointer_t;''', flags=_flags)
         #import code
         #code.interact(local=locals())
         
-        return typedesc.ArrayType(_type, size)
+        obj = typedesc.ArrayType(_type, size)
+        self.set_location(obj, cursor)
+        return obj
 
     def _fixup_ArrayType(self, a):
         # FIXME
@@ -605,7 +628,9 @@ typedef void* pointer_t;''', flags=_flags)
         typ = attrs["type"]
         const = attrs.get("const", None)
         volatile = attrs.get("volatile", None)
-        return typedesc.CvQualifiedType(typ, const, volatile)
+        obj = typedesc.CvQualifiedType(typ, const, volatile)
+        self.set_location(obj, cursor)
+        return obj
 
     def _fixup_CvQualifiedType(self, c):
         c.typ = self.all[c.typ]
@@ -626,7 +651,9 @@ typedef void* pointer_t;''', flags=_flags)
         extern = None
         # FIXME:
         # cursor.get_arguments() or see def PARM_DECL()
-        return typedesc.Function(name, returns, attributes, extern)
+        obj = typedesc.Function(name, returns, attributes, extern)
+        self.set_location(obj, cursor)
+        return obj
 
     def _fixup_Function(self, func):
         #FIXME
@@ -653,7 +680,9 @@ typedef void* pointer_t;''', flags=_flags)
                 attributes.append(attr)
         import code
         code.interact(local=locals())    
-        return typedesc.FunctionType(returns, attributes)
+        obj = typedesc.FunctionType(returns, attributes)
+        self.set_location(obj, cursor)
+        return obj
     
     def _fixup_FunctionType(self, func):
         func.returns = self.all[func.returns]
@@ -664,7 +693,9 @@ typedef void* pointer_t;''', flags=_flags)
         # name, returns, extern, attributes
         name = attrs["name"]
         returns = attrs["returns"]
-        return typedesc.OperatorFunction(name, returns)
+        obj = typedesc.OperatorFunction(name, returns)
+        self.set_location(obj, cursor)
+        return obj
 
     def _fixup_OperatorFunction(self, func):
         func.returns = self.all[func.returns]
@@ -698,9 +729,7 @@ typedef void* pointer_t;''', flags=_flags)
         return
 
     @log_entity
-    def _literal_handling(self, cursor, return_value=False):
-        if not return_value:
-            return
+    def _literal_handling(self, cursor):
         tokens = list(cursor.get_tokens())
         log.debug('literal has %d tokens.[ %s ]'%(len(tokens), 
             str([str(t.spelling) for t in tokens])))
@@ -733,7 +762,9 @@ typedef void* pointer_t;''', flags=_flags)
         align = cursor.type.get_align() 
         size = cursor.type.get_size() 
         #print align, size
-        return self.register(name, typedesc.Enumeration(name, size, align))
+        obj = self.register(name, typedesc.Enumeration(name, size, align))
+        self.set_location(obj, cursor)
+        return obj
 
     def _fixup_Enumeration(self, e): pass
 
@@ -794,15 +825,16 @@ typedef void* pointer_t;''', flags=_flags)
             name = MAKE_NAME( _id )
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
-        if self.is_registered(name): # could be reached as child of a typedef
-            return None
+        if self.is_registered(name): 
+            # STRUCT_DECL as a child of TYPEDEF_DECL for example
+            return True 
         # FIXME: lets ignore bases for now.
         #bases = attrs.get("bases", "").split() # that for cpp ?
         bases = [] # FIXME: support CXX
         align = cursor.type.get_align() 
         if align < 0 :
             log.error('invalid structure %s %s'%(name, cursor.location))
-            return None
+            return True
         size = cursor.type.get_size()
         log.debug('_record_decl: name: %s size:%d'%(name, size))
         members = []
@@ -824,7 +856,9 @@ typedef void* pointer_t;''', flags=_flags)
             #    packed = True
         obj = _type(name, align, members, bases, size, packed=packed)
         self.records[name] = obj
-        return self.register(name, obj)
+        self.register(name, obj)
+        self.set_location(obj, cursor)
+        return obj
 
     def _make_padding(self, name, offset, length):
         log.debug("_make_padding: for %d bits"%(length))
