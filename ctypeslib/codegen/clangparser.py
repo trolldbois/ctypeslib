@@ -821,7 +821,8 @@ typedef void* pointer_t;''', flags=_flags)
         if align < 0 :
             log.error('invalid structure %s %s'%(name, cursor.location))
             return None
-        size = cursor.type.get_size()  
+        size = cursor.type.get_size()
+        log.debug('_record_decl: name: %s size:%d'%(name, size))
         members = []
         packed = False # 
         for child in cursor.get_children():
@@ -869,6 +870,7 @@ typedef void* pointer_t;''', flags=_flags)
         members = []
         offset = 0
         padding_nb = 0
+        member = None
         # create padding fields
         #DEBUG FIXME: why are s.members already typedesc objet ?
         for m in s.members: # s.members are strings - NOT
@@ -894,10 +896,12 @@ typedef void* pointer_t;''', flags=_flags)
                 log.error('FIXUP_STRUCT: %s.type is None'%(member.name))
             members.append(member)
             offset = member.offset + member.bits
-        # tail padding
+        # tail padding if necessary and last field is NOT a bitfield
         # FIXME: this isn't right. Why does Union.size returns 1.
         # Probably because of sizeof returning standard size instead of real size
-        if s.size*8 != offset:
+        if member and member.is_bitfield:
+            pass
+        elif s.size*8 != offset:                
             length = s.size*8 - offset
             log.debug('Fixup_struct: s:%d create tail padding for %d bits %d bytes'%(s.size, length, length/8))
             p_name = 'PADDING_%d'%padding_nb
@@ -907,7 +911,9 @@ typedef void* pointer_t;''', flags=_flags)
         # go
         s.members = members
         log.debug("FIXUP_STRUCT: size:%d offset:%d"%(s.size*8, offset))
-        assert offset == s.size*8 #, assert that the last field stop at the size limit
+        # FIXME:
+        if member and not member.is_bitfield:
+            assert offset == s.size*8 #, assert that the last field stop at the size limit
         pass
     _fixup_Union = _fixup_Structure
 

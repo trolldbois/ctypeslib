@@ -527,23 +527,26 @@ class Generator(object):
             print >> self.stream, "%s._anonymous_ = %r" % \
                   (body.struct.name, unnamed_fields.values())
         if len(fields) > 0:
-          print >> self.stream, "%s._fields_ = [" % body.struct.name
+            print >> self.stream, "%s._fields_ = [" % body.struct.name
 
-          if self.generate_comments and body.struct.location:
-              print >> self.stream, "    # %s %s" % body.struct.location
-          index = 0
-          for f in fields:
-              fieldname = unnamed_fields.get(f, f.name)
-              import code
-              #code.interact(local=locals())
-              #print f.__dict__
-              if f.is_bitfield is False:
-                  print >> self.stream, "    ('%s', %s)," % \
+            if self.generate_comments and body.struct.location:
+                print >> self.stream, "    # %s %s" % body.struct.location
+            index = 0
+            for f in fields:
+                fieldname = unnamed_fields.get(f, f.name)
+                import code
+                #code.interact(local=locals())
+                #print f.__dict__
+                if f.is_bitfield is False:
+                    print >> self.stream, "    ('%s', %s)," % \
                      (fieldname, self.type_name(f.type))
-              else:
-                  print >> self.stream, "    ('%s', %s, %s)," % \
-                        (fieldname, self.type_name(f.type), f.bits)
-          print >> self.stream, "]"
+                else:
+                    # FIXME: Python bitfield is int32 only.
+                    from clang.cindex import TypeKind                
+                    print >> self.stream, "    ('%s', %s, %s)," % \
+                        (fieldname, self.parser.get_ctypes_name(TypeKind.LONG), 
+                        f.bits ) # self.type_name(f.type), f.bits)
+            print >> self.stream, "]"
         # disable size checks because they are not portable across
         # platforms:
 ##        # generate assert statements for size and alignment
@@ -733,6 +736,8 @@ class Generator(object):
         return loops
 
     def generate_headers(self, parser):
+        # fix parser in self for later use
+        self.parser = parser 
         import clang
         from clang.cindex import TypeKind
         word_size = str(parser.get_ctypes_size(TypeKind.POINTER)/8)
