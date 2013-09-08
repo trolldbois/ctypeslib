@@ -429,7 +429,7 @@ typedef void* pointer_t;''', flags=_flags)
         #print _type.__class__.__name__
         obj = self.register(name, typedesc.Variable(name, _type, init_value) )
         self.set_location(obj, cursor)
-        return obj
+        return True # dont parse literals again
 
     def _fixup_Variable(self, t):
         if type(t.typ) == str: #typedesc.FundamentalType:
@@ -725,7 +725,15 @@ typedef void* pointer_t;''', flags=_flags)
         tokens = list(cursor.get_tokens())
         log.debug('literal has %d tokens.[ %s ]'%(len(tokens), 
             str([str(t.spelling) for t in tokens])))
-        return tokens[0].spelling
+        value = tokens[0].spelling
+        if cursor.kind == CursorKind.INTEGER_LITERAL:
+            # strip type suffix for constants 
+            value = value.replace('L','').replace('U','')
+            value = value.replace('l','').replace('u','')
+        elif cursor.kind == CursorKind.FLOATING_LITERAL:
+            # strip type suffix for constants 
+            value = value.replace('f','').replace('F','')
+        return value
 
     INTEGER_LITERAL = _literal_handling
     FLOATING_LITERAL = _literal_handling

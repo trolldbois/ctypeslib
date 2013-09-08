@@ -13,3 +13,5 @@ float f = 2.1;
 double g = 2.2;
 long double h = 2.3;
 
+long long int i1 = 0x7FFFFFFFFFFFFFFFLL;
+float i2 = 2.2f;

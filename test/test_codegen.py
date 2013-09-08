@@ -1,52 +1,19 @@
-import sys
-import os
 import unittest
-import tempfile
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
 
 import ctypes
-from ctypes.util import find_library
-from ctypeslib import clang2py
-from ctypeslib.codegen.codegenerator import generate_code
 
-def mktemp(suffix):
-    handle, fnm = tempfile.mkstemp(suffix)
-    os.close(handle)
-    return fnm
+from util import ClangTest
 
-class ADict(dict):
-    def __getattr__(self, name):
-        try:
-            return self[name]
-        except KeyError:
-            raise AttributeError(name)
+class ConstantsTest(ClangTest):
 
-class ConstantsTest(unittest.TestCase):
-    def convert(self, defs, flags=None, dump=False, **kw):
-        hfile = mktemp(".h")
-        open(hfile, "w").write(defs)
-
-        try:
-            args = [hfile]
-            if flags:
-                args.extend(flags)
-            
-            #ofi = StringIO()
-            ofi = sys.stdout
-            generate_code(args, ofi)#, use_clang=True) #, **kw)
-            namespace = {}
-            #exec ofi.getvalue() in namespace
-            ##            print ofi.getvalue()
-            return ADict(namespace)
-
-        finally:
-            os.unlink(hfile)
-
+    #@unittest.skip('')
     def test_longlong(self):
-        self.skipTest('')
+        """Basic POD test variable on longlong values'
+        """
         ns = self.convert("""
         long long int i1 = 0x7FFFFFFFFFFFFFFFLL;
         long long int i2 = -1;
@@ -62,6 +29,7 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(ns.ui3, 0xFFFFFFFFFFFFFFFF)
         self.failUnlessEqual(ns.ui2, 0x8000000000000000)
 
+    @unittest.skip('')
     def test_int(self):
         ns = self.convert("""
         int zero = 0;
@@ -77,8 +45,8 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(ns.maxint, 2147483647)
         self.failUnlessEqual(ns.minint, -2147483648)
 
+    @unittest.skip('')
     def test_uint(self):
-        self.skipTest('')
         ns = self.convert("""
         unsigned int zero = 0;
         unsigned int one = 1;
@@ -91,8 +59,8 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(ns.minusone, 4294967295)
         self.failUnlessEqual(ns.maxuint, 0xFFFFFFFF)
 
+    @unittest.skip('')
     def test_doubles(self):
-        self.skipTest('')
         ns = self.convert("""
         #define A  0.9642
         #define B  1.0
@@ -107,8 +75,8 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessAlmostEqual(ns.d, 0.0036)
         self.failUnlessAlmostEqual(ns.f, 2.5)
 
+    @unittest.skip('')
     def test_char(self):
-        self.skipTest('')
         ns = self.convert("""
         char x = 'x';
         wchar_t X = L'X';
@@ -128,8 +96,8 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(type(ns.zero), str)
         self.failUnlessEqual(type(ns.w_zero), unicode)
 
+    @unittest.skip('')
     def test_defines(self):
-        self.skipTest('')
         ns = self.convert("""
         #define zero 0
         #define one 1
@@ -159,8 +127,8 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(ns.foo, "foo")
         self.failUnlessEqual(type(ns.foo), unicode)
 
+    @unittest.skip('')
     def test_array_nosize(self):
-        self.skipTest('')
         ns = self.convert("""
         typedef char array[];
         struct blah {
@@ -171,8 +139,8 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(ctypes.sizeof(ns.blah), 0)
         self.failUnlessEqual(ctypes.sizeof(ns.array), 0)
 
+    @unittest.skip('')
     def test_docstring(self):
-        self.skipTest('')
         from ctypes import CDLL
         from ctypes.util import find_library
         if os.name == "nt":
@@ -190,8 +158,8 @@ class ConstantsTest(unittest.TestCase):
         self.failUnlessEqual(docstring[:len(prototype)], prototype)
         self.failUnless("malloc.h" in ns.malloc.__doc__)
 
+    @unittest.skip('')
     def test_emptystruct(self):
-        self.skipTest('')
         ns = self.convert("""
         typedef struct tagEMPTY {
         } EMPTY;

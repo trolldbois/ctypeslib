@@ -3,9 +3,9 @@ import ctypes
 
 from util import get_cursor
 from util import get_tu
-from util import ArchTest
+from util import ClangTest
     
-class CompareSizes(ArchTest):
+class CompareSizes(ClangTest):
     """Compare python sizes with the clang framework.
     """
 

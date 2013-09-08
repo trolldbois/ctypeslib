@@ -3,9 +3,9 @@ import ctypes
 
 from util import get_cursor
 from util import get_tu
-from util import ArchTest
+from util import ClangTest
     
-class RecordTest(ArchTest):
+class RecordTest(ClangTest):
     """Test if records are correctly generated for different target archictecture.
     """
     #@unittest.skip('')

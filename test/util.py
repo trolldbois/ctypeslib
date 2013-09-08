@@ -3,6 +3,7 @@
 #
 
 import ctypes 
+import os
 from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
 import unittest
@@ -11,6 +12,12 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
+
+import tempfile
+def mktemp(suffix):
+    handle, fnm = tempfile.mkstemp(suffix)
+    os.close(handle)
+    return fnm
 
 
 def get_tu(source, lang='c', all_warnings=False, flags=[]):
@@ -100,9 +107,11 @@ class ADict(dict):
         except KeyError:
             raise AttributeError(name)    
 
-class ArchTest(unittest.TestCase):
+class ClangTest(unittest.TestCase):
     word_size = None
-    def gen(self, fname, flags=None):
+    def gen(self, fname, flags=[]):
+        """Take a file input and generate the code.
+        """ 
         ofi = StringIO()
         # leave the new parser accessible for tests
         self.parser = clangparser.Clang_Parser(flags)
@@ -121,7 +130,17 @@ class ArchTest(unittest.TestCase):
         # DEBUG 
         exec ofi.getvalue() in namespace
         return ADict(namespace)
-    
+
+    def convert(self, src_code, flags=[]):
+        """Take a string input, write it into a temp file and the code.
+        """ 
+        hfile = mktemp(".h")
+        open(hfile, "w").write(src_code)
+        try:
+            return self.gen(hfile, flags)
+        finally:
+            os.unlink(hfile)
+        #  
 
 __all__ = [
     'get_cursor',
