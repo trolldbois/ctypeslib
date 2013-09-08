@@ -8,7 +8,7 @@ from util import ArchTest
 '''Test if records are correctly generated for different target archictecture.
 '''
 class RecordTest(ArchTest):
-    @unittest.skip('')
+    #@unittest.skip('')
     def test_simple_x32(self):
         flags = ['-target','i386-linux']
         self.namespace = self.gen('test/data/test-clang0.c', flags)
@@ -21,7 +21,7 @@ class RecordTest(ArchTest):
         self.assertEquals(ctypes.sizeof(self.namespace.float_badaboum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.ptr), 4)
 
-    @unittest.skip('')
+    #@unittest.skip('')
     def test_simple_x64(self):
         flags = ['-target','x86_64-linux']
         self.namespace = self.gen('test/data/test-clang0.c', flags)
@@ -44,9 +44,11 @@ class RecordTest(ArchTest):
         self.assertEquals(ctypes.sizeof(self.namespace.Node2), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.myEnum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.my__quad_t), 8)
-        self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 16)
-        self.assertEquals(ctypes.sizeof(self.namespace.my_struct), 8)
-
+        self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 4)
+        self.assertEquals(ctypes.sizeof(self.namespace.mystruct), 5)
+    
+    # others size tests are in test_fast_clang
+    
     @unittest.skip('')
     def test_padding(self):
         flags = ['-target','i386-linux']
@@ -59,7 +61,7 @@ class RecordTest(ArchTest):
         self.assertEquals(ctypes.sizeof(self.namespace.Node3), 12)
         self.assertEquals(ctypes.sizeof(self.namespace.Node4), 12)
         self.assertEquals(ctypes.sizeof(self.namespace.Node5), 8)
-        self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 8)
 
         
 

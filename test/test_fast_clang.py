@@ -18,6 +18,23 @@ class CompareSizes(ArchTest):
         self.assertEquals( _clang, _python, 
             'Sizes for target: %s Clang:%d Python:%d flags:%s'%(name, _clang, _python, self.parser.flags))
 
+    def assertOffsets(self, name):
+        target = get_cursor(self.parser.tu, name).type.get_declaration()
+        self.assertTrue(target is not None, '%s was not found in source'%name )
+        members = [c.displayname for c in target.get_children() if c.kind.name == 'FIELD_DECL']
+        if members == []:
+            import code
+            code.interact(local=locals())
+        _clang_type = target.type
+        _python_type = getattr(self.namespace,name)
+        # Does not handle bitfield
+        for member in members:
+            _c_offset = _clang_type.get_offset(member)
+            _p_offset = 8*getattr(_python_type, member).offset
+            self.assertEquals( _c_offset, _p_offset, 
+                'Offsets for target: %s.%s Clang:%d Python:%d flags:%s'%(
+                    name, member, _c_offset, _p_offset, self.parser.flags))
+
     @unittest.skip('')
     def test_simple2(self):
         targets = ['structName', 'structName2','Node','Node2','myEnum',
@@ -45,6 +62,7 @@ class CompareSizes(ArchTest):
             self.namespace = self.gen('test/data/test-clang1.c', flags)
             for name in targets:
                 self.assertSizes(name)
+                self.assertOffsets(name)
 
     #@unittest.skip('')
     def test_includes(self):
