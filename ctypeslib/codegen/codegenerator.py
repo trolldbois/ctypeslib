@@ -445,10 +445,9 @@ class Generator(object):
         #import code
         #code.interact(local=locals())
         print >> self.stream, \
-              "%s = %s # Variable %s %r" % (tp.name,
+              "%s = %s # Variable %s" % (tp.name,
                                          tp.init,
-                                         self.type_name(tp.typ, False),
-                                         tp.init)
+                                         self.type_name(tp.typ, False))
         self.names.add(tp.name)
 
     _enumvalues = 0

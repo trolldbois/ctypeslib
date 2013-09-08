@@ -251,6 +251,9 @@ typedef void* pointer_t;''', flags=_flags)
     def is_pointer_type(self, t):
         return t.kind == TypeKind.POINTER
 
+    def is_unexposed_type(self, t):
+        return t.kind == TypeKind.UNEXPOSED
+
     # deprecated
     def convert_to_ctypes(self, typekind):
         return self.ctypes_typename[typekind]
@@ -324,23 +327,46 @@ typedef void* pointer_t;''', flags=_flags)
     #    return typedesc.File(name)
     #
     #def _fixup_File(self, f): pass
+
+    '''clang does not expose some types for some expression.
+    Example: the type of a token group in a Char_s or char variable.
+    Counter example: The type of an integer literal to a (int) variable.'''
+    @log_entity
+    def UNEXPOSED_EXPR(self, cursor): 
+        for child in node.get_children():
+            self.startElement( child ) 
+        pass
+
+    # References
+
+    @log_entity
+    def DECL_REF_EXPR(self, cursor):
+        return cursor.displayname
     
-    def get_token(self, cursor):
-        init = None
-        for c in cursor.get_children():
-            #print c.displayname
-            for t in c.get_tokens():
-                init = t.spelling
-                #print init
-                break
-            break
-            #print init
-        #print 'VAR_DECL init', init
-        try:
-            int(init)
-        except:
-            init = None
-        return init
+    @log_entity
+    def TYPE_REF(self, cursor):
+        return None
+        # Should probably never get here.
+        # I'm a field. ?
+        _definition = cursor.get_definition() 
+        if _definition is None: 
+            _definition = cursor.type.get_declaration() 
+            
+        #_id = _definition.get_usr()
+        name = _definition.displayname
+        if name == '': 
+            name = MAKE_NAME( _definition.get_usr() )
+        obj = self.get_registered(name)
+        if obj is None:
+            log.warning('This TYPE_REF was not previously defined. %s. Adding it'%(name))
+            # FIXME maybe do not fail and ignore record.
+            #import code
+            #code.interact(local=locals())
+            #raise TypeError('This TYPE_REF was not previously defined. %s. Adding it'%(name))
+            return self.TYPEDEF_DECL(_definition)
+        return obj
+
+    # Declarations     
     
     # simple types and modifiers
     # FIXME, token is bad, ar_ref is bad
@@ -353,35 +379,49 @@ typedef void* pointer_t;''', flags=_flags)
         if name.startswith("cpp_sym_"):
             # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx fix me!
             name = name[len("cpp_sym_"):]
-        # get the value
+        # get the value from literal & token
         init = None
-        for c in cursor.get_children():
-            for t in c.get_tokens():
-                init = t.spelling
-                break
-            break
-            #print init        
-            log.debug('VAR_DECL init:%s'%(init))
+        children = list(cursor.get_children())
+        assert( len(children) == 1 )
+        literal_type = children[0].kind
+        mth = getattr(self, literal_type.name)
+        import code
+        code.interact(local=locals())
+        if mth is None:
+            log.warning('%s children type is not exposed. Bailling out'%(name))
+            return
+        log.debug('Calling %s'%(literal_type.name))
+        # call recursively the children. As of clang 3.3, int literals are 
+        # level 1 children where char_s literal are level 2, under 
+        # an unexposed_expr.
+        init_value = mth(children[0], return_value=True)
+        import code
+        code.interact(local=locals())
         # Get the type
         _ctype = cursor.type.get_canonical()
         # FIXME - feels weird
         if self.is_fundamental_type(_ctype):
             ctypesname = self.get_ctypes_name(_ctype.kind)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )
-            init = '%s(%s)'%(ctypesname, init)
+            init_value = '%s(%s)'%(ctypesname, init_value)
+        elif self.is_unexposed_type(_ctype):
+            log.error('PATCH NEEDED: %s type is not exposed by clang'%(name))
+            ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
+            _type = typedesc.FundamentalType( ctypesname, 0, 0 )
+            init_value = '%s # UNEXPOSED ATTR. PATCH NEEDED.'%(init_value)
         else:
+            ## What else ?
+            raise NotImplementedError('What other type of variable?')
             # _type = cursor.get_usr()
-            _type = cursor.type.get_definition().kind.name
-            if _type == '': 
-                _type = MAKE_NAME( cursor.get_usr() )
-        # try to cast into python value type
-        #try:
-        #    int(init)
-        #except:
-        #    init = None
-        log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s'%(name, _ctype.kind.name, _type.name, init))
+            #import code
+            #code.interact(local=locals())
+            #_type = cursor.type.get_declaration().kind.name
+            #if _type == '': 
+            #    _type = MAKE_NAME( cursor.get_usr() )
+        log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s'%(name, 
+                    _ctype.kind.name, _type.name, init_value))
         #print _type.__class__.__name__
-        return self.register(name, typedesc.Variable(name, _type, init) )
+        return self.register(name, typedesc.Variable(name, _type, init_value) )
 
     def _fixup_Variable(self, t):
         if type(t.typ) == str: #typedesc.FundamentalType:
@@ -457,55 +497,7 @@ typedef void* pointer_t;''', flags=_flags)
             t.typ = self.all[t.name]
         pass
 
-    @log_entity
-    def TYPE_REF(self, cursor):
-        return None
-        # Should probably never get here.
-        # I'm a field. ?
-        _definition = cursor.get_definition() 
-        if _definition is None: 
-            _definition = cursor.type.get_declaration() 
-            
-        #_id = _definition.get_usr()
-        name = _definition.displayname
-        if name == '': 
-            name = MAKE_NAME( _definition.get_usr() )
-        obj = self.get_registered(name)
-        if obj is None:
-            log.warning('This TYPE_REF was not previously defined. %s. Adding it'%(name))
-            # FIXME maybe do not fail and ignore record.
-            #import code
-            #code.interact(local=locals())
-            #raise TypeError('This TYPE_REF was not previously defined. %s. Adding it'%(name))
-            return self.TYPEDEF_DECL(_definition)
-        return obj
-        '''
-        #if not t.is_definition():
-        #    log.debug('TYPE_REF: if not t.is_definition()')
-        #    return
-        # get the definition, create or reuse typedesc.
-        next = t.type.get_declaration()
-        _id = next.get_usr()
-        log.debug('TYPE_REF: next:%s id:%s'%(next, _id))
-        ##print '** _id is ', _id
-        if _id in self.all:
-            log.debug('TYPE_REF: _id in self.all')
-            return self.all[_id]
-        mth = getattr(self, next.kind.name)
-        if mth is None:
-            log.debug('TYPE_REF: mth is None')
-            raise TypeError('unhandled Type_ref TypeKind %s'%(next.kind))
-        log.debug('TYPE_REF: mth is %s'%(mth.__name__))
-        res = mth(next)
-        log.debug('TYPE_REF: res is %s'%(res.name))
-        if res is not None:
-            log.debug('TYPE_REF: self.all[%s] = %s'%(res.name, res))
-            self.all[res.name] = res
-            return self.all[res.name]
-        log.error('None on TYPE_REF')
-        return None
-        '''
-        
+       
     def FundamentalType(self, typ):
         #print cursor.displayname
         #t = cursor.type.get_canonical().kind
@@ -705,17 +697,27 @@ typedef void* pointer_t;''', flags=_flags)
         #        parent.add_argument(typedesc.Argument(p.type.get_canonical(), p.name))
         return
 
-    # Just ignore it.
     @log_entity
-    def INTEGER_LITERAL(self, cursor):
-        # FIXME : unhandled constant values.
-        #print 'INTEGER_LITERAL'
-        #import code
-        #code.interact(local=locals())
-        #print ' im a integer i=', self.get_token(cursor)
-        #import code
-        #code.interact(local=locals())
-        return
+    def _literal_handling(self, cursor, return_value=False):
+        if not return_value:
+            return
+        tokens = list(cursor.get_tokens())
+        log.debug('literal has %d tokens.[ %s ]'%(len(tokens), 
+            str([str(t.spelling) for t in tokens])))
+        return tokens[0].spelling
+
+    INTEGER_LITERAL = _literal_handling
+    STRING_LITERAL = _literal_handling
+    CHARACTER_LITERAL = _literal_handling
+
+    @log_entity
+    def _literal_handling(self, cursor, return_value=False):
+        if not return_value:
+            return
+        tokens = list(cursor.get_tokens())
+        log.debug('literal has %d tokens.[ %s ]'%(len(tokens), 
+            str([str(t.spelling) for t in tokens])))
+        return tokens[0].spelling
 
     # enumerations
 
@@ -770,44 +772,21 @@ typedef void* pointer_t;''', flags=_flags)
             #code.interact(local=locals())
             raise ValueError('This RECORD was not previously defined. %s. NOT Adding it'%(name))
         return obj
-        '''
-        name = _type.spelling
-        log.info('THIS is a record %s|%s|%s'%(_type.displayname, _type.spelling, cursor.get_usr()))
-        # DEBUG
-        import code
-        code.interact(local=locals())
-        if name == '': 
-            name = MAKE_NAME( cursor.get_usr() )
-        kind = _type.kind
-        if name in self.records:
-            return self.records[name]
-        #import code
-        #code.interact(local=locals())
-        log.debug("RECORD: TypeKind:'%s'"%(kind.name))
-        mth = getattr(self, kind.name)
-        if mth is None:
-            raise TypeError('unhandled Record TypeKind %s'%(kind.name))
-        self.records[name] = mth(cursor)
-        return self.records[name]
-        ## if next == CursorKind.TYPE_REF: # defer
-        ## if next == CursorKind.UNION_DECL: # create
-        ## if next == CursorKind.STRUCT_DECL: # create
-        '''
-        
-        return None
-
 
     @log_entity
     def STRUCT_DECL(self, cursor):
+        '''The cursor is on the declaration of a structure.'''
         return self._record_decl(typedesc.Structure, cursor)
 
     @log_entity
     def UNION_DECL(self, cursor):
+        '''The cursor is on the declaration of a union.'''
         return self._record_decl(typedesc.Union, cursor)
 
     def _record_decl(self, _type, cursor):
+        ''' a structure and an union have the same handling.'''
         if not cursor.kind.is_declaration():#definition():
-            raise TypeError('STRUCT_DECL is not declaration')
+            raise TypeError('cursor is not pointing to a declaration')
         # id, name, members
         name = cursor.displayname
         _id = cursor.get_usr()
@@ -828,6 +807,8 @@ typedef void* pointer_t;''', flags=_flags)
         log.debug('_record_decl: name: %s size:%d'%(name, size))
         members = []
         packed = False # 
+        # Go and recurse through children to get this record member's _id
+        # Members fields will not be "parsed" here, but later.
         for child in cursor.get_children():
             if child.kind == clang.cindex.CursorKind.FIELD_DECL:
                 # LLVM-CLANG, issue https://github.com/trolldbois/python-clang/issues/2
@@ -1088,8 +1069,8 @@ typedef void* pointer_t;''', flags=_flags)
         if name not in self._unhandled:
             log.debug('%s is not handled'%(name))
             self._unhandled.append(name)
-            return None
-        def p(node):
+            #return None
+        def p(node, **args):
             for child in node.get_children():
                 self.startElement( child ) 
         return p
