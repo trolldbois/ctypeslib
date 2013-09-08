@@ -21,6 +21,8 @@ class ConstantsTest(ClangTest):
         unsigned long long ui2 = 0x8000000000000000ULL;
         unsigned long long ui1 = 0x7FFFFFFFFFFFFFFFULL;
         """)
+        import code
+        code.interact(local=locals())
         self.failUnlessEqual(ns.i1, 0x7FFFFFFFFFFFFFFF)
         self.failUnlessEqual(ns.i2, -1)
         self.failUnlessEqual(ns.ui1, 0x7FFFFFFFFFFFFFFF)

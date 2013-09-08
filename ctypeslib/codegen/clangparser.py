@@ -388,6 +388,7 @@ typedef void* pointer_t;''', flags=_flags)
         # the value is a literal in get_children()
         children = list(cursor.get_children())
         assert( len(children) == 1 )
+        # token shortcut is not possible.
         literal_kind = children[0].kind
         if literal_kind.is_unexposed():
             literal_kind = list(children[0].get_children())[0].kind
@@ -720,20 +721,36 @@ typedef void* pointer_t;''', flags=_flags)
         #        parent.add_argument(typedesc.Argument(p.type.get_canonical(), p.name))
         return
 
+    # DEPRECATED
+    # Function is not used any more, as variable assignate are goten directly
+    # from the token.
+    # We can't use a shortcut by getting tokens
+    ## init_value = ' '.join([t.spelling for t in children[0].get_tokens() 
+    ##                         if t.spelling != ';'])
+    # because some literal might need cleaning.
     @log_entity
     def _literal_handling(self, cursor):
         tokens = list(cursor.get_tokens())
         log.debug('literal has %d tokens.[ %s ]'%(len(tokens), 
             str([str(t.spelling) for t in tokens])))
-        value = tokens[0].spelling
-        if cursor.kind == CursorKind.INTEGER_LITERAL:
-            # strip type suffix for constants 
-            value = value.replace('L','').replace('U','')
-            value = value.replace('l','').replace('u','')
-        elif cursor.kind == CursorKind.FLOATING_LITERAL:
-            # strip type suffix for constants 
-            value = value.replace('f','').replace('F','')
-        return value
+        final_value = []
+        #import code
+        #code.interact(local=locals())
+        for token in tokens:
+            value = token.spelling
+            if value == ';':
+                continue
+            if cursor.kind == CursorKind.INTEGER_LITERAL:
+                # strip type suffix for constants 
+                value = value.replace('L','').replace('U','')
+                value = value.replace('l','').replace('u','')
+            elif cursor.kind == CursorKind.FLOATING_LITERAL:
+                # strip type suffix for constants 
+                value = value.replace('f','').replace('F','')
+            # add token
+            final_value.append(value)
+        # return the EXPR    
+        return ' '.join(final_value)
 
     INTEGER_LITERAL = _literal_handling
     FLOATING_LITERAL = _literal_handling
@@ -741,14 +758,8 @@ typedef void* pointer_t;''', flags=_flags)
     STRING_LITERAL = _literal_handling
     CHARACTER_LITERAL = _literal_handling
 
-    @log_entity
-    def _literal_handling(self, cursor, return_value=False):
-        if not return_value:
-            return
-        tokens = list(cursor.get_tokens())
-        log.debug('literal has %d tokens.[ %s ]'%(len(tokens), 
-            str([str(t.spelling) for t in tokens])))
-        return tokens[0].spelling
+    UNARY_OPERATOR = _literal_handling
+    BINARY_OPERATOR = _literal_handling
 
     # enumerations
 
