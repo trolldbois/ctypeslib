@@ -14,6 +14,26 @@ struct structName2
   long long member3;
 };
 
+struct structName3
+{
+  short member1;
+  long member2;
+  short member3;
+  long member4;
+  short member5;
+  long member6;
+} __attribute__((packed));
+
+struct structName4
+{
+  short member1;
+  long member2;
+  short member3;
+  long member4;
+  short member5;
+  long member6;
+};
+
 struct Node {
   unsigned int val1;
   void * ptr2;
