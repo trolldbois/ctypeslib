@@ -96,8 +96,8 @@ class Clang_Parser(object):
         TypeKind.ULONG : 'TBD' ,
         TypeKind.ULONGLONG : 'TBD' ,
         TypeKind.UINT128 : 'c_uint128' , # FIXME
-        TypeKind.CHAR_S : 'c_byte' ,
-        TypeKind.SCHAR : 'c_byte' ,
+        TypeKind.CHAR_S : 'c_char' , 
+        TypeKind.SCHAR : 'c_char' , 
         TypeKind.WCHAR : 'c_wchar' ,
         TypeKind.SHORT : 'TBD' ,
         TypeKind.INT : 'TBD' ,
@@ -353,32 +353,35 @@ typedef void* pointer_t;''', flags=_flags)
         if name.startswith("cpp_sym_"):
             # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx fix me!
             name = name[len("cpp_sym_"):]
-        # I dont have the value... 
+        # get the value
         init = None
         for c in cursor.get_children():
             for t in c.get_tokens():
                 init = t.spelling
                 break
             break
-            #print init
-        
+            #print init        
             log.debug('VAR_DECL init:%s'%(init))
-        
-        try:
-            int(init)
-        except:
-            init = None
-        # now get the type
-        typ = cursor.type.get_canonical()
+        # Get the type
+        _ctype = cursor.type.get_canonical()
         # FIXME - feels weird
-        if self.is_fundamental_type(typ):
-            ctypesname = self.convert_to_ctypes(typ.kind)
-            typ = typedesc.FundamentalType( ctypesname, 0, 0 )
+        if self.is_fundamental_type(_ctype):
+            ctypesname = self.get_ctypes_name(_ctype.kind)
+            _type = typedesc.FundamentalType( ctypesname, 0, 0 )
+            init = '%s(%s)'%(ctypesname, init)
         else:
-            typ = cursor.get_usr() #cursor.type.get_canonical().kind.name
-
-        #print typ.__class__.__name__
-        return typedesc.Variable(name, typ, init)
+            # _type = cursor.get_usr()
+            _type = cursor.type.get_definition().kind.name
+            if _type == '': 
+                _type = MAKE_NAME( cursor.get_usr() )
+        # try to cast into python value type
+        #try:
+        #    int(init)
+        #except:
+        #    init = None
+        log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s'%(name, _ctype.kind.name, _type.name, init))
+        #print _type.__class__.__name__
+        return self.register(name, typedesc.Variable(name, _type, init) )
 
     def _fixup_Variable(self, t):
         if type(t.typ) == str: #typedesc.FundamentalType:

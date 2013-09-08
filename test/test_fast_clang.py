@@ -48,7 +48,7 @@ class CompareSizes(ArchTest):
 
     #@unittest.skip('')
     def test_includes(self):
-        targets = ['Anon', 'p','c']
+        targets = ['p','c']
         for flags in [ ['-target','i386-linux'], ['-target','x86_64-linux'] ]:
             self.namespace = self.gen('test/data/test-clang2.c', flags)
             for name in targets:

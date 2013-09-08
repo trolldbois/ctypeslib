@@ -437,20 +437,23 @@ class Generator(object):
         if tp.init is None:
             self._notfound_variables += 1
             return
-        try:
-            value = self.initialize(tp.typ, tp.init)
-        except (TypeError, ValueError, SyntaxError, NameError), detail:
-            log.error("Could not init %s %s %s"% (tp.name, tp.init, detail))
-            return
+        #try:
+        #    value = self.initialize(tp.typ, tp.init)
+        #except (TypeError, ValueError, SyntaxError, NameError), detail:
+        #    log.error("Could not init %s %s %s"% (tp.name, tp.init, detail))
+        #    return
+        #import code
+        #code.interact(local=locals())
         print >> self.stream, \
-              "%s = %r # Variable %s %r" % (tp.name,
-                                         value,
+              "%s = %s # Variable %s %r" % (tp.name,
+                                         tp.init,
                                          self.type_name(tp.typ, False),
                                          tp.init)
         self.names.add(tp.name)
 
     _enumvalues = 0
     def EnumValue(self, tp):
+        # FIXME should be in parser
         value = int(tp.value)
         print >> self.stream, \
               "%s = %d" % (tp.name, value)
@@ -690,7 +693,8 @@ class Generator(object):
             log.error( '** got an string item %s'%( item ) )
             import code
             code.interact(local=locals())
-        
+            raise TypeError('Item should not be a string %s'%(item))
+        log.debug('generate: %s( %s )'%( type(item).__name__, name))
         #if isinstance(item, typedesc.StructureHead):
         #    name = getattr(item.struct, "name", None)
         #else:

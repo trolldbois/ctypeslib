@@ -4,5 +4,9 @@
 typedef struct Anon;
 //struct Anon2;
 
-int p = 2;
-int c = p;
+int a = 2;
+int b = a;
+char c = 'x';
+char d = '1';
+char[] e = 'abcde';
+
