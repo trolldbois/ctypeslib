@@ -2,6 +2,7 @@
 # This file provides common utility functions for the test suite.
 #
 
+import ctypes 
 from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
 import unittest
@@ -121,6 +122,14 @@ class ArchTest(unittest.TestCase):
         exec ofi.getvalue() in namespace
         return ADict(namespace)
     
+    ''' Python versus Clang sizeof. Python should always return the same size 
+    as the native clang results. ''' 
+    def assertSizes(self, name):
+        target = get_cursor(self.parser.tu, name)
+        _clang = target.type.get_size()
+        _python = ctypes.sizeof(getattr(self.namespace,name))
+        self.assertEquals( _clang, _python, 
+            'Sizes for target: %s Clang:%d Python:%d flags:%s'%(name, _clang, _python, self.parser.flags))
 
 __all__ = [
     'get_cursor',
