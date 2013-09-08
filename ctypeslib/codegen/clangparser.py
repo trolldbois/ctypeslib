@@ -382,47 +382,41 @@ typedef void* pointer_t;''', flags=_flags)
 
     # Declarations     
     
-    # simple types and modifiers
-    # FIXME, token is bad, ar_ref is bad
+    ''' The cursor is on a Variable declaration.'''
     @log_entity
     def VAR_DECL(self, cursor):
-        import code
-        #code.interact(local=locals())
-        
+        # get the name
         name = cursor.displayname
-        if name.startswith("cpp_sym_"):
-            # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx fix me!
-            name = name[len("cpp_sym_"):]
-        # get the value from literal & token
-        init = None
+        # the value is a literal in get_children()
         children = list(cursor.get_children())
         assert( len(children) == 1 )
-        literal_type = children[0].kind
-        mth = getattr(self, literal_type.name)
-        #import code
-        #code.interact(local=locals())
-        if mth is None:
-            log.warning('%s children type is not exposed. Bailling out'%(name))
-            return
-        log.debug('Calling %s'%(literal_type.name))
-        # call recursively the children. As of clang 3.3, int literals are 
-        # level 1 children where char_s literal are level 2, under 
-        # an unexposed_expr.
+        literal_kind = children[0].kind
+        if literal_kind.is_unexposed():
+            literal_kind = list(children[0].get_children())[0].kind
+        mth = getattr(self, literal_kind.name)
+        # pod ariable are easy. some are unexposed.
+        log.debug('Calling %s'%(literal_kind.name))
+        # As of clang 3.3, int, double literals are exposed.
+        # float, long double, char , char* are not exposed directly in level1.
         init_value = mth(children[0])
-        #import code
-        #code.interact(local=locals())
         # Get the type
         _ctype = cursor.type.get_canonical()
-        # FIXME - feels weird
+        #import code
+        #code.interact(local=locals())
+        # FIXME: Need working int128, long_double, etc...
         if self.is_fundamental_type(_ctype):
             ctypesname = self.get_ctypes_name(_ctype.kind)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )
-            init_value = '%s(%s)'%(ctypesname, init_value)
-        elif self.is_unexposed_type(_ctype):
+            # FIXME: because c_long_double_t or c_unint128 are not real ctypes
+            # we can make variable with them.
+            # just write the value as-is.
+            ### if literal_kind != CursorKind.DECL_REF_EXPR:
+            ###    init_value = '%s(%s)'%(ctypesname, init_value)
+        elif self.is_unexposed_type(_ctype): # string are not exposed
             log.error('PATCH NEEDED: %s type is not exposed by clang'%(name))
             ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )
-            init_value = '%s # UNEXPOSED ATTR. PATCH NEEDED.'%(init_value)
+            init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
         else:
             ## What else ?
             raise NotImplementedError('What other type of variable?')
@@ -736,6 +730,8 @@ typedef void* pointer_t;''', flags=_flags)
         return tokens[0].spelling
 
     INTEGER_LITERAL = _literal_handling
+    FLOATING_LITERAL = _literal_handling
+    IMAGINARY_LITERAL = _literal_handling
     STRING_LITERAL = _literal_handling
     CHARACTER_LITERAL = _literal_handling
 

@@ -117,7 +117,7 @@ class ArchTest(unittest.TestCase):
         # load code 
         namespace = {}
         # DEBUG
-        print ofi.getvalue()
+        # print ofi.getvalue()
         # DEBUG 
         exec ofi.getvalue() in namespace
         return ADict(namespace)

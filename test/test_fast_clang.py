@@ -23,11 +23,11 @@ class CompareSizes(ArchTest):
         targets = ['structName', 'structName2','Node','Node2','myEnum',
             'my__quad_t','my_bitfield','mystruct']
         flags = ['-target','i386-linux']
-        self.namespace = self.gen('test/data/test-clang1.c', flags)
+        self.namespace = self.gen('test/data/test-clang3.c', flags)
         for name in targets:
             self.assertSizes(name)
 
-    @unittest.skip('')
+    #@unittest.skip('')
     def test_simple(self):
         targets = ['badaboum', 'you_badaboum', 'big_badaboum', 
             'you_big_badaboum', 'double_badaboum', 'long_double_badaboum',
@@ -37,7 +37,7 @@ class CompareSizes(ArchTest):
             for name in targets:
                 self.assertSizes(name)
 
-    @unittest.skip('')
+    #@unittest.skip('')
     def test_records(self):
         targets = ['structName', 'structName2','Node','Node2','myEnum',
             'my__quad_t','my_bitfield','mystruct']
@@ -48,7 +48,8 @@ class CompareSizes(ArchTest):
 
     #@unittest.skip('')
     def test_includes(self):
-        targets = ['p','c']
+        targets = ['int8_t', 'intptr_t', 'intmax_t' ] 
+        #no size here ['a','b','c','d','e','f','g','h']
         for flags in [ ['-target','i386-linux'], ['-target','x86_64-linux'] ]:
             self.namespace = self.gen('test/data/test-clang2.c', flags)
             for name in targets:
