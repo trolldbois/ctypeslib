@@ -416,6 +416,9 @@ typedef void* pointer_t;''', flags=_flags)
             ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )
             init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
+        elif _ctype.kind == TypeKind.RECORD:
+          structname = self.get_unique_name(_ctype.get_declaration())
+          _type = self.all[structname]
         else:
             ## What else ?
             raise NotImplementedError('What other type of variable?')
@@ -671,8 +674,8 @@ typedef void* pointer_t;''', flags=_flags)
                 #if _type is None:
                 #    return None
                 attributes.append(attr)
-        import code
-        code.interact(local=locals())    
+        #import code
+        #code.interact(local=locals())    
         obj = typedesc.FunctionType(returns, attributes)
         self.set_location(obj, cursor)
         return obj
@@ -797,6 +800,13 @@ typedef void* pointer_t;''', flags=_flags)
     def _fixup_EnumValue(self, e): pass
 
     # structures, unions, classes
+    
+    def get_unique_name(self, cursor):
+      name = cursor.displayname
+      _id = cursor.get_usr()
+      if name == '': # anonymous is spelling == ''
+          name = MAKE_NAME( _id )
+      return name
 
     @log_entity
     def RECORD(self, cursor):
@@ -806,9 +816,7 @@ typedef void* pointer_t;''', flags=_flags)
         Type is accessible by cursor.type.get_declaration() 
         '''
         _decl = cursor.type.get_declaration() 
-        name = _decl.displayname
-        if name == '': 
-            name = MAKE_NAME( _decl.get_usr() )
+        name = self.get_unique_name(_decl)
         obj = self.get_registered(name)
         if obj is None:
             log.warning('This RECORD was not previously defined. %s. NOT Adding it'%(name))
@@ -829,11 +837,8 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _record_decl(self, _type, cursor):
         ''' a structure and an union have the same handling.'''
-        name = cursor.displayname
-        # better name
-        _id = cursor.get_usr()
-        if name == '': # anonymous is spelling == ''
-            name = MAKE_NAME( _id )
+        
+        name = self.get_unique_name(cursor)
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
         # TODO unittest: try redefinition.
