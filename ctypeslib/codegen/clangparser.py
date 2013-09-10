@@ -191,7 +191,7 @@ class Clang_Parser(object):
 
     ''' Location is also used for codegeneration ordering.'''
     def set_location(self, obj, cursor):
-        if cursor.location.file is not None:
+        if hasattr(cursor, 'location') and cursor.location.file is not None:
             obj.location = (cursor.location.file.name, cursor.location.line)
 
     ########################################################################
