@@ -95,6 +95,7 @@ class ConstantsTest(ClangTest):
         self.assertEqual(ns.w_zero, '\0')
         self.assertEqual(type(ns.w_zero), unicode)
 
+    #@unittest.skip('')
     def test_char(self):
         ns = self.convert("""
         char x = 'x';
@@ -107,7 +108,9 @@ class ConstantsTest(ClangTest):
         self.assertEqual(type(ns.zero), str) # that is another problem.
 
 
-    @unittest.skip('')
+    #@unittest.skip('')
+    # no macro support yet
+    @unittest.expectedFailure
     def test_defines(self):
         ns = self.convert("""
         #define zero 0
@@ -122,7 +125,7 @@ class ConstantsTest(ClangTest):
         #ifdef _MSC_VER
         # define VERYLARGE 0xFFFFFFFFFFFFFFFFui64
         #endif
-        """, "-c")
+        """)
 
         self.assertEqual(ns.zero, 0)
         self.assertEqual(ns.one, 1)
@@ -138,14 +141,15 @@ class ConstantsTest(ClangTest):
         self.assertEqual(ns.foo, "foo")
         self.assertEqual(type(ns.foo), unicode)
 
-    @unittest.skip('')
+    #@unittest.skip('')
+    # CLANG PATCH needed, char array type is not exposed.
     def test_array_nosize(self):
         ns = self.convert("""
         typedef char array[];
         struct blah {
             char varsize[];
         };
-        """, "-c")
+        """)
         # for 'typedef char array[];', gccxml does XXX
         self.assertEqual(ctypes.sizeof(ns.blah), 0)
         self.assertEqual(ctypes.sizeof(ns.array), 0)
