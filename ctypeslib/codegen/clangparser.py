@@ -15,6 +15,7 @@ import re
 from . import util
 
 log = logging.getLogger('clangparser')
+log.setLevel(logging.DEBUG)
 
 def decorator(dec):
     def new_decorator(f):
@@ -385,19 +386,24 @@ typedef void* pointer_t;''', flags=_flags)
     def VAR_DECL(self, cursor):
         # get the name
         name = cursor.displayname
+
         # the value is a literal in get_children()
         children = list(cursor.get_children())
-        assert( len(children) == 1 )
-        # token shortcut is not possible.
-        literal_kind = children[0].kind
-        if literal_kind.is_unexposed():
-            literal_kind = list(children[0].get_children())[0].kind
-        mth = getattr(self, literal_kind.name)
-        # pod ariable are easy. some are unexposed.
-        log.debug('Calling %s'%(literal_kind.name))
-        # As of clang 3.3, int, double literals are exposed.
-        # float, long double, char , char* are not exposed directly in level1.
-        init_value = mth(children[0])
+        if len(children) == 0:
+          init_value = "None"
+        else:
+          assert (len(children) == 1)
+          # token shortcut is not possible.
+          literal_kind = children[0].kind
+          if literal_kind.is_unexposed():
+              literal_kind = list(children[0].get_children())[0].kind
+          mth = getattr(self, literal_kind.name)
+          # pod ariable are easy. some are unexposed.
+          log.debug('Calling %s'%(literal_kind.name))
+          # As of clang 3.3, int, double literals are exposed.
+          # float, long double, char , char* are not exposed directly in level1.
+          init_value = mth(children[0])
+
         # Get the type
         _ctype = cursor.type.get_canonical()
         #import code
@@ -428,8 +434,9 @@ typedef void* pointer_t;''', flags=_flags)
             #_type = cursor.type.get_declaration().kind.name
             #if _type == '': 
             #    _type = MAKE_NAME( cursor.get_usr() )
-        log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s'%(name, 
-                    _ctype.kind.name, _type.name, init_value))
+        log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s'%(name, 
+                    _ctype.kind.name, _type.name, init_value,
+                    getattr(cursor, 'location')))
         #print _type.__class__.__name__
         obj = self.register(name, typedesc.Variable(name, _type, init_value) )
         self.set_location(obj, cursor)
