@@ -875,13 +875,13 @@ typedef void* pointer_t;''', flags=_flags)
         members = []
         # Go and recurse through children to get this record member's _id
         # Members fields will not be "parsed" here, but later.
-        for child in cursor.get_children():
+        for childnum, child in enumerate(cursor.get_children()):
             if child.kind == clang.cindex.CursorKind.FIELD_DECL:
                 # LLVM-CLANG, issue https://github.com/trolldbois/python-clang/issues/2
                 # CIndexUSR.cpp:800+ // Bit fields can be anonymous.
                 _cid = child.get_usr()
                 if _cid == '' and child.is_bitfield():
-                    _cid = cursor.get_usr() + "@Ab"
+                    _cid = cursor.get_usr() + "@Ab#" + str(childnum)
                 # END FIXME
                 members.append( _cid )
                 continue
@@ -994,7 +994,14 @@ typedef void* pointer_t;''', flags=_flags)
             bits = cursor.get_bitfield_width()
             if name == '': # TODO FIXME libclang, get_usr() should return != ''
                 log.warning("Cursor has no displayname - anonymous bitfield")
-                _id = cursor.semantic_parent.get_usr() + "@Ab"
+                childnum = None
+                for i, x in enumerate(cursor.semantic_parent.get_children()):
+                  if x == cursor:
+                    childnum = i
+                    break
+                else:
+                  raise Exception('Did not find child in semantic parent')
+                _id = cursor.semantic_parent.get_usr() + "@Ab#" + str(childnum)
                 name = "anonymous_bitfield"
         else:
             bits = cursor.type.get_size() * 8
