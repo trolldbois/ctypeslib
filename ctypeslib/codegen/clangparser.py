@@ -815,7 +815,13 @@ typedef void* pointer_t;''', flags=_flags)
         known.
         Type is accessible by cursor.type.get_declaration() 
         '''
-        _decl = cursor.type.get_declaration() 
+        if cursor.type.kind == TypeKind.CONSTANTARRAY:
+            _decl = cursor.type.get_array_element_type().get_declaration()
+        else:
+            _decl = cursor.type.get_declaration()
+
+        assert _decl.kind != CursorKind.NO_DECL_FOUND
+
         name = self.get_unique_name(_decl)
         obj = self.get_registered(name)
         if obj is None:
