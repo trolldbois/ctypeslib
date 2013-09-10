@@ -63,42 +63,49 @@ class ConstantsTest(ClangTest):
         self.assertEqual(ns.one, 1)
         self.assertEqual(ns.maxuint, 0xFFFFFFFF)
 
-    @unittest.skip('')
-    def test_doubles(self):
+    # no macro support yet
+    @unittest.expectedFailure
+    def test_macro(self):
         ns = self.convert("""
         #define A  0.9642
         #define B  1.0
         #define C  0.8249
-
-        double d = 0.0036;
-        float f = 2.5;
-        """, "-c")
+        """)
         self.failUnlessAlmostEqual(ns.A, 0.9642)
         self.failUnlessAlmostEqual(ns.B, 1.0)
         self.failUnlessAlmostEqual(ns.C, 0.8249)
+
+    def test_doubles(self):
+        ns = self.convert("""
+        double d = 0.0036;
+        float f = 2.5;
+        """)
         self.failUnlessAlmostEqual(ns.d, 0.0036)
         self.failUnlessAlmostEqual(ns.f, 2.5)
 
-    @unittest.skip('')
+    #@unittest.skip('')
+    # FIXME, L prefix.
+    def test_wchar(self):
+        ns = self.convert("""
+        wchar_t X = L'X'; 
+        wchar_t w_zero = 0;
+        """, ['-x','c++']) # force c++ lang for wchar
+        self.assertEqual(ns.X, 'X')
+        self.assertEqual(type(ns.X), unicode)
+        self.assertEqual(ns.w_zero, '\0')
+        self.assertEqual(type(ns.w_zero), unicode)
+
     def test_char(self):
         ns = self.convert("""
         char x = 'x';
-        wchar_t X = L'X';
         char zero = 0;
-        wchar_t w_zero = 0;
-        """)
-
+        """) 
         self.assertEqual(ns.x, 'x')
-        self.assertEqual(ns.X, 'X')
-
         self.assertEqual(type(ns.x), str)
-        self.assertEqual(type(ns.X), unicode)
+        self.assertEqual(ns.zero, '\0') # not very true...
+        # type casting will not work in ctypes anyway
+        self.assertEqual(type(ns.zero), str) # that is another problem.
 
-        self.assertEqual(ns.zero, '\0')
-        self.assertEqual(ns.w_zero, '\0')
-
-        self.assertEqual(type(ns.zero), str)
-        self.assertEqual(type(ns.w_zero), unicode)
 
     @unittest.skip('')
     def test_defines(self):
@@ -171,6 +178,8 @@ class ConstantsTest(ClangTest):
 
         self.assertEqual(ctypes.sizeof(ns.tagEMPTY), 0)
 
-
+import logging, sys
 if __name__ == "__main__":
+    logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
+    #logging.getLogger( "SomeTest.testSomething" ).setLevel( logging.DEBUG )
     unittest.main()
