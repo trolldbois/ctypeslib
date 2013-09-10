@@ -1051,6 +1051,13 @@ typedef void* pointer_t;''', flags=_flags)
         pass
 
     ################
+    
+    # Do not traverse into function bodies and other compound statements
+    @log_entity
+    def COMPOUND_STMT(self, cursor):
+      return True
+    
+    ################
 
     def _fixup_Macro(self, m):
         pass
