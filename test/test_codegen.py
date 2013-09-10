@@ -9,6 +9,8 @@ import ctypes
 from util import ClangTest
 
 class ConstantsTest(ClangTest):
+    """Tests from the original ctypeslib.
+    """
 
     #@unittest.skip('')
     def test_longlong(self):
@@ -21,17 +23,13 @@ class ConstantsTest(ClangTest):
         unsigned long long ui2 = 0x8000000000000000ULL;
         unsigned long long ui1 = 0x7FFFFFFFFFFFFFFFULL;
         """)
-        import code
-        code.interact(local=locals())
-        self.failUnlessEqual(ns.i1, 0x7FFFFFFFFFFFFFFF)
-        self.failUnlessEqual(ns.i2, -1)
-        self.failUnlessEqual(ns.ui1, 0x7FFFFFFFFFFFFFFF)
+        self.assertEquals(ns.i1, 0x7FFFFFFFFFFFFFFF)
+        self.assertEquals(ns.i2, -1)
+        self.assertEquals(ns.ui1, 0x7FFFFFFFFFFFFFFF)
+        self.assertEquals(ns.ui3, 0xFFFFFFFFFFFFFFFF)
+        self.assertEquals(ns.ui2, 0x8000000000000000)
 
-        # These two tests fail on 64-bit Linux! gccxml bug, I assume...
-        self.failUnlessEqual(ns.ui3, 0xFFFFFFFFFFFFFFFF)
-        self.failUnlessEqual(ns.ui2, 0x8000000000000000)
-
-    @unittest.skip('')
+    #@unittest.skip('')
     def test_int(self):
         ns = self.convert("""
         int zero = 0;
@@ -41,25 +39,29 @@ class ConstantsTest(ClangTest):
         int minint = -2147483648;
         """)
 
-        self.failUnlessEqual(ns.zero, 0)
-        self.failUnlessEqual(ns.one, 1)
-        self.failUnlessEqual(ns.minusone, -1)
-        self.failUnlessEqual(ns.maxint, 2147483647)
-        self.failUnlessEqual(ns.minint, -2147483648)
+        self.assertEqual(ns.zero, 0)
+        self.assertEqual(ns.one, 1)
+        self.assertEqual(ns.minusone, -1)
+        self.assertEqual(ns.maxint, 2147483647)
+        self.assertEqual(ns.minint, -2147483648)
 
-    @unittest.skip('')
+    # we are not actually looking at signed/unsigned types...
+    @unittest.expectedFailure
+    def test_uint_minus_one(self):
+        ns = self.convert("""
+        unsigned int minusone = -1;
+        """)
+        self.assertEqual(ns.minusone, 4294967295)
+
     def test_uint(self):
         ns = self.convert("""
         unsigned int zero = 0;
         unsigned int one = 1;
-        unsigned int minusone = -1;
         unsigned int maxuint = 0xFFFFFFFF;
         """)
-
-        self.failUnlessEqual(ns.zero, 0)
-        self.failUnlessEqual(ns.one, 1)
-        self.failUnlessEqual(ns.minusone, 4294967295)
-        self.failUnlessEqual(ns.maxuint, 0xFFFFFFFF)
+        self.assertEqual(ns.zero, 0)
+        self.assertEqual(ns.one, 1)
+        self.assertEqual(ns.maxuint, 0xFFFFFFFF)
 
     @unittest.skip('')
     def test_doubles(self):
@@ -86,17 +88,17 @@ class ConstantsTest(ClangTest):
         wchar_t w_zero = 0;
         """)
 
-        self.failUnlessEqual(ns.x, 'x')
-        self.failUnlessEqual(ns.X, 'X')
+        self.assertEqual(ns.x, 'x')
+        self.assertEqual(ns.X, 'X')
 
-        self.failUnlessEqual(type(ns.x), str)
-        self.failUnlessEqual(type(ns.X), unicode)
+        self.assertEqual(type(ns.x), str)
+        self.assertEqual(type(ns.X), unicode)
 
-        self.failUnlessEqual(ns.zero, '\0')
-        self.failUnlessEqual(ns.w_zero, '\0')
+        self.assertEqual(ns.zero, '\0')
+        self.assertEqual(ns.w_zero, '\0')
 
-        self.failUnlessEqual(type(ns.zero), str)
-        self.failUnlessEqual(type(ns.w_zero), unicode)
+        self.assertEqual(type(ns.zero), str)
+        self.assertEqual(type(ns.w_zero), unicode)
 
     @unittest.skip('')
     def test_defines(self):
@@ -115,19 +117,19 @@ class ConstantsTest(ClangTest):
         #endif
         """, "-c")
 
-        self.failUnlessEqual(ns.zero, 0)
-        self.failUnlessEqual(ns.one, 1)
-        self.failUnlessEqual(ns.minusone, -1)
-        self.failUnlessEqual(ns.maxint, 2147483647)
-        self.failUnlessEqual(ns.LARGE, 0xFFFFFFFF)
-##        self.failUnlessEqual(ns.VERYLARGE, 0xFFFFFFFFFFFFFFFF)
-##        self.failUnlessEqual(ns.minint, -2147483648)
+        self.assertEqual(ns.zero, 0)
+        self.assertEqual(ns.one, 1)
+        self.assertEqual(ns.minusone, -1)
+        self.assertEqual(ns.maxint, 2147483647)
+        self.assertEqual(ns.LARGE, 0xFFFFFFFF)
+##        self.assertEqual(ns.VERYLARGE, 0xFFFFFFFFFFFFFFFF)
+##        self.assertEqual(ns.minint, -2147483648)
 
-        self.failUnlessEqual(ns.spam, "spam")
-        self.failUnlessEqual(type(ns.spam), str)
+        self.assertEqual(ns.spam, "spam")
+        self.assertEqual(type(ns.spam), str)
 
-        self.failUnlessEqual(ns.foo, "foo")
-        self.failUnlessEqual(type(ns.foo), unicode)
+        self.assertEqual(ns.foo, "foo")
+        self.assertEqual(type(ns.foo), unicode)
 
     @unittest.skip('')
     def test_array_nosize(self):
@@ -138,8 +140,8 @@ class ConstantsTest(ClangTest):
         };
         """, "-c")
         # for 'typedef char array[];', gccxml does XXX
-        self.failUnlessEqual(ctypes.sizeof(ns.blah), 0)
-        self.failUnlessEqual(ctypes.sizeof(ns.array), 0)
+        self.assertEqual(ctypes.sizeof(ns.blah), 0)
+        self.assertEqual(ctypes.sizeof(ns.array), 0)
 
     @unittest.skip('')
     def test_docstring(self):
@@ -157,7 +159,7 @@ class ConstantsTest(ClangTest):
         )
         prototype = "void * malloc(size_t".replace(" ", "")
         docstring = ns.malloc.__doc__.replace(" ", "")
-        self.failUnlessEqual(docstring[:len(prototype)], prototype)
+        self.assertEqual(docstring[:len(prototype)], prototype)
         self.failUnless("malloc.h" in ns.malloc.__doc__)
 
     @unittest.skip('')
@@ -167,7 +169,7 @@ class ConstantsTest(ClangTest):
         } EMPTY;
         """)
 
-        self.failUnlessEqual(ctypes.sizeof(ns.tagEMPTY), 0)
+        self.assertEqual(ctypes.sizeof(ns.tagEMPTY), 0)
 
 
 if __name__ == "__main__":
