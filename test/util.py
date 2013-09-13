@@ -31,6 +31,7 @@ def get_tu(source, lang='c', all_warnings=False, flags=[]):
 
     all_warnings is a convenience argument to enable all compiler warnings.
     """
+    assert type(flags) == list
     args = list(flags)
     name = 't.c'
     if lang == 'cpp':
