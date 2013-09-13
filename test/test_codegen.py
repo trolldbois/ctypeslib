@@ -12,6 +12,14 @@ class ConstantsTest(ClangTest):
     """Tests from the original ctypeslib.
     """
 
+    def test_var(self):
+        """Basic POD test variable declaration'
+        """
+        ns = self.convert("""
+        int i1;
+        """)
+        self.assertEqual(ctypes.sizeof(ns.i1), 4)
+
     #@unittest.skip('')
     def test_longlong(self):
         """Basic POD test variable on longlong values'
@@ -179,9 +187,69 @@ class ConstantsTest(ClangTest):
         typedef struct tagEMPTY {
         } EMPTY;
         """)
-
         self.assertEqual(ctypes.sizeof(ns.tagEMPTY), 0)
 
+    def test_struct_named_twice(self):
+        ns = self.convert('''
+        typedef struct xyz {
+            int a;
+        } xyz;
+        ''')
+        self.assertEqual(ctypes.sizeof(ns.struct_xyz), 4)
+        self.assertEqual(ctypes.sizeof(ns.xyz), 4)
+        self.assertSizes('xyz')
+
+    def test_struct_with_pointer(self):
+        ns = self.convert('''
+        struct x {
+            int y;
+        };
+        typedef struct x *x_n_t;
+
+        typedef struct p {
+            x_n_t g[1];
+        } *p_t;
+        ''')    
+        self.assertEqual(ctypes.sizeof(ns.struct_x), 4)
+        self.assertEqual(ctypes.sizeof(ns.x_n_t), ctypes.sizeof(ctypes.c_void_p))
+        self.assertEqual(ctypes.sizeof(ns.struct_p), 4)
+        self.assertEqual(ctypes.sizeof(ns.p_t), ctypes.sizeof(ctypes.c_void_p))
+        self.assertSizes('x_n_t')
+        self.assertSizes('p_t')
+
+    def test_struct_with_struct_array_member(self):
+        ns = self.convert('''
+        struct foo {
+             int bar;
+        };
+
+        typedef struct foo foo_t[256];
+
+        typedef struct {
+            foo_t baz;
+        } __somestruct;
+        ''')
+
+    def test_var_decl_and_scope(self):
+        ns = self.convert('''
+        int zig;
+
+        inline void foo() {
+          int zig;
+        }
+        ''')
+
+    def test_extern_function_pointer(self):
+        ns = self.convert('''
+        extern int (*func_ptr)(const char *arg);
+        ''')
+
+    def test_extern_function_pointer_multiarg(self):
+        ns = self.convert('''
+        extern int (*func_ptr)(const char *arg, int c);
+        ''')
+    
+    
 import logging, sys
 if __name__ == "__main__":
     logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )

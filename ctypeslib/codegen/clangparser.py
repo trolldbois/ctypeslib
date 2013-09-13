@@ -15,7 +15,6 @@ import re
 from . import util
 
 log = logging.getLogger('clangparser')
-log.setLevel(logging.DEBUG)
 
 def decorator(dec):
     def new_decorator(f):
@@ -195,6 +194,13 @@ class Clang_Parser(object):
         if hasattr(cursor, 'location') and cursor.location.file is not None:
             obj.location = (cursor.location.file.name, cursor.location.line)
 
+    def get_unique_name(self, cursor):
+      name = cursor.displayname
+      _id = cursor.get_usr()
+      if name == '': # anonymous is spelling == ''
+          name = MAKE_NAME( _id )
+      return name
+
     ########################################################################
     ''' clang types to ctypes for architecture dependent size types
     '''
@@ -262,10 +268,6 @@ typedef void* pointer_t;''', flags=_flags)
 
     def is_unexposed_type(self, t):
         return t.kind == TypeKind.UNEXPOSED
-
-    # deprecated
-    def convert_to_ctypes(self, typekind):
-        return self.ctypes_typename[typekind]
 
     def get_ctypes_name(self, typekind):
         return self.ctypes_typename[typekind]
@@ -392,7 +394,10 @@ typedef void* pointer_t;''', flags=_flags)
         if len(children) == 0:
           init_value = "None"
         else:
-          assert (len(children) == 1)
+          if (len(children) != 1):
+            log.debug('Multiple children in a var_decl')
+            import code
+            code.interact(local=locals())
           # token shortcut is not possible.
           literal_kind = children[0].kind
           if literal_kind.is_unexposed():
@@ -424,7 +429,7 @@ typedef void* pointer_t;''', flags=_flags)
             init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
         elif _ctype.kind == TypeKind.RECORD:
           structname = self.get_unique_name(_ctype.get_declaration())
-          _type = self.all[structname]
+          _type = self.get_registered(structname)
         else:
             ## What else ?
             raise NotImplementedError('What other type of variable?')
@@ -467,7 +472,7 @@ typedef void* pointer_t;''', flags=_flags)
         # FIXME feels weird not to call self.fundamental
         if self.is_fundamental_type(_type):
             p_type = self.FundamentalType(_type)
-            #ctypesname = self.convert_to_ctypes(typ.kind)
+            #ctypesname = self.get_ctypes_name(typ.kind)
             #typ = typedesc.FundamentalType( ctypesname, 0, 0 )
             #log.debug("TYPEDEF_DECL: fundamental typ:%s"%(typ))
         elif self.is_pointer_type(_type):
@@ -523,7 +528,7 @@ typedef void* pointer_t;''', flags=_flags)
     def FundamentalType(self, typ):
         #print cursor.displayname
         #t = cursor.type.get_canonical().kind
-        ctypesname = self.convert_to_ctypes(typ.kind)
+        ctypesname = self.get_ctypes_name(typ.kind)
         if typ.kind == TypeKind.VOID:
             size = align = 1
         else:
@@ -808,13 +813,6 @@ typedef void* pointer_t;''', flags=_flags)
 
     # structures, unions, classes
     
-    def get_unique_name(self, cursor):
-      name = cursor.displayname
-      _id = cursor.get_usr()
-      if name == '': # anonymous is spelling == ''
-          name = MAKE_NAME( _id )
-      return name
-
     @log_entity
     def RECORD(self, cursor):
         ''' A record is a NOT a declaration. A record is the occurrence of of
