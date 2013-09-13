@@ -15,6 +15,7 @@ import re
 from . import util
 
 log = logging.getLogger('clangparser')
+log.setLevel(logging.DEBUG)
 
 def decorator(dec):
     def new_decorator(f):
@@ -191,7 +192,7 @@ class Clang_Parser(object):
 
     ''' Location is also used for codegeneration ordering.'''
     def set_location(self, obj, cursor):
-        if cursor.location.file is not None:
+        if hasattr(cursor, 'location') and cursor.location.file is not None:
             obj.location = (cursor.location.file.name, cursor.location.line)
 
     ########################################################################
@@ -385,19 +386,24 @@ typedef void* pointer_t;''', flags=_flags)
     def VAR_DECL(self, cursor):
         # get the name
         name = cursor.displayname
+
         # the value is a literal in get_children()
         children = list(cursor.get_children())
-        assert( len(children) == 1 )
-        # token shortcut is not possible.
-        literal_kind = children[0].kind
-        if literal_kind.is_unexposed():
-            literal_kind = list(children[0].get_children())[0].kind
-        mth = getattr(self, literal_kind.name)
-        # pod ariable are easy. some are unexposed.
-        log.debug('Calling %s'%(literal_kind.name))
-        # As of clang 3.3, int, double literals are exposed.
-        # float, long double, char , char* are not exposed directly in level1.
-        init_value = mth(children[0])
+        if len(children) == 0:
+          init_value = "None"
+        else:
+          assert (len(children) == 1)
+          # token shortcut is not possible.
+          literal_kind = children[0].kind
+          if literal_kind.is_unexposed():
+              literal_kind = list(children[0].get_children())[0].kind
+          mth = getattr(self, literal_kind.name)
+          # pod ariable are easy. some are unexposed.
+          log.debug('Calling %s'%(literal_kind.name))
+          # As of clang 3.3, int, double literals are exposed.
+          # float, long double, char , char* are not exposed directly in level1.
+          init_value = mth(children[0])
+
         # Get the type
         _ctype = cursor.type.get_canonical()
         #import code
@@ -416,6 +422,9 @@ typedef void* pointer_t;''', flags=_flags)
             ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )
             init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
+        elif _ctype.kind == TypeKind.RECORD:
+          structname = self.get_unique_name(_ctype.get_declaration())
+          _type = self.all[structname]
         else:
             ## What else ?
             raise NotImplementedError('What other type of variable?')
@@ -425,8 +434,9 @@ typedef void* pointer_t;''', flags=_flags)
             #_type = cursor.type.get_declaration().kind.name
             #if _type == '': 
             #    _type = MAKE_NAME( cursor.get_usr() )
-        log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s'%(name, 
-                    _ctype.kind.name, _type.name, init_value))
+        log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s'%(name, 
+                    _ctype.kind.name, _type.name, init_value,
+                    getattr(cursor, 'location')))
         #print _type.__class__.__name__
         obj = self.register(name, typedesc.Variable(name, _type, init_value) )
         self.set_location(obj, cursor)
@@ -671,8 +681,8 @@ typedef void* pointer_t;''', flags=_flags)
                 #if _type is None:
                 #    return None
                 attributes.append(attr)
-        import code
-        code.interact(local=locals())    
+        #import code
+        #code.interact(local=locals())    
         obj = typedesc.FunctionType(returns, attributes)
         self.set_location(obj, cursor)
         return obj
@@ -797,6 +807,13 @@ typedef void* pointer_t;''', flags=_flags)
     def _fixup_EnumValue(self, e): pass
 
     # structures, unions, classes
+    
+    def get_unique_name(self, cursor):
+      name = cursor.displayname
+      _id = cursor.get_usr()
+      if name == '': # anonymous is spelling == ''
+          name = MAKE_NAME( _id )
+      return name
 
     @log_entity
     def RECORD(self, cursor):
@@ -805,10 +822,14 @@ typedef void* pointer_t;''', flags=_flags)
         known.
         Type is accessible by cursor.type.get_declaration() 
         '''
-        _decl = cursor.type.get_declaration() 
-        name = _decl.displayname
-        if name == '': 
-            name = MAKE_NAME( _decl.get_usr() )
+        if cursor.type.kind == TypeKind.CONSTANTARRAY:
+            _decl = cursor.type.get_array_element_type().get_declaration()
+        else:
+            _decl = cursor.type.get_declaration()
+
+        assert _decl.kind != CursorKind.NO_DECL_FOUND
+
+        name = self.get_unique_name(_decl)
         obj = self.get_registered(name)
         if obj is None:
             log.warning('This RECORD was not previously defined. %s. NOT Adding it'%(name))
@@ -829,11 +850,8 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _record_decl(self, _type, cursor):
         ''' a structure and an union have the same handling.'''
-        name = cursor.displayname
-        # better name
-        _id = cursor.get_usr()
-        if name == '': # anonymous is spelling == ''
-            name = MAKE_NAME( _id )
+        
+        name = self.get_unique_name(cursor)
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
         # TODO unittest: try redefinition.
@@ -864,13 +882,13 @@ typedef void* pointer_t;''', flags=_flags)
         members = []
         # Go and recurse through children to get this record member's _id
         # Members fields will not be "parsed" here, but later.
-        for child in cursor.get_children():
+        for childnum, child in enumerate(cursor.get_children()):
             if child.kind == clang.cindex.CursorKind.FIELD_DECL:
                 # LLVM-CLANG, issue https://github.com/trolldbois/python-clang/issues/2
                 # CIndexUSR.cpp:800+ // Bit fields can be anonymous.
                 _cid = child.get_usr()
                 if _cid == '' and child.is_bitfield():
-                    _cid = cursor.get_usr() + "@Ab"
+                    _cid = cursor.get_usr() + "@Ab#" + str(childnum)
                 # END FIXME
                 members.append( _cid )
                 continue
@@ -983,7 +1001,14 @@ typedef void* pointer_t;''', flags=_flags)
             bits = cursor.get_bitfield_width()
             if name == '': # TODO FIXME libclang, get_usr() should return != ''
                 log.warning("Cursor has no displayname - anonymous bitfield")
-                _id = cursor.semantic_parent.get_usr() + "@Ab"
+                childnum = None
+                for i, x in enumerate(cursor.semantic_parent.get_children()):
+                  if x == cursor:
+                    childnum = i
+                    break
+                else:
+                  raise Exception('Did not find child in semantic parent')
+                _id = cursor.semantic_parent.get_usr() + "@Ab#" + str(childnum)
                 name = "anonymous_bitfield"
         else:
             bits = cursor.type.get_size() * 8
@@ -1025,6 +1050,13 @@ typedef void* pointer_t;''', flags=_flags)
         #    mth(f.type)
         pass
 
+    ################
+    
+    # Do not traverse into function bodies and other compound statements
+    @log_entity
+    def COMPOUND_STMT(self, cursor):
+      return True
+    
     ################
 
     def _fixup_Macro(self, m):
