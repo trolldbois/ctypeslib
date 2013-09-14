@@ -94,7 +94,7 @@ Setting up python-clang>=3.4
 This are the python bindings, not distributed by llvm as far as I know. 
 I made a python package for them.
 
-  sudo easy_install python-clang
+  sudo easy_install clang
 
 
 
