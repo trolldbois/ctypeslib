@@ -1,7 +1,7 @@
 ctypeslib with libclang
 -----------------------
 
-This fork of ctypeslib is mainly about using the libclang1>=3.2 python bindings
+This fork of ctypeslib is mainly about using the libclang1>=3.4 python bindings
 to generate python code from C source code.
 
 ctypeslib contains these packages:
@@ -70,15 +70,21 @@ Because clang is capable to handle different target architecture, this fork
  {is/should be} able to produce cross-platform memory representation if needed.
 
 
-Setting up clang>=3.3
+Setting up clang>=3.4
 ---------------------
-wget http://launchpadlibrarian.net/146336115/libllvm3.3_3.3-3ubuntu1_amd64.deb
-wget http://launchpadlibrarian.net/146336111/libclang1-3.3_3.3-3ubuntu1_amd64.deb
-wget http://launchpadlibrarian.net/146336113/libclang-3.3-dev_3.3-3ubuntu1_amd64.deb
-wget http://launchpadlibrarian.net/146336114/libclang-common-3.3-dev_3.3-3ubuntu1_amd64.deb
-sudo dpkg -i libclang1-3.3_3.3-3ubuntu1_amd64.deb libclang-3.3-dev_3.3-3ubuntu1_amd64.deb libclang-common-3.3-dev_3.3-3ubuntu1_amd64.deb libllvm3.3_3.3-3ubuntu1_amd64.deb
-sudo echo `echo "/usr/lib/llvm-3.3/lib/" >> /etc/ld.so.conf.d/llvm-3.3.conf`
-sudo ldconfig -n
+see http://llvm.org/apt/
+
+  apt-add-repository "deb http://llvm.org/apt/raring/ llvm-toolchain-raring main"
+  sudo echo `echo "/usr/lib/llvm-3.4/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
+  sudo ldconfig -n
+
+Setting up python-clang>=3.4
+----------------------------
+This are the python bindings, not distributed by llvm as far as I know. 
+I made a python package for them.
+
+  sudo easy_install python-clang
+
 
 
 
