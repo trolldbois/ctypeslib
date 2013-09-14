@@ -434,14 +434,16 @@ typedef void* pointer_t;''', flags=_flags)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )
             init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
         elif _ctype.kind == TypeKind.RECORD:
-          structname = self.get_unique_name(_ctype.get_declaration())
-          _type = self.get_registered(structname)
+            structname = self.get_unique_name(_ctype.get_declaration())
+            _type = self.get_registered(structname)
+        elif ( _ctype.kind == TypeKind.INCOMPLETEARRAY or 
+               _ctype.kind == TypeKind.CONSTANTARRAY ):
+            mth = getattr(self, _ctype.kind.name)
+            _type = mth(cursor)
         else:
             ## What else ?
-            raise NotImplementedError('What other type of variable?')
+            raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
             # _type = cursor.get_usr()
-            #import code
-            #code.interact(local=locals())
             #_type = cursor.type.get_declaration().kind.name
             #if _type == '': 
             #    _type = MAKE_NAME( cursor.get_usr() )
@@ -627,6 +629,8 @@ typedef void* pointer_t;''', flags=_flags)
         #if type(a.typ) != typedesc.FundamentalType:
         #    a.typ = self.all[a.typ]
         pass
+
+    INCOMPLETEARRAY = CONSTANTARRAY
 
     def CvQualifiedType(self, attrs):
         # id, type, [const|volatile]

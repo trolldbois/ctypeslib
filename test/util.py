@@ -142,7 +142,6 @@ class ClangTest(unittest.TestCase):
             self.gen(hfile, flags)
         finally:
             os.unlink(hfile)
-        #  
         return
 
     def _get_target_with_struct_hack(self, name):
@@ -162,7 +161,9 @@ class ClangTest(unittest.TestCase):
         _clang = target.type.get_size()
         _python = ctypes.sizeof(getattr(self.namespace,name))
         self.assertEquals( _clang, _python, 
-            'Sizes for target: %s Clang:%d Python:%d flags:%s'%(name, _clang, _python, self.parser.flags))
+            'Sizes for target: %s Clang:%d Python:%d flags:%s'%(name, _clang, 
+             _python, self.parser.flags))
+        return
     
     def assertOffsets(self, name):
         """ Compare offset of records' fields using clang offsets versus 
@@ -170,7 +171,8 @@ class ClangTest(unittest.TestCase):
         target = self._get_target_with_struct_hack(name)
         target = target.type.get_declaration()
         self.assertTrue(target is not None, '%s was not found in source'%name )
-        members = [c.displayname for c in target.get_children() if c.kind.name == 'FIELD_DECL']
+        members = [c.displayname for c in target.get_children() 
+                   if c.kind.name == 'FIELD_DECL']
         _clang_type = target.type
         _python_type = getattr(self.namespace,name)
         # Does not handle bitfield
@@ -180,7 +182,7 @@ class ClangTest(unittest.TestCase):
             self.assertEquals( _c_offset, _p_offset, 
                 'Offsets for target: %s.%s Clang:%d Python:%d flags:%s'%(
                     name, member, _c_offset, _p_offset, self.parser.flags))
-
+        return
 
 __all__ = [
     'get_cursor',
