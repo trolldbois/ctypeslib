@@ -74,7 +74,8 @@ Setting up clang>=3.4
 ---------------------
 see http://llvm.org/apt/
 
-  apt-add-repository "deb http://llvm.org/apt/raring/ llvm-toolchain-raring main"
+  sudo apt-add-repository "deb http://llvm.org/apt/raring/ llvm-toolchain-raring main"
+  sudo apt-get install libclang1-3.4 libclang-common-3.4-dev
   sudo echo `echo "/usr/lib/llvm-3.4/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
   sudo ldconfig -n
 
