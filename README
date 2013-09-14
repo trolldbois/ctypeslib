@@ -23,10 +23,19 @@ author_email="theller@ctypes.org",
 
 Usage
 -----
-Usage: clang2py [options] {filename} [clang-args*]
+usage: clang2py [-h] [--debug] [-c] [-d] [-k TYPEKIND] [-l DLLS] [-o OUTPUT]
+                [-r EXPRESSION] [-s SYMBOL] [-v] [-w W] [-m module]
+                [--preload DLL] [--show-ids SHOWIDS] [--max-depth N]
+                files [files ...]
 
-Options:
+generate python ABI code from C code
+
+positional arguments:
+  files               source filenames
+
+optional arguments:
   -h, --help          show this help message and exit
+  --debug             setLevel to DEBUG
   -c                  include source file location in comments
   -d                  include docstrings containing C prototype and source
                       file location
@@ -42,16 +51,17 @@ Options:
   -s SYMBOL           symbol to include (if neither symbols nor expressions
                       are specified,everything will be included)
   -v                  verbose output
-  -w                  add all standard windows dlls to the searched dlls list
+  -w W                add all standard windows dlls to the searched dlls list
   -m module           Python module(s) containing symbols which will be
                       imported instead of generated
-  --preload=DLL       dlls to be loaded before all others (to resolve symbols)
-  --show-ids=SHOWIDS  Don't compute cursor IDs (very slow)
-  --max-depth=N       Limit cursor expansion to depth N
+  --preload DLL       dlls to be loaded before all others (to resolve symbols)
+  --show-ids SHOWIDS  Don't compute cursor IDs (very slow)
+  --max-depth N       Limit cursor expansion to depth N
 
-About clang-args:     You can pass modifier to clang after your file name.
-For example, try -m64 or -m32 as the last argument to change the target CPU 
-arch.
+About clang-args: You can pass modifier to clang after your file name. For
+example, try "-target x86_64" or "-target i386-linux" as the last argument to
+change the target CPU arch.
+
 
 Inner workings for memo
 -----------------------
