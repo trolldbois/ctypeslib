@@ -1,6 +1,6 @@
 
 
-struct structName
+struct Name
 {
   short member1;
   int member2;
@@ -9,7 +9,7 @@ struct structName
   unsigned int member5;
 } __attribute__((packed));
 
-struct structName2
+struct Name2
 {
   short member1;
   int member2;

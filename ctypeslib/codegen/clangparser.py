@@ -53,7 +53,9 @@ def MAKE_NAME(name):
     #FIXME: test case ? I want this func to be neutral on C valid names.
     if name.startswith("__"):
         return "_X" + name
-    if name[0] in "01234567879":
+    elif len(name) == 0:
+        raise ValueError
+    elif name[0] in "01234567879":
         return "_" + name
     return name
 
@@ -195,7 +197,9 @@ class Clang_Parser(object):
     def get_unique_name(self, cursor):
         name = cursor.displayname
         _id = cursor.get_usr()
-        if name == '': # anonymous is spelling == ''
+        if name == '':
+            if _id == '': # anonymous is spelling == ''
+                return None
             name = MAKE_NAME( _id )
         if cursor.kind == CursorKind.STRUCT_DECL:
             name = 'struct_%s'%(name)
@@ -372,9 +376,7 @@ typedef void* pointer_t;''', flags=_flags)
             _definition = cursor.type.get_declaration() 
             
         #_id = _definition.get_usr()
-        name = _definition.displayname
-        if name == '': 
-            name = MAKE_NAME( _definition.get_usr() )
+        name = self.get_unique_name(_definition)
         obj = self.get_registered(name)
         if obj is None:
             log.warning('This TYPE_REF was not previously defined. %s. Adding it'%(name))
@@ -556,9 +558,7 @@ typedef void* pointer_t;''', flags=_flags)
             #assert children[0].kind == CursorKind.TYPE_REF#, 'Wasnt expecting a %s in PointerType'%(children[0].kind))
             # check registration
             decl = _type.get_declaration()
-            decl_name = decl.displayname
-            if decl_name == '':
-                decl_name = MAKE_NAME(decl.get_usr())
+            decl_name = self.get_unique_name(decl)
             # Type is already defined OR will be defined later.
             p_type = self.get_registered(decl_name) or decl_name
             #p_type = children[0].get_definition().get_usr()
@@ -609,12 +609,15 @@ typedef void* pointer_t;''', flags=_flags)
         # The element type has been previously declared
         size = cursor.type.get_array_size()
         _type = cursor.type.get_array_element_type().get_canonical()
-        #if self.is_fundamental_type(_type):
-        #    _type = self.FundamentalType(_type)
-        #else:
-        _subtype_decl = cursor.type.get_array_element_type().get_declaration()
-        _subtype_name = self.get_unique_name(_subtype_decl)
-        _subtype = self.get_registered(_subtype_name)
+        if self.is_fundamental_type(_type):
+            _subtype = self.FundamentalType(_type)
+        else:
+            _subtype_decl = _type.get_declaration()
+            _subtype_name = self.get_unique_name(_subtype_decl)
+            if _subtype_name is None:
+                import code
+                code.interact(local=locals())
+            _subtype = self.get_registered(_subtype_name)
         obj = typedesc.ArrayType(_subtype, size)
         self.set_location(obj, cursor)
         return obj
@@ -777,9 +780,7 @@ typedef void* pointer_t;''', flags=_flags)
         ''' Get the enumeration type'''
         # id, name
         #print '** ENUMERATION', cursor.displayname
-        name = cursor.displayname
-        if name == '':
-            name = MAKE_NAME( cursor.get_usr() )
+        name = self.get_unique_name(cursor)
         #    #raise ValueError('could try get_usr()')
         align = cursor.type.get_align() 
         size = cursor.type.get_size() 
@@ -795,9 +796,7 @@ typedef void* pointer_t;''', flags=_flags)
         ''' Get the enumeration values'''
         name = cursor.displayname
         value = cursor.enum_value
-        pname = cursor.semantic_parent.displayname
-        if pname == '':
-            pname = MAKE_NAME( cursor.semantic_parent.get_usr() )
+        pname = self.get_unique_name(cursor.semantic_parent)
         parent = self.all[pname]
         v = typedesc.EnumValue(name, value, parent)
         parent.add_value(v)

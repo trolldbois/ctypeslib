@@ -15,31 +15,31 @@ class ConstantsTest(ClangTest):
     def test_var(self):
         """Basic POD test variable declaration'
         """
-        ns = self.convert("""
+        self.convert("""
         int i1;
         """)
-        self.assertEqual(ctypes.sizeof(ns.i1), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.i1), 4)
 
     #@unittest.skip('')
     def test_longlong(self):
         """Basic POD test variable on longlong values'
         """
-        ns = self.convert("""
+        self.convert("""
         long long int i1 = 0x7FFFFFFFFFFFFFFFLL;
         long long int i2 = -1;
         unsigned long long ui3 = 0xFFFFFFFFFFFFFFFFULL;
         unsigned long long ui2 = 0x8000000000000000ULL;
         unsigned long long ui1 = 0x7FFFFFFFFFFFFFFFULL;
         """)
-        self.assertEquals(ns.i1, 0x7FFFFFFFFFFFFFFF)
-        self.assertEquals(ns.i2, -1)
-        self.assertEquals(ns.ui1, 0x7FFFFFFFFFFFFFFF)
-        self.assertEquals(ns.ui3, 0xFFFFFFFFFFFFFFFF)
-        self.assertEquals(ns.ui2, 0x8000000000000000)
+        self.assertEquals(self.namespace.i1, 0x7FFFFFFFFFFFFFFF)
+        self.assertEquals(self.namespace.i2, -1)
+        self.assertEquals(self.namespace.ui1, 0x7FFFFFFFFFFFFFFF)
+        self.assertEquals(self.namespace.ui3, 0xFFFFFFFFFFFFFFFF)
+        self.assertEquals(self.namespace.ui2, 0x8000000000000000)
 
     #@unittest.skip('')
     def test_int(self):
-        ns = self.convert("""
+        self.convert("""
         int zero = 0;
         int one = 1;
         int minusone = -1;
@@ -47,80 +47,80 @@ class ConstantsTest(ClangTest):
         int minint = -2147483648;
         """)
 
-        self.assertEqual(ns.zero, 0)
-        self.assertEqual(ns.one, 1)
-        self.assertEqual(ns.minusone, -1)
-        self.assertEqual(ns.maxint, 2147483647)
-        self.assertEqual(ns.minint, -2147483648)
+        self.assertEqual(self.namespace.zero, 0)
+        self.assertEqual(self.namespace.one, 1)
+        self.assertEqual(self.namespace.minusone, -1)
+        self.assertEqual(self.namespace.maxint, 2147483647)
+        self.assertEqual(self.namespace.minint, -2147483648)
 
     # we are not actually looking at signed/unsigned types...
     @unittest.expectedFailure
     def test_uint_minus_one(self):
-        ns = self.convert("""
+        self.convert("""
         unsigned int minusone = -1;
         """)
-        self.assertEqual(ns.minusone, 4294967295)
+        self.assertEqual(self.namespace.minusone, 4294967295)
 
     def test_uint(self):
-        ns = self.convert("""
+        self.convert("""
         unsigned int zero = 0;
         unsigned int one = 1;
         unsigned int maxuint = 0xFFFFFFFF;
         """)
-        self.assertEqual(ns.zero, 0)
-        self.assertEqual(ns.one, 1)
-        self.assertEqual(ns.maxuint, 0xFFFFFFFF)
+        self.assertEqual(self.namespace.zero, 0)
+        self.assertEqual(self.namespace.one, 1)
+        self.assertEqual(self.namespace.maxuint, 0xFFFFFFFF)
 
     # no macro support yet
     @unittest.expectedFailure
     def test_macro(self):
-        ns = self.convert("""
+        self.convert("""
         #define A  0.9642
         #define B  1.0
         #define C  0.8249
         """)
-        self.failUnlessAlmostEqual(ns.A, 0.9642)
-        self.failUnlessAlmostEqual(ns.B, 1.0)
-        self.failUnlessAlmostEqual(ns.C, 0.8249)
+        self.failUnlessAlmostEqual(self.namespace.A, 0.9642)
+        self.failUnlessAlmostEqual(self.namespace.B, 1.0)
+        self.failUnlessAlmostEqual(self.namespace.C, 0.8249)
 
     def test_doubles(self):
-        ns = self.convert("""
+        self.convert("""
         double d = 0.0036;
         float f = 2.5;
         """)
-        self.failUnlessAlmostEqual(ns.d, 0.0036)
-        self.failUnlessAlmostEqual(ns.f, 2.5)
+        self.failUnlessAlmostEqual(self.namespace.d, 0.0036)
+        self.failUnlessAlmostEqual(self.namespace.f, 2.5)
 
     #@unittest.skip('')
     # FIXME, L prefix.
     def test_wchar(self):
-        ns = self.convert("""
+        self.convert("""
         wchar_t X = L'X'; 
         wchar_t w_zero = 0;
         """, ['-x','c++']) # force c++ lang for wchar
-        self.assertEqual(ns.X, 'X')
-        self.assertEqual(type(ns.X), unicode)
-        self.assertEqual(ns.w_zero, '\0')
-        self.assertEqual(type(ns.w_zero), unicode)
+        self.assertEqual(self.namespace.X, 'X')
+        self.assertEqual(type(self.namespace.X), unicode)
+        self.assertEqual(self.namespace.w_zero, '\0')
+        self.assertEqual(type(self.namespace.w_zero), unicode)
 
     #@unittest.skip('')
     def test_char(self):
-        ns = self.convert("""
+        self.convert("""
         char x = 'x';
         char zero = 0;
         """) 
-        self.assertEqual(ns.x, 'x')
-        self.assertEqual(type(ns.x), str)
-        self.assertEqual(ns.zero, '\0') # not very true...
+        self.assertEqual(self.namespace.x, 'x')
+        self.assertEqual(type(self.namespace.x), str)
+        self.assertEqual(self.namespace.zero, '\0') # not very true...
         # type casting will not work in ctypes anyway
-        self.assertEqual(type(ns.zero), str) # that is another problem.
+        self.assertEqual(type(self.namespace.zero), str) # that is another problem.
 
 
     #@unittest.skip('')
     # no macro support yet
     @unittest.expectedFailure
     def test_defines(self):
-        ns = self.convert("""
+        self.convert("""
         #define zero 0
         #define one 1
         #define minusone -1
@@ -135,31 +135,31 @@ class ConstantsTest(ClangTest):
         #endif
         """)
 
-        self.assertEqual(ns.zero, 0)
-        self.assertEqual(ns.one, 1)
-        self.assertEqual(ns.minusone, -1)
-        self.assertEqual(ns.maxint, 2147483647)
-        self.assertEqual(ns.LARGE, 0xFFFFFFFF)
-##        self.assertEqual(ns.VERYLARGE, 0xFFFFFFFFFFFFFFFF)
-##        self.assertEqual(ns.minint, -2147483648)
+        self.assertEqual(self.namespace.zero, 0)
+        self.assertEqual(self.namespace.one, 1)
+        self.assertEqual(self.namespace.minusone, -1)
+        self.assertEqual(self.namespace.maxint, 2147483647)
+        self.assertEqual(self.namespace.LARGE, 0xFFFFFFFF)
+##        self.assertEqual(self.namespace.VERYLARGE, 0xFFFFFFFFFFFFFFFF)
+##        self.assertEqual(self.namespace.minint, -2147483648)
 
-        self.assertEqual(ns.spam, "spam")
-        self.assertEqual(type(ns.spam), str)
+        self.assertEqual(self.namespace.spam, "spam")
+        self.assertEqual(type(self.namespace.spam), str)
 
-        self.assertEqual(ns.foo, "foo")
-        self.assertEqual(type(ns.foo), unicode)
+        self.assertEqual(self.namespace.foo, "foo")
+        self.assertEqual(type(self.namespace.foo), unicode)
 
     #@unittest.skip('')
     def test_incomplete_array(self):
-        ns = self.convert("""
+        self.convert("""
         typedef char array[];
         struct blah {
             char varsize[];
         };
         """)
-        self.assertEqual(ctypes.sizeof(ns.blah), 1)
+        self.assertEqual(ctypes.sizeof(self.namespace.blah), 1)
         cb = lambda x: x.array
-        self.assertRaises(AttributeError, cb, ns )
+        self.assertRaises(AttributeError, cb, self.namespace )
 
     @unittest.skip('')
     def test_docstring(self):
@@ -169,37 +169,37 @@ class ConstantsTest(ClangTest):
             libc = CDLL("msvcrt")
         else:
             libc = CDLL(find_library("c"))
-        ns = self.convert("""
+        self.convert("""
         #include <malloc.h>
         """,
                           generate_docstrings=True,
                           searched_dlls=[libc]
         )
         prototype = "void * malloc(size_t".replace(" ", "")
-        docstring = ns.malloc.__doc__.replace(" ", "")
+        docstring = self.namespace.malloc.__doc__.replace(" ", "")
         self.assertEqual(docstring[:len(prototype)], prototype)
-        self.failUnless("malloc.h" in ns.malloc.__doc__)
+        self.failUnless("malloc.h" in self.namespace.malloc.__doc__)
 
     @unittest.skip('')
     def test_emptystruct(self):
-        ns = self.convert("""
+        self.convert("""
         typedef struct tagEMPTY {
         } EMPTY;
         """)
-        self.assertEqual(ctypes.sizeof(ns.tagEMPTY), 0)
+        self.assertEqual(ctypes.sizeof(self.namespace.tagEMPTY), 0)
 
     def test_struct_named_twice(self):
-        ns = self.convert('''
+        self.convert('''
         typedef struct xyz {
             int a;
         } xyz;
         ''')
-        self.assertEqual(ctypes.sizeof(ns.struct_xyz), 4)
-        self.assertEqual(ctypes.sizeof(ns.xyz), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_xyz), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.xyz), 4)
         self.assertSizes('xyz')
 
     def test_struct_with_pointer(self):
-        ns = self.convert('''
+        self.convert('''
         struct x {
             int y;
         };
@@ -209,15 +209,15 @@ class ConstantsTest(ClangTest):
             x_n_t g[1];
         } *p_t;
         ''')    
-        self.assertEqual(ctypes.sizeof(ns.struct_x), 4)
-        self.assertEqual(ctypes.sizeof(ns.x_n_t), ctypes.sizeof(ctypes.c_void_p))
-        self.assertEqual(ctypes.sizeof(ns.struct_p), 4)
-        self.assertEqual(ctypes.sizeof(ns.p_t), ctypes.sizeof(ctypes.c_void_p))
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_x), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.x_n_t), ctypes.sizeof(ctypes.c_void_p))
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_p), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.p_t), ctypes.sizeof(ctypes.c_void_p))
         self.assertSizes('x_n_t')
         self.assertSizes('p_t')
 
     def test_struct_with_struct_array_member(self):
-        ns = self.convert('''
+        self.convert('''
         struct foo {
              int bar;
         };
@@ -230,7 +230,7 @@ class ConstantsTest(ClangTest):
         ''')
 
     def test_var_decl_and_scope(self):
-        ns = self.convert('''
+        self.convert('''
         int zig;
 
         inline void foo() {
@@ -239,12 +239,12 @@ class ConstantsTest(ClangTest):
         ''')
 
     def test_extern_function_pointer(self):
-        ns = self.convert('''
+        self.convert('''
         extern int (*func_ptr)(const char *arg);
         ''')
 
     def test_extern_function_pointer_multiarg(self):
-        ns = self.convert('''
+        self.convert('''
         extern int (*func_ptr)(const char *arg, int c);
         ''')
     
