@@ -393,6 +393,9 @@ class Generator(object):
         self._functiontypes += 1
         self.generate(tp.returns)
         self.generate_all(tp.iterArgTypes())
+
+    def Argument(self, tp):
+        self.generate(tp.typ)
         
     _pointertypes = 0
     def PointerType(self, tp):

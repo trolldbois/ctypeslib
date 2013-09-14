@@ -103,9 +103,9 @@ class Clang_Parser(object):
         TypeKind.ULONG : 'TBD' ,
         TypeKind.ULONGLONG : 'TBD' ,
         TypeKind.UINT128 : 'c_uint128' , # FIXME
-        TypeKind.CHAR_S : 'c_char' , 
-        TypeKind.SCHAR : 'c_char' , 
-        TypeKind.WCHAR : 'c_wchar' ,
+        TypeKind.CHAR_S : 'c_char_p' , 
+        TypeKind.SCHAR : 'c_char' , #? 
+        TypeKind.WCHAR : 'c_wchar' , 
         TypeKind.SHORT : 'TBD' ,
         TypeKind.INT : 'TBD' ,
         TypeKind.LONG : 'TBD' ,
@@ -398,22 +398,22 @@ typedef void* pointer_t;''', flags=_flags)
         # the value is a literal in get_children()
         children = list(cursor.get_children())
         if len(children) == 0:
-          init_value = "None"
+            init_value = "None"
         else:
-          if (len(children) != 1):
-            log.debug('Multiple children in a var_decl')
-            import code
-            code.interact(local=locals())
-          # token shortcut is not possible.
-          literal_kind = children[0].kind
-          if literal_kind.is_unexposed():
-              literal_kind = list(children[0].get_children())[0].kind
-          mth = getattr(self, literal_kind.name)
-          # pod ariable are easy. some are unexposed.
-          log.debug('Calling %s'%(literal_kind.name))
-          # As of clang 3.3, int, double literals are exposed.
-          # float, long double, char , char* are not exposed directly in level1.
-          init_value = mth(children[0])
+            if (len(children) != 1):
+                log.debug('Multiple children in a var_decl')
+                #import code
+                #code.interact(local=locals())
+            # token shortcut is not possible.
+            literal_kind = children[0].kind
+            if literal_kind.is_unexposed():
+                literal_kind = list(children[0].get_children())[0].kind
+            mth = getattr(self, literal_kind.name)
+            # pod ariable are easy. some are unexposed.
+            log.debug('Calling %s'%(literal_kind.name))
+            # As of clang 3.3, int, double literals are exposed.
+            # float, long double, char , char* are not exposed directly in level1.
+            init_value = mth(children[0])
 
         # Get the type
         _ctype = cursor.type.get_canonical()
@@ -440,6 +440,16 @@ typedef void* pointer_t;''', flags=_flags)
                _ctype.kind == TypeKind.CONSTANTARRAY ):
             mth = getattr(self, _ctype.kind.name)
             _type = mth(cursor)
+        elif self.is_pointer_type(_ctype):
+            import code
+            code.interact(local=locals())
+            # extern Function pointer 
+            if _ctype.get_pointee().kind == TypeKind.UNEXPOSED:
+                log.debug('Ignoring unexposed pointer type.')
+                return True
+            # TypeKind.FUNCTIONPROTO:
+            mth = getattr(self, _ctype.get_pointee().kind.name)
+            _type = mth(_ctype.get_pointee())
         else:
             ## What else ?
             raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
@@ -551,7 +561,7 @@ typedef void* pointer_t;''', flags=_flags)
         # get pointer size
         size = cursor.type.get_size() # not size of pointee
         align = cursor.type.get_align() 
-        log.debug("POINTER: size:%d align:%d typ:%s"%(size, align, _type))
+        log.debug("POINTER: size:%d align:%d typ:%s"%(size, align, _type.kind))
         if self.is_fundamental_type(_type):
             p_type = self.FundamentalType(_type)
         elif _type.kind == TypeKind.RECORD:
@@ -730,12 +740,21 @@ typedef void* pointer_t;''', flags=_flags)
         m.returns = self.all[m.returns]
         m.fixup_argtypes(self.all)
 
-    # working, except for parent not being a Typedesc.
+    @log_entity
     def PARM_DECL(self, cursor):
-        parent = cursor.semantic_parent
-        #    if parent is not None:
-        #        parent.add_argument(typedesc.Argument(p.type.get_canonical(), p.name))
-        return
+        _type = cursor.type
+        _name = cursor.spelling
+        if self.is_fundamental_type(_type):
+            _argtype = self.FundamentalType(_type)
+        elif self.is_pointer_type(_type):
+            _argtype = self.POINTER(cursor)
+        else:
+            _argtype_decl = _type.get_declaration()
+            _argtype_name = self.get_unique_name(_argtype_decl)
+            _argtype = self.get_registered(_argtype_name)
+        obj = typedesc.Argument(_name, _argtype)
+        self.set_location(obj, cursor)
+        return obj
 
     # DEPRECATED
     # Function is not used any more, as variable assignate are goten directly

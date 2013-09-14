@@ -6,8 +6,8 @@ except NameError:
 
 class Argument(object):
     "a Parameter in the argument list of a callable (Function, Method, ...)"
-    def __init__(self, atype, name):
-        self.atype = atype
+    def __init__(self, name, _type):
+        self.typ = _type
         self.name = name
 
 class _HasArgs(object):
@@ -83,6 +83,7 @@ class FunctionType(_HasArgs):
         _HasArgs.__init__(self)
         self.returns = returns
         self.attributes = attributes
+        self.name = "FP_"
 
 class Method(_HasArgs):
     location = None
@@ -105,6 +106,7 @@ class PointerType(object):
         self.typ = typ
         self.size = int(size)
         self.align = int(align)
+        self.name = "LP_%s"%(self.typ.name)
 
 class Typedef(object):
     location = None
