@@ -159,8 +159,9 @@ class ConstantsTest(ClangTest):
         };
         """)
         # for 'typedef char array[];', gccxml does XXX
-        self.assertEqual(ctypes.sizeof(ns.blah), 0)
-        self.assertEqual(ctypes.sizeof(ns.array), 0)
+        self.assertEqual(ctypes.sizeof(ns.blah), 1)
+        cb = lambda x: x.array
+        self.assertRaises(AttributeError, cb, ns )
 
     @unittest.skip('')
     def test_docstring(self):

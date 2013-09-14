@@ -182,8 +182,6 @@ class Clang_Parser(object):
         return obj
 
     def get_registered(self, name):
-        if name not in self.all:
-            return None
         return self.all[name]
 
     def is_registered(self, name):
@@ -937,13 +935,16 @@ typedef void* pointer_t;''', flags=_flags)
         # create padding fields
         #DEBUG FIXME: why are s.members already typedesc objet ?
         for m in s.members: # s.members are strings - NOT
-            if m not in self.all or type(self.all[m]) != typedesc.Field:
-                # DEBUG
-                #import code
-                #code.interact(local=locals())
+            if m not in self.all:
                 log.warning('Fixup_struct: Member unexpected : %s'%(m))
-                #continue
                 raise TypeError('Fixup_struct: Member unexpected : %s'%(m))
+            elif self.get_registered(m) is None:
+                log.warning('record %s: ignoring field %s'%(s.name,m))
+                continue
+            elif type(self.all[m]) != typedesc.Field:
+                # should not happend ?
+                log.warning('Fixup_struct: Member not a typedesc : %s'%(m))
+                raise TypeError('Fixup_struct: Member not a typedesc : %s'%(m))
             member = self.all[m]
             log.debug('Fixup_struct: Member:%s offset:%d-%d expecting offset:%d'%(
                     member.name, member.offset, member.offset + member.bits, offset))
@@ -1017,7 +1018,7 @@ typedef void* pointer_t;''', flags=_flags)
         _type = None
         if self.is_fundamental_type(_canonical_type):
             _type = self.FundamentalType(_canonical_type)
-        #elif self.is_pointer_type(_canonical_type):
+       #elif self.is_pointer_type(_canonical_type):
         #    _type = self.POINTER(cursor)
         else: # RECORD, FNPTR
             ''' No need to try and get the subtypes, it will show up in children.
@@ -1034,7 +1035,10 @@ typedef void* pointer_t;''', flags=_flags)
             #_type = mth(cursor.type.get_declaration())
             _type = mth(cursor)
             if _type is None:
-                raise TypeError('Field can not be None %s'%(name ))   
+                #raise TypeError('Field can not be None %s'%(name ))   
+                log.warning("Field %s is an %s type - ignoring field type"%(
+                            name,_canonical_type.kind.name))
+                return self.register( _id, None)
         #else:
         #    log.debug("FIELD_DECL: TypeKind:'%s'"%(t.kind.name))
         #import code, sys
@@ -1054,6 +1058,7 @@ typedef void* pointer_t;''', flags=_flags)
     @log_entity
     def COMPOUND_STMT(self, cursor):
       return True
+
     
     ################
 
@@ -1110,6 +1115,9 @@ typedef void* pointer_t;''', flags=_flags)
         # fix all objects after that all are resolved
         remove = []
         for _id, _item in self.all.items():
+            if _item is None:
+                log.warning('ignoring %s'%(_id))
+                continue            
             location = getattr(_item, "location", None)
             # FIXME , why do we get different location types
             if location and hasattr(location, 'file'):
@@ -1117,12 +1125,6 @@ typedef void* pointer_t;''', flags=_flags)
                 log.error('%s %s came in with a SourceLocation'%(_id, _item))
             elif location is None:
                 log.warning('item %s has no location.'%(_id))
-                #import code
-                #code.interact(local=locals())
-            #elif not hasattr(location, 'file'):
-            #    log.warning('item %s location has no file.'%(_id))
-            #    #import code
-            #    #code.interact(local=locals())
             mth = getattr(self, "_fixup_" + type(_item).__name__)
             try:
                 mth(_item)
@@ -1162,7 +1164,7 @@ typedef void* pointer_t;''', flags=_flags)
         if name not in self._unhandled:
             log.debug('%s is not handled'%(name))
             self._unhandled.append(name)
-            #return None
+            #return True
         def p(node, **args):
             for child in node.get_children():
                 self.startElement( child ) 
