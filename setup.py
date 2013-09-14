@@ -28,6 +28,6 @@ setup(
                ],
     package_data={'ctypeslib': ['data/headers.tpl']},
     scripts = ['scripts/clang2py'],
-    install_requires = ["clang>=3.3"],
+    install_requires = ["clang>=3.4"],
     test_suite= "test.alltests",
 )
