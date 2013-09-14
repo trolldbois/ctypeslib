@@ -682,9 +682,12 @@ class Generator(object):
     ########
 
     def generate(self, item):
-        if item in self.done:
-            return
-        #print item, item.__dict__
+        try:
+            if item in self.done:
+                return
+        except TypeError:
+            import code
+            code.interact(local=locals())
         name=''
         if hasattr(item, 'name'):
             name = item.name
@@ -828,7 +831,7 @@ def generate_code(srcfiles,
     #code.interact(local=locals())
     # filter symbols to generate
     todo = []
-
+    
     if types:
         items = [i for i in items if isinstance(i, types)]
     
