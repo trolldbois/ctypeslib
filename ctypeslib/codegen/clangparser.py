@@ -193,11 +193,17 @@ class Clang_Parser(object):
             obj.location = (cursor.location.file.name, cursor.location.line)
 
     def get_unique_name(self, cursor):
-      name = cursor.displayname
-      _id = cursor.get_usr()
-      if name == '': # anonymous is spelling == ''
-          name = MAKE_NAME( _id )
-      return name
+        name = cursor.displayname
+        _id = cursor.get_usr()
+        if name == '': # anonymous is spelling == ''
+            name = MAKE_NAME( _id )
+        if cursor.kind == CursorKind.STRUCT_DECL:
+            name = 'struct_%s'%(name)
+        elif cursor.kind == CursorKind.UNION_DECL:
+            name = 'union_%s'%(name)
+        elif cursor.kind == CursorKind.CLASS_DECL:
+            name = 'class_%s'%(name)
+        return name
 
     ########################################################################
     ''' clang types to ctypes for architecture dependent size types
@@ -480,9 +486,7 @@ typedef void* pointer_t;''', flags=_flags)
         elif _type.kind == TypeKind.RECORD:
             # Typedef and struct_decl will have the same name. 
             decl = _type.get_declaration() 
-            decl_name = decl.displayname
-            if decl_name == '':
-                decl_name = MAKE_NAME(decl.get_usr())
+            decl_name = self.get_unique_name(decl)
             # Type is already defined OR will be defined later.
             p_type = self.get_registered(decl_name) or decl_name
             #import code
@@ -575,9 +579,9 @@ typedef void* pointer_t;''', flags=_flags)
         else:
             # 
             mth = getattr(self, _type.kind.name)
+            import code
+            code.interact(local=locals())
             p_type = mth(_type)
-            #import code
-            #code.interact(local=locals())
             #raise TypeError('Unknown scenario in PointerType - %s'%(_type))
         log.debug("POINTER: p_type:'%s'"%(p_type.__dict__))
         # return the pointer        
@@ -602,24 +606,16 @@ typedef void* pointer_t;''', flags=_flags)
 
     @log_entity
     def CONSTANTARRAY(self, cursor):
-        # 
-        #return typedesc.ArrayType('INT', 2)
+        # The element type has been previously declared
         size = cursor.type.get_array_size()
         _type = cursor.type.get_array_element_type().get_canonical()
-        if self.is_fundamental_type(_type):
-            _type = self.FundamentalType(_type)
-        else:
-            mth = getattr(self, _type.kind.name)
-            if mth is None:
-                raise TypeError('unhandled Field TypeKind %s'%(_type.kind.name))
-            _type  = mth(cursor)
-            if _type is None:
-                return None
-
-        #import code
-        #code.interact(local=locals())
-        
-        obj = typedesc.ArrayType(_type, size)
+        #if self.is_fundamental_type(_type):
+        #    _type = self.FundamentalType(_type)
+        #else:
+        _subtype_decl = cursor.type.get_array_element_type().get_declaration()
+        _subtype_name = self.get_unique_name(_subtype_decl)
+        _subtype = self.get_registered(_subtype_name)
+        obj = typedesc.ArrayType(_subtype, size)
         self.set_location(obj, cursor)
         return obj
 
@@ -846,7 +842,6 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _record_decl(self, _type, cursor):
         ''' a structure and an union have the same handling.'''
-        
         name = self.get_unique_name(cursor)
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
