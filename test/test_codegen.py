@@ -150,15 +150,13 @@ class ConstantsTest(ClangTest):
         self.assertEqual(type(ns.foo), unicode)
 
     #@unittest.skip('')
-    # CLANG PATCH needed, char array type is not exposed.
-    def test_array_nosize(self):
+    def test_incomplete_array(self):
         ns = self.convert("""
         typedef char array[];
         struct blah {
             char varsize[];
         };
         """)
-        # for 'typedef char array[];', gccxml does XXX
         self.assertEqual(ctypes.sizeof(ns.blah), 1)
         cb = lambda x: x.array
         self.assertRaises(AttributeError, cb, ns )
