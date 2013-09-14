@@ -53,9 +53,7 @@ def MAKE_NAME(name):
     #FIXME: test case ? I want this func to be neutral on C valid names.
     if name.startswith("__"):
         return "_X" + name
-    elif len(name) == 0:
-        raise ValueError
-    elif name[0] in "01234567879":
+    if name[0] in "01234567879":
         return "_" + name
     return name
 
@@ -184,6 +182,8 @@ class Clang_Parser(object):
         return obj
 
     def get_registered(self, name):
+        if name not in self.all:
+            return None
         return self.all[name]
 
     def is_registered(self, name):
@@ -193,21 +193,6 @@ class Clang_Parser(object):
     def set_location(self, obj, cursor):
         if hasattr(cursor, 'location') and cursor.location.file is not None:
             obj.location = (cursor.location.file.name, cursor.location.line)
-
-    def get_unique_name(self, cursor):
-        name = cursor.displayname
-        _id = cursor.get_usr()
-        if name == '':
-            if _id == '': # anonymous is spelling == ''
-                return None
-            name = MAKE_NAME( _id )
-        if cursor.kind == CursorKind.STRUCT_DECL:
-            name = 'struct_%s'%(name)
-        elif cursor.kind == CursorKind.UNION_DECL:
-            name = 'union_%s'%(name)
-        elif cursor.kind == CursorKind.CLASS_DECL:
-            name = 'class_%s'%(name)
-        return name
 
     ########################################################################
     ''' clang types to ctypes for architecture dependent size types
@@ -276,6 +261,10 @@ typedef void* pointer_t;''', flags=_flags)
 
     def is_unexposed_type(self, t):
         return t.kind == TypeKind.UNEXPOSED
+
+    # deprecated
+    def convert_to_ctypes(self, typekind):
+        return self.ctypes_typename[typekind]
 
     def get_ctypes_name(self, typekind):
         return self.ctypes_typename[typekind]
@@ -376,7 +365,9 @@ typedef void* pointer_t;''', flags=_flags)
             _definition = cursor.type.get_declaration() 
             
         #_id = _definition.get_usr()
-        name = self.get_unique_name(_definition)
+        name = _definition.displayname
+        if name == '': 
+            name = MAKE_NAME( _definition.get_usr() )
         obj = self.get_registered(name)
         if obj is None:
             log.warning('This TYPE_REF was not previously defined. %s. Adding it'%(name))
@@ -397,23 +388,26 @@ typedef void* pointer_t;''', flags=_flags)
 
         # the value is a literal in get_children()
         children = list(cursor.get_children())
-        if len(children) == 0:
-          init_value = "None"
+        n_children = len(children)
+        if n_children == 0:
+            init_value = "None"
+        elif n_children == 1:
+            # token shortcut is not possible.
+            literal_kind = children[0].kind
+            if literal_kind.is_unexposed():
+                literal_kind = list(children[0].get_children())[0].kind
+            mth = getattr(self, literal_kind.name)
+            # pod ariable are easy. some are unexposed.
+            log.debug('Calling %s'%(literal_kind.name))
+            # As of clang 3.3, int, double literals are exposed.
+            # float, long double, char , char* are not exposed directly in level1.
+            init_value = mth(children[0])
         else:
-          if (len(children) != 1):
-            log.debug('Multiple children in a var_decl')
-            import code
-            code.interact(local=locals())
-          # token shortcut is not possible.
-          literal_kind = children[0].kind
-          if literal_kind.is_unexposed():
-              literal_kind = list(children[0].get_children())[0].kind
-          mth = getattr(self, literal_kind.name)
-          # pod ariable are easy. some are unexposed.
-          log.debug('Calling %s'%(literal_kind.name))
-          # As of clang 3.3, int, double literals are exposed.
-          # float, long double, char , char* are not exposed directly in level1.
-          init_value = mth(children[0])
+            if self.is_pointer_type(cursor.type):
+                if cursor.type.get_pointee().kind == TypeKind.UNEXPOSED:
+                    log.debug('Ignoring unexposed pointer type.')
+                    return True
+            raise TypeError('Unexpected number of children (%s, %i)' % name, n_children)
 
         # Get the type
         _ctype = cursor.type.get_canonical()
@@ -436,20 +430,25 @@ typedef void* pointer_t;''', flags=_flags)
         elif _ctype.kind == TypeKind.RECORD:
             structname = self.get_unique_name(_ctype.get_declaration())
             _type = self.get_registered(structname)
-        elif ( _ctype.kind == TypeKind.INCOMPLETEARRAY or 
-               _ctype.kind == TypeKind.CONSTANTARRAY ):
-            mth = getattr(self, _ctype.kind.name)
-            _type = mth(cursor)
+        elif self.is_pointer_type(_ctype):
+            pointee = _ctype.get_pointee()
+            if pointee.kind == TypeKind.UNEXPOSED:
+                log.debug('Ignoring unexposed pointer type.')
+                return True
+            
+            _type = self.POINTER(cursor)
         else:
             ## What else ?
-            raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
+            raise NotImplementedError('What other type of variable? %s' % _ctype.kind)
             # _type = cursor.get_usr()
+            #import code
+            #code.interact(local=locals())
             #_type = cursor.type.get_declaration().kind.name
             #if _type == '': 
             #    _type = MAKE_NAME( cursor.get_usr() )
         log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s'%(name, 
-                    _ctype.kind.name, _type.name, init_value,
-                    getattr(cursor, 'location')))
+                    _ctype.kind.name, getattr(_type, 'name', None), init_value,
+                    getattr(cursor, 'location', None)))
         #print _type.__class__.__name__
         obj = self.register(name, typedesc.Variable(name, _type, init_value) )
         self.set_location(obj, cursor)
@@ -476,11 +475,11 @@ typedef void* pointer_t;''', flags=_flags)
         log.debug("TYPEDEF_DECL: name:%s"%(name))
         _type = cursor.type.get_canonical()
         _id = cursor.get_usr()
-        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind.spelling))
+        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s cursor.location:%s"%(_type.kind.spelling, cursor.location))
         # FIXME feels weird not to call self.fundamental
         if self.is_fundamental_type(_type):
             p_type = self.FundamentalType(_type)
-            #ctypesname = self.get_ctypes_name(typ.kind)
+            #ctypesname = self.convert_to_ctypes(typ.kind)
             #typ = typedesc.FundamentalType( ctypesname, 0, 0 )
             #log.debug("TYPEDEF_DECL: fundamental typ:%s"%(typ))
         elif self.is_pointer_type(_type):
@@ -490,7 +489,9 @@ typedef void* pointer_t;''', flags=_flags)
         elif _type.kind == TypeKind.RECORD:
             # Typedef and struct_decl will have the same name. 
             decl = _type.get_declaration() 
-            decl_name = self.get_unique_name(decl)
+            decl_name = decl.displayname
+            if decl_name == '':
+                decl_name = MAKE_NAME(decl.get_usr())
             # Type is already defined OR will be defined later.
             p_type = self.get_registered(decl_name) or decl_name
             #import code
@@ -509,14 +510,28 @@ typedef void* pointer_t;''', flags=_flags)
             else:
                 return obj
             '''
+        elif _type.kind == TypeKind.CONSTANTARRAY:
+            array_type = _type.get_array_element_type()
+            array_size = _type.get_array_size()
+            
+            decl = array_type.get_declaration()
+            decl_name = decl.displayname
+            
+            array_type = self.get_registered(decl_name)
+            if array_type is None:
+                # TODO: I have seen __va_list_tag here
+                log.debug('No type registered for name %s', decl_name)
+                return None
+            p_type = typedesc.ArrayType(array_type, array_size)
         else:
-            # _type.kind == TypeKind.CONSTANTARRAY or
+            log.debug('Unknown type', _type.kind)
             #  _type.kind == TypeKind.FUNCTIONPROTO
-            pass
             return None
+        
         if p_type is None:
-            import code
-            code.interact(local=locals())
+            log.debug('Null p_type %s' % _type)
+            return None
+        
         # final
         obj = self.register(name, typedesc.Typedef(name, p_type))
         self.set_location(obj, cursor)
@@ -534,7 +549,7 @@ typedef void* pointer_t;''', flags=_flags)
     def FundamentalType(self, typ):
         #print cursor.displayname
         #t = cursor.type.get_canonical().kind
-        ctypesname = self.get_ctypes_name(typ.kind)
+        ctypesname = self.convert_to_ctypes(typ.kind)
         if typ.kind == TypeKind.VOID:
             size = align = 1
         else:
@@ -560,7 +575,9 @@ typedef void* pointer_t;''', flags=_flags)
             #assert children[0].kind == CursorKind.TYPE_REF#, 'Wasnt expecting a %s in PointerType'%(children[0].kind))
             # check registration
             decl = _type.get_declaration()
-            decl_name = self.get_unique_name(decl)
+            decl_name = decl.displayname
+            if decl_name == '':
+                decl_name = MAKE_NAME(decl.get_usr())
             # Type is already defined OR will be defined later.
             p_type = self.get_registered(decl_name) or decl_name
             #p_type = children[0].get_definition().get_usr()
@@ -578,18 +595,25 @@ typedef void* pointer_t;''', flags=_flags)
         #elif _type.kind == TypeKind.FUNCTIONPROTO:
         #    log.error('TypeKind.FUNCTIONPROTO not implemented')
         #    return None
+        elif _type.kind == TypeKind.INVALID:
+            log.debug('Invalid type:%s', _type)
+            return None
         else:
             # 
             mth = getattr(self, _type.kind.name)
-            import code
-            code.interact(local=locals())
             p_type = mth(_type)
+            #import code
+            #code.interact(local=locals())
             #raise TypeError('Unknown scenario in PointerType - %s'%(_type))
-        log.debug("POINTER: p_type:'%s'"%(p_type.__dict__))
-        # return the pointer        
-        obj = typedesc.PointerType( p_type, size, align)
-        self.set_location(obj, cursor)
-        return obj
+        
+        if p_type is None:
+            log.debug('no type found %s' % _type)
+        else:
+            log.debug("POINTER: p_type:'%s'"%(p_type.__dict__))
+            # return the pointer        
+            obj = typedesc.PointerType( p_type, size, align)
+            self.set_location(obj, cursor)
+            return obj
 
 
     def _fixup_PointerType(self, p):
@@ -608,19 +632,27 @@ typedef void* pointer_t;''', flags=_flags)
 
     @log_entity
     def CONSTANTARRAY(self, cursor):
-        # The element type has been previously declared
+        spelling = cursor.type.get_declaration().spelling
+        
+        if spelling in self.all:
+            return self.all[spelling]
+        
         size = cursor.type.get_array_size()
         _type = cursor.type.get_array_element_type().get_canonical()
         if self.is_fundamental_type(_type):
-            _subtype = self.FundamentalType(_type)
+            _type = self.FundamentalType(_type)
         else:
-            _subtype_decl = _type.get_declaration()
-            _subtype_name = self.get_unique_name(_subtype_decl)
-            if _subtype_name is None:
-                import code
-                code.interact(local=locals())
-            _subtype = self.get_registered(_subtype_name)
-        obj = typedesc.ArrayType(_subtype, size)
+            mth = getattr(self, _type.kind.name)
+            if mth is None:
+                raise TypeError('unhandled Field TypeKind %s'%(_type.kind.name))
+            _type  = mth(cursor)
+            if _type is None:
+                return None
+
+        #import code
+        #code.interact(local=locals())
+        
+        obj = typedesc.ArrayType(_type, size)
         self.set_location(obj, cursor)
         return obj
 
@@ -629,8 +661,6 @@ typedef void* pointer_t;''', flags=_flags)
         #if type(a.typ) != typedesc.FundamentalType:
         #    a.typ = self.all[a.typ]
         pass
-
-    INCOMPLETEARRAY = CONSTANTARRAY
 
     def CvQualifiedType(self, attrs):
         # id, type, [const|volatile]
@@ -675,6 +705,9 @@ typedef void* pointer_t;''', flags=_flags)
         returns = cursor.get_result()
         if self.is_fundamental_type(returns):
             returns = self.FundamentalType(returns)
+        elif self.is_pointer_type(returns):
+            returns = self.POINTER(returns.get_declaration())
+        
         attributes = []
         for attr in iter(cursor.argument_types()):
             if self.is_fundamental_type(attr):
@@ -687,8 +720,9 @@ typedef void* pointer_t;''', flags=_flags)
                 #if _type is None:
                 #    return None
                 attributes.append(attr)
-        #import code
-        #code.interact(local=locals())    
+        if not isinstance(returns, typedesc.FundamentalType):
+            import code
+            code.interact(local=locals())
         obj = typedesc.FunctionType(returns, attributes)
         self.set_location(obj, cursor)
         return obj
@@ -784,7 +818,9 @@ typedef void* pointer_t;''', flags=_flags)
         ''' Get the enumeration type'''
         # id, name
         #print '** ENUMERATION', cursor.displayname
-        name = self.get_unique_name(cursor)
+        name = cursor.displayname
+        if name == '':
+            name = MAKE_NAME( cursor.get_usr() )
         #    #raise ValueError('could try get_usr()')
         align = cursor.type.get_align() 
         size = cursor.type.get_size() 
@@ -800,7 +836,9 @@ typedef void* pointer_t;''', flags=_flags)
         ''' Get the enumeration values'''
         name = cursor.displayname
         value = cursor.enum_value
-        pname = self.get_unique_name(cursor.semantic_parent)
+        pname = cursor.semantic_parent.displayname
+        if pname == '':
+            pname = MAKE_NAME( cursor.semantic_parent.get_usr() )
         parent = self.all[pname]
         v = typedesc.EnumValue(name, value, parent)
         parent.add_value(v)
@@ -810,6 +848,13 @@ typedef void* pointer_t;''', flags=_flags)
 
     # structures, unions, classes
     
+    def get_unique_name(self, cursor):
+      name = cursor.displayname
+      _id = cursor.get_usr()
+      if name == '': # anonymous is spelling == ''
+          name = MAKE_NAME( _id )
+      return name
+
     @log_entity
     def RECORD(self, cursor):
         ''' A record is a NOT a declaration. A record is the occurrence of of
@@ -821,9 +866,7 @@ typedef void* pointer_t;''', flags=_flags)
             _decl = cursor.type.get_array_element_type().get_declaration()
         else:
             _decl = cursor.type.get_declaration()
-
         assert _decl.kind != CursorKind.NO_DECL_FOUND
-
         name = self.get_unique_name(_decl)
         obj = self.get_registered(name)
         if obj is None:
@@ -845,6 +888,7 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _record_decl(self, _type, cursor):
         ''' a structure and an union have the same handling.'''
+        
         name = self.get_unique_name(cursor)
         if name in codegenerator.dont_assert_size:
             return typedesc.Ignored(name)
@@ -933,16 +977,13 @@ typedef void* pointer_t;''', flags=_flags)
         # create padding fields
         #DEBUG FIXME: why are s.members already typedesc objet ?
         for m in s.members: # s.members are strings - NOT
-            if m not in self.all:
+            if m not in self.all or type(self.all[m]) != typedesc.Field:
+                # DEBUG
+                #import code
+                #code.interact(local=locals())
                 log.warning('Fixup_struct: Member unexpected : %s'%(m))
+                #continue
                 raise TypeError('Fixup_struct: Member unexpected : %s'%(m))
-            elif self.get_registered(m) is None:
-                log.warning('record %s: ignoring field %s'%(s.name,m))
-                continue
-            elif type(self.all[m]) != typedesc.Field:
-                # should not happend ?
-                log.warning('Fixup_struct: Member not a typedesc : %s'%(m))
-                raise TypeError('Fixup_struct: Member not a typedesc : %s'%(m))
             member = self.all[m]
             log.debug('Fixup_struct: Member:%s offset:%d-%d expecting offset:%d'%(
                     member.name, member.offset, member.offset + member.bits, offset))
@@ -1016,7 +1057,7 @@ typedef void* pointer_t;''', flags=_flags)
         _type = None
         if self.is_fundamental_type(_canonical_type):
             _type = self.FundamentalType(_canonical_type)
-       #elif self.is_pointer_type(_canonical_type):
+        #elif self.is_pointer_type(_canonical_type):
         #    _type = self.POINTER(cursor)
         else: # RECORD, FNPTR
             ''' No need to try and get the subtypes, it will show up in children.
@@ -1033,10 +1074,9 @@ typedef void* pointer_t;''', flags=_flags)
             #_type = mth(cursor.type.get_declaration())
             _type = mth(cursor)
             if _type is None:
-                #raise TypeError('Field can not be None %s'%(name ))   
-                log.warning("Field %s is an %s type - ignoring field type"%(
-                            name,_canonical_type.kind.name))
-                return self.register( _id, None)
+                import code, sys
+                code.interact(local=locals())
+                raise TypeError('Field can not be None %s'%(name ))
         #else:
         #    log.debug("FIELD_DECL: TypeKind:'%s'"%(t.kind.name))
         #import code, sys
@@ -1056,7 +1096,6 @@ typedef void* pointer_t;''', flags=_flags)
     @log_entity
     def COMPOUND_STMT(self, cursor):
       return True
-
     
     ################
 
@@ -1113,9 +1152,6 @@ typedef void* pointer_t;''', flags=_flags)
         # fix all objects after that all are resolved
         remove = []
         for _id, _item in self.all.items():
-            if _item is None:
-                log.warning('ignoring %s'%(_id))
-                continue            
             location = getattr(_item, "location", None)
             # FIXME , why do we get different location types
             if location and hasattr(location, 'file'):
@@ -1123,6 +1159,12 @@ typedef void* pointer_t;''', flags=_flags)
                 log.error('%s %s came in with a SourceLocation'%(_id, _item))
             elif location is None:
                 log.warning('item %s has no location.'%(_id))
+                #import code
+                #code.interact(local=locals())
+            #elif not hasattr(location, 'file'):
+            #    log.warning('item %s location has no file.'%(_id))
+            #    #import code
+            #    #code.interact(local=locals())
             mth = getattr(self, "_fixup_" + type(_item).__name__)
             try:
                 mth(_item)
@@ -1154,7 +1196,6 @@ typedef void* pointer_t;''', flags=_flags)
         #code.interact(local=locals())
 
         
-        #print 'clangparser get_result:',result
         return result
     
     #catch-all
@@ -1162,10 +1203,9 @@ typedef void* pointer_t;''', flags=_flags)
         if name not in self._unhandled:
             log.debug('%s is not handled'%(name))
             self._unhandled.append(name)
-            #return True
+            #return None
         def p(node, **args):
             for child in node.get_children():
                 self.startElement( child ) 
         return p
-
 
