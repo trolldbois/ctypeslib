@@ -120,6 +120,7 @@ class Clang_Parser(object):
         self.all = {}
         self.cpp_data = {}
         self._unhandled = []
+        self.fields = {}
         self.tu = None
         self.flags = flags
         self.ctypes_sizes = {}
@@ -393,7 +394,7 @@ typedef void* pointer_t;''', flags=_flags)
     @log_entity
     def VAR_DECL(self, cursor):
         # get the name
-        name = cursor.displayname
+        name = self.get_unique_name(cursor)
 
         # the value is a literal in get_children()
         children = list(cursor.get_children())
@@ -482,48 +483,56 @@ typedef void* pointer_t;''', flags=_flags)
     def TYPEDEF_DECL(self, cursor):
         ''' At some point the target type is declared.
         '''
-        name = cursor.displayname
-        log.debug("TYPEDEF_DECL: name:%s"%(name))
+        name = self.get_unique_name(cursor)
         _type = cursor.type.get_canonical()
-        _id = cursor.get_usr()
-        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind.spelling))
+        log.debug("TYPEDEF_DECL: name:%s"%(name))
+        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind))
+        _decl_cursor = _type.get_declaration()
+        #if _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
+        #    log.warning('TYPE %s has no declaration. Builtin type?'%(name))
+        #    return True
+        p_type = None
         # FIXME feels weird not to call self.fundamental
         if self.is_fundamental_type(_type):
             p_type = self.FundamentalType(_type)
-            #ctypesname = self.get_ctypes_name(typ.kind)
-            #typ = typedesc.FundamentalType( ctypesname, 0, 0 )
-            #log.debug("TYPEDEF_DECL: fundamental typ:%s"%(typ))
-        elif self.is_pointer_type(_type):
-            p_type = self.POINTER(cursor)
+        #elif _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
+        #    log.debug("_decl_cursor == CursorKind.NO_DECL_FOUND:")
+        #    import code
+        #    code.interact(local=locals())        
+        else:
+            '''
+            # record types, pointers, arrays
+            children = list(cursor.get_children())
+            if len(children) == 0:
+                raise TypeError("Got a typedef '%s' as non fndamental with 0 children"%(name))
+            # in case of POD Array, we have a literal
+            if (len(children) != 1):
+                log.debug('Multiple children in a var_decl')
+            ###
+            '''         
+            # get the typedef source declaration
+            mth = getattr(self, _type.kind.name)
             #import code
             #code.interact(local=locals())
-        elif _type.kind == TypeKind.RECORD:
+            p_type = mth(cursor)
+        '''
+        elif self.is_pointer_type(_type): # could go with getattr
+            p_type = self.POINTER(cursor)
+        elif _type.kind == TypeKind.RECORD: # could go with getattr
             # Typedef and struct_decl will have the same name. 
             decl = _type.get_declaration() 
             decl_name = self.get_unique_name(decl)
             # Type is already defined OR will be defined later.
             p_type = self.get_registered(decl_name) or decl_name
-            #import code
-            #code.interact(local=locals())
-            '''
-            _id = cursor.get_definition().get_usr()
-            obj = self.get_registered(name)
-            #import code
-            #code.interact(local=locals())
-            return obj or self.register(name, typedesc.Typedef(name, name))
-            if obj is None:
-                # kinda expected, isn't it ?
-                log.info('TYPEDEF_DECL record was not previously defined. Not a surprise.')
-                typ = name
-                return self.register(name, typedesc.Typedef(name, typ))
-            else:
-                return obj
-            '''
-        else:
+        else: # could go with getattr
+            log.debug('TYPEDEF_DECL: type is %s'%(_type.kind.name))
+            import code
+            code.interact(local=locals())            
             # _type.kind == TypeKind.CONSTANTARRAY or
             #  _type.kind == TypeKind.FUNCTIONPROTO
             pass
             return None
+        '''
         if p_type is None:
             import code
             code.interact(local=locals())
@@ -616,31 +625,40 @@ typedef void* pointer_t;''', flags=_flags)
     OffsetType = POINTER
     _fixup_OffsetType = _fixup_PointerType
 
+    #########################
+    def parse_cursor(self, cursor):
+        mth = getattr(self, cursor.kind.name)
+        return mth(cursor)
+    ############################
+    
     @log_entity
     def CONSTANTARRAY(self, cursor):
         # The element type has been previously declared
-        size = cursor.type.get_array_size()
+        # we need to get the canonical typedef, in some cases
+        _type = cursor.type.get_canonical()
+        size = _type.get_array_size()
         # FIXME: useful or not ?
-        if size == -1 and cursor.type.kind == TypeKind.INCOMPLETEARRAY:
+        if size == -1 and _type.kind == TypeKind.INCOMPLETEARRAY:
             size = 0
             # Fixes error in negative sized array.
             # FIXME VARIABLEARRAY DEPENDENTSIZEDARRAY
-        _type = cursor.type.get_array_element_type()#.get_canonical()
-        if self.is_fundamental_type(_type):
-            _subtype = self.FundamentalType(_type)
+        _array_type = _type.get_array_element_type()#.get_canonical()
+        if self.is_fundamental_type(_array_type):
+            _subtype = self.FundamentalType(_array_type)
         #elif self.is_pointer_type(_type):
         #    p_type = self.POINTER(cursor)
         #Nothing special about a pointer type contantarray
         else:
+            _subtype_decl = _array_type.get_declaration()
+            _subtype = self.parse_cursor(_subtype_decl)
             #import code
             #code.interact(local=locals())
-            _subtype_decl = _type.get_declaration()
-            _subtype_name = self.get_unique_name(_subtype_decl)
-            if _subtype_name is None:
-                import code
-                code.interact(local=locals())
-                pass
-            _subtype = self.get_registered(_subtype_name)
+            #if _subtype_decl.kind == CursorKind.NO_DECL_FOUND:
+            #    pass
+            #_subtype_name = self.get_unique_name(_subtype_decl)
+            #_subtype = self.get_registered(_subtype_name)
+        #import code
+        #code.interact(local=locals())
         obj = typedesc.ArrayType(_subtype, size)
         self.set_location(obj, cursor)
         return obj
@@ -854,8 +872,14 @@ typedef void* pointer_t;''', flags=_flags)
 
         assert _decl.kind != CursorKind.NO_DECL_FOUND
 
+        import code
+        code.interact(local=locals())
         name = self.get_unique_name(_decl)
-        obj = self.get_registered(name)
+        if self.is_registered(name):
+            obj = self.get_registered(name)
+        else:
+            obj = self.parse_cursor(_decl)
+
         if obj is None:
             log.warning('This RECORD was not previously defined. %s. NOT Adding it'%(name))
             #import code
@@ -910,11 +934,12 @@ typedef void* pointer_t;''', flags=_flags)
             if child.kind == clang.cindex.CursorKind.FIELD_DECL:
                 # LLVM-CLANG, issue https://github.com/trolldbois/python-clang/issues/2
                 # CIndexUSR.cpp:800+ // Bit fields can be anonymous.
-                _cid = child.get_usr()
+                _cid = self.get_unique_name(child)
+                ## FIXME 2: no get_usr() for members of builtin struct
                 if _cid == '' and child.is_bitfield():
                     _cid = cursor.get_usr() + "@Ab#" + str(childnum)
                 # END FIXME
-                members.append( _cid )
+                members.append( self.FIELD_DECL(child) )
                 continue
             # FIXME LLVM-CLANG, patch http://lists.cs.uiuc.edu/pipermail/cfe-commits/Week-of-Mon-20130415/078445.html
             #if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
@@ -950,30 +975,31 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _fixup_Structure(self, s):
         log.debug('Struct/Union_FIX: %s '%(s.name))
-        #import code
-        #code.interact(local=locals())
-        #print 'before', s.members
-        #for m in s.members:
-        #    if m not in self.all:
-        #        print s.name,s.location
+        ## No need to lookup members in a global var.
+        ## Just fix the padding        
         members = []
         offset = 0
         padding_nb = 0
         member = None
         # create padding fields
         #DEBUG FIXME: why are s.members already typedesc objet ?
+        #fields = self.fields[s.name]
         for m in s.members: # s.members are strings - NOT
-            if m not in self.all:
+            '''import code
+            code.interact(local=locals())
+            if m not in self.fields.keys():
                 log.warning('Fixup_struct: Member unexpected : %s'%(m))
                 raise TypeError('Fixup_struct: Member unexpected : %s'%(m))
-            elif self.get_registered(m) is None:
+            elif fields[m] is None:
                 log.warning('record %s: ignoring field %s'%(s.name,m))
                 continue
-            elif type(self.all[m]) != typedesc.Field:
+            elif type(fields[m]) != typedesc.Field:
                 # should not happend ?
                 log.warning('Fixup_struct: Member not a typedesc : %s'%(m))
                 raise TypeError('Fixup_struct: Member not a typedesc : %s'%(m))
-            member = self.all[m]
+            member = fields[m]
+            '''
+            member = m
             log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d'%(
                     member.name, member.offset, member.offset + member.bits, offset))
             if member.offset > offset:
@@ -1020,8 +1046,9 @@ typedef void* pointer_t;''', flags=_flags)
         a Record needs to be treated by self.record... etc..
         '''
         # name, type
-        name = cursor.displayname
-        _id = cursor.get_usr()
+        name = self.get_unique_name(cursor)
+        record_name = self.get_unique_name(cursor.semantic_parent)
+        #_id = cursor.get_usr()
         offset = cursor.semantic_parent.type.get_offset(name)
         if offset < 0:
             log.error('BAD RECORD, Bad offset: %d for %s'%(offset, name))
@@ -1044,41 +1071,54 @@ typedef void* pointer_t;''', flags=_flags)
             bits = cursor.type.get_size() * 8
             if bits < 0:
                 log.warning('Bad source code, bitsize == %d <0 on %s'%(bits, name))
-                bits =0
+                bits = 0
         # after dealing with anon bitfields
         if name == '': 
             raise ValueError("Field has no displayname")
         # try to get a representation of the type
-        _canonical_type = cursor.type.get_canonical()
+        ##_canonical_type = cursor.type.get_canonical()
+        # t-t-t-t-
         _type = None
+        _canonical_type = cursor.type.get_canonical()
         if self.is_fundamental_type(_canonical_type):
             _type = self.FundamentalType(_canonical_type)
-       #elif self.is_pointer_type(_canonical_type):
-        #    _type = self.POINTER(cursor)
-        else: # RECORD, FNPTR
-            ''' No need to try and get the subtypes, it will show up in children.
-            '''
-            log.debug("FIELD_DECL: displayname:'%s'"%(cursor.get_usr()))
-            log.debug("%s: nb children:%s"%(cursor.type.kind, len([c for c in cursor.get_children()])))
-            mth = getattr(self, _canonical_type.kind.name)
-            if mth is None:
-                raise TypeError('unhandled Field TypeKind %s'%(_canonical_type.kind.name))
-            # Go and register the field's type from its declaration location
-            #print'PPPPPPPPPPPPP'
-            #import code, sys
-            #code.interact(local=locals())
-            #_type = mth(cursor.type.get_declaration())
-            _type = mth(cursor)
-            if _type is None:
-                #raise TypeError('Field can not be None %s'%(name ))   
-                log.warning("Field %s is an %s type - ignoring field type"%(
-                            name,_canonical_type.kind.name))
-                return self.register( _id, None)
+        elif self.is_pointer_type(_canonical_type):
+            _type = self.POINTER(cursor)
+        else:
+            _decl_name = self.get_unique_name(cursor.type.get_declaration()) # .spelling ??
+            if self.is_registered(_decl_name):
+                _type = self.get_registered(_decl_name)
+                # then we shortcut
+            else:
+                log.error('FIELD_DECL: found a type not previously declared: %s'%(_decl_name))
+                import code, sys
+                code.interact(local=locals())
+               #elif self.is_pointer_type(_canonical_type):
+                #    _type = self.POINTER(cursor)
+                #elif RECORD, FNPTR
+                ''' No need to try and get the subtypes, it will show up in children.
+                '''
+                log.debug("FIELD_DECL: displayname:'%s'"%(cursor.get_usr()))
+                log.debug("%s: nb children:%s"%(cursor.type.kind, 
+                                len(list(cursor.get_children()))))
+                mth = getattr(self, _canonical_type.kind.name)
+                if mth is None:
+                    raise TypeError('unhandled Field TypeKind %s'%(_canonical_type.kind.name))
+                # Go and register the field's type from its declaration location
+                #print'PPPPPPPPPPPPP'
+                #import code, sys
+                #code.interact(local=locals())
+                #_type = mth(cursor.type.get_declaration())
+                _type = mth(cursor)
+                if _type is None:
+                    #raise TypeError('Field can not be None %s'%(name ))   
+                    log.warning("Field %s is an %s type - ignoring field type"%(
+                                name,_canonical_type.kind.name))
+                    return self.register( _id, None)
         #else:
         #    log.debug("FIELD_DECL: TypeKind:'%s'"%(t.kind.name))
-        #import code, sys
-        #code.interact(local=locals())
-        return self.register( _id, typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield()))
+        #self.fields[record_name][name] = typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield())
+        return typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield())
 
     def _fixup_Field(self, f):
         #print 'fixup field', f.type

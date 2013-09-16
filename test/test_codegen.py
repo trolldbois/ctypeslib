@@ -149,6 +149,14 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.foo, "foo")
         self.assertEqual(type(self.namespace.foo), unicode)
 
+    def test_typedef(self):
+        self.convert("""
+        typedef char char_t;
+        typedef int array_t[16];
+        """)
+        self.assertEqual(ctypes.sizeof(self.namespace.t1), 1)
+
+
     #@unittest.skip('')
     def test_incomplete_array(self):
         self.convert("""
