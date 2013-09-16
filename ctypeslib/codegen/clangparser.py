@@ -103,7 +103,7 @@ class Clang_Parser(object):
         TypeKind.ULONG : 'TBD' ,
         TypeKind.ULONGLONG : 'TBD' ,
         TypeKind.UINT128 : 'c_uint128' , # FIXME
-        TypeKind.CHAR_S : 'c_char_p' , 
+        TypeKind.CHAR_S : 'c_char' , 
         TypeKind.SCHAR : 'c_char' , #? 
         TypeKind.WCHAR : 'c_wchar' , 
         TypeKind.SHORT : 'TBD' ,
