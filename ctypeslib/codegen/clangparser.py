@@ -890,9 +890,10 @@ typedef void* pointer_t;''', flags=_flags)
             return typedesc.Ignored(name)
         # TODO unittest: try redefinition.
         # check for definition already parsed 
-        if (self.is_registered(name) and 
+        if (self.is_registered(name) and
             self.get_registered(name).members is not None):
-            return True 
+            log.debug('_record_decl: %s is already registered with members')
+            return self.get_registered(name)
         # FIXME: lets ignore bases for now.
         #bases = attrs.get("bases", "").split() # that for cpp ?
         bases = [] # FIXME: support CXX
