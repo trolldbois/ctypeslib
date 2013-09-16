@@ -865,26 +865,21 @@ typedef void* pointer_t;''', flags=_flags)
         known.
         Type is accessible by cursor.type.get_declaration() 
         '''
+        
         if cursor.type.kind == TypeKind.CONSTANTARRAY:
+            raise TypeError('no way this record is an array')
             _decl = cursor.type.get_array_element_type().get_declaration()
         else:
             _decl = cursor.type.get_declaration()
-
-        assert _decl.kind != CursorKind.NO_DECL_FOUND
-
-        import code
-        code.interact(local=locals())
-        name = self.get_unique_name(_decl)
+        
+        _decl = cursor.type.get_declaration() # is a record
+        _decl_cursor = list(_decl.get_children())[0] # record -> decl
+        name = self.get_unique_name(_decl_cursor)
         if self.is_registered(name):
             obj = self.get_registered(name)
         else:
+            log.warning('Was in RECORD but had to parse record declaration ')
             obj = self.parse_cursor(_decl)
-
-        if obj is None:
-            log.warning('This RECORD was not previously defined. %s. NOT Adding it'%(name))
-            #import code
-            #code.interact(local=locals())
-            raise ValueError('This RECORD was not previously defined. %s. NOT Adding it'%(name))
         return obj
 
     @log_entity

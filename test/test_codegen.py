@@ -153,8 +153,13 @@ class ConstantsTest(ClangTest):
         self.convert("""
         typedef char char_t;
         typedef int array_t[16];
+        typedef union u {
+            int a;
+            int b;
+        } u;
         """)
-        self.assertEqual(ctypes.sizeof(self.namespace.t1), 1)
+        self.assertEqual(ctypes.sizeof(self.namespace.array_t), 64)
+        self.assertEqual(ctypes.sizeof(self.namespace.union_u), 4)
 
 
     #@unittest.skip('')
