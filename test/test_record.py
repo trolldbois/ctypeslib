@@ -13,7 +13,7 @@ class RecordTest(ClangTest):
         """Test sizes for simple POD types on i386.
         """
         flags = ['-target','i386-linux']
-        self.namespace = self.gen('test/data/test-clang0.c', flags)
+        self.gen('test/data/test-clang0.c', flags)
         self.assertEquals(ctypes.sizeof(self.namespace.badaboum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.you_badaboum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.big_badaboum), 4)
@@ -28,7 +28,7 @@ class RecordTest(ClangTest):
         """Test sizes for simple POD types on x64.
         """
         flags = ['-target','x86_64-linux']
-        self.namespace = self.gen('test/data/test-clang0.c', flags)
+        self.gen('test/data/test-clang0.c', flags)
         self.assertEquals(ctypes.sizeof(self.namespace.badaboum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.you_badaboum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.big_badaboum), 8)
@@ -43,11 +43,11 @@ class RecordTest(ClangTest):
         """Test sizes for simple records on i386.
         """
         flags = ['-target','i386-linux']
-        self.namespace = self.gen('test/data/test-clang1.c', flags)
-        self.assertEquals(ctypes.sizeof(self.namespace.structName), 18)
-        self.assertEquals(ctypes.sizeof(self.namespace.structName2), 20)
-        self.assertEquals(ctypes.sizeof(self.namespace.Node), 16)
-        self.assertEquals(ctypes.sizeof(self.namespace.Node2), 8)
+        self.gen('test/data/test-clang1.c', flags)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_Name), 18)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_Name2), 20)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_Node), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_Node2), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.myEnum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.my__quad_t), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 4)
@@ -60,63 +60,60 @@ class RecordTest(ClangTest):
         """Test padding for simple records on i386.
         """
         flags = ['-target','i386-linux']
-        self.namespace = self.gen('test/data/test-clang5.c', flags)        
-        self.assertEquals(self.namespace.structName2.PADDING_0.offset, 2)
-        self.assertEquals(self.namespace.structName2.PADDING_0.size, 2)
-        self.assertEquals(self.namespace.structName4.PADDING_0.offset, 2)
-        self.assertEquals(self.namespace.structName4.PADDING_0.size, 2)
-        self.assertEquals(self.namespace.structName4.PADDING_1.offset, 10)
-        self.assertEquals(self.namespace.structName4.PADDING_1.size, 2)
-        self.assertEquals(self.namespace.structName4.PADDING_2.offset, 18)
-        self.assertEquals(self.namespace.structName4.PADDING_2.size, 2)
-        self.assertEquals(self.namespace.Node.PADDING_0.offset, 13)
-        self.assertEquals(self.namespace.Node.PADDING_0.size, 3)
-        self.assertEquals(self.namespace.Node2.PADDING_0.offset, 1)
-        self.assertEquals(self.namespace.Node2.PADDING_0.size, 3)
-        self.assertEquals(self.namespace.Node3.PADDING_0.offset, 1)
-        self.assertEquals(self.namespace.Node3.PADDING_0.size, 3)
-        self.assertEquals(self.namespace.Node3.PADDING_1.offset, 21)
-        self.assertEquals(self.namespace.Node3.PADDING_1.size, 3)
-        self.assertEquals(self.namespace.Node4.PADDING_0.offset, 1)
-        self.assertEquals(self.namespace.Node4.PADDING_0.size, 1)
-        self.assertEquals(self.namespace.Node5.PADDING_0.offset, 6)
-        self.assertEquals(self.namespace.Node5.PADDING_0.size, 2)
+        self.gen('test/data/test-clang5.c', flags)        
+        self.assertEquals(self.namespace.struct_Name2.PADDING_0.offset, 2)
+        self.assertEquals(self.namespace.struct_Name2.PADDING_0.size, 2)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_0.offset, 2)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_0.size, 2)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_1.offset, 10)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_1.size, 2)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_2.offset, 18)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_2.size, 2)
+        self.assertEquals(self.namespace.struct_Node.PADDING_0.offset, 13)
+        self.assertEquals(self.namespace.struct_Node.PADDING_0.size, 3)
+        self.assertEquals(self.namespace.struct_Node2.PADDING_0.offset, 1)
+        self.assertEquals(self.namespace.struct_Node2.PADDING_0.size, 3)
+        self.assertEquals(self.namespace.struct_Node3.PADDING_0.offset, 1)
+        self.assertEquals(self.namespace.struct_Node3.PADDING_0.size, 3)
+        self.assertEquals(self.namespace.struct_Node3.PADDING_1.offset, 21)
+        self.assertEquals(self.namespace.struct_Node3.PADDING_1.size, 3)
+        self.assertEquals(self.namespace.struct_Node4.PADDING_0.offset, 1)
+        self.assertEquals(self.namespace.struct_Node4.PADDING_0.size, 1)
+        self.assertEquals(self.namespace.struct_Node5.PADDING_0.offset, 6)
+        self.assertEquals(self.namespace.struct_Node5.PADDING_0.size, 2)
 
     def test_padding_x64(self):
         """Test padding for simple records on x64.
         """
         flags = ['-target','x86_64-linux']
-        self.namespace = self.gen('test/data/test-clang5.c', flags)        
-        self.assertEquals(self.namespace.structName2.PADDING_0.offset, 2)
-        self.assertEquals(self.namespace.structName2.PADDING_0.size, 2)
-        self.assertEquals(self.namespace.structName4.PADDING_0.offset, 2)
-        self.assertEquals(self.namespace.structName4.PADDING_0.size, 6)
-        self.assertEquals(self.namespace.structName4.PADDING_1.offset, 18)
-        self.assertEquals(self.namespace.structName4.PADDING_1.size, 6)
-        self.assertEquals(self.namespace.structName4.PADDING_2.offset, 34)
-        self.assertEquals(self.namespace.structName4.PADDING_2.size, 6)
-        self.assertEquals(self.namespace.Node.PADDING_0.offset, 4)
-        self.assertEquals(self.namespace.Node.PADDING_0.size, 4)
-        self.assertEquals(self.namespace.Node.PADDING_1.offset, 25)
-        self.assertEquals(self.namespace.Node.PADDING_1.size, 7)
-        self.assertEquals(self.namespace.Node2.PADDING_0.offset, 1)
-        self.assertEquals(self.namespace.Node2.PADDING_0.size, 7)
-        self.assertEquals(self.namespace.Node3.PADDING_0.offset, 1)
-        self.assertEquals(self.namespace.Node3.PADDING_0.size, 7)
-        self.assertEquals(self.namespace.Node3.PADDING_1.offset, 41)
-        self.assertEquals(self.namespace.Node3.PADDING_1.size, 7)
-        self.assertEquals(self.namespace.Node4.PADDING_0.offset, 1)
-        self.assertEquals(self.namespace.Node4.PADDING_0.size, 1)
-        self.assertEquals(self.namespace.Node4.PADDING_1.offset, 4)
-        self.assertEquals(self.namespace.Node4.PADDING_1.size, 4)
-        self.assertEquals(self.namespace.Node5.PADDING_0.offset, 6)
-        self.assertEquals(self.namespace.Node5.PADDING_0.size, 2)
+        self.gen('test/data/test-clang5.c', flags)        
+        self.assertEquals(self.namespace.struct_Name2.PADDING_0.offset, 2)
+        self.assertEquals(self.namespace.struct_Name2.PADDING_0.size, 2)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_0.offset, 2)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_0.size, 6)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_1.offset, 18)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_1.size, 6)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_2.offset, 34)
+        self.assertEquals(self.namespace.struct_Name4.PADDING_2.size, 6)
+        self.assertEquals(self.namespace.struct_Node.PADDING_0.offset, 4)
+        self.assertEquals(self.namespace.struct_Node.PADDING_0.size, 4)
+        self.assertEquals(self.namespace.struct_Node.PADDING_1.offset, 25)
+        self.assertEquals(self.namespace.struct_Node.PADDING_1.size, 7)
+        self.assertEquals(self.namespace.struct_Node2.PADDING_0.offset, 1)
+        self.assertEquals(self.namespace.struct_Node2.PADDING_0.size, 7)
+        self.assertEquals(self.namespace.struct_Node3.PADDING_0.offset, 1)
+        self.assertEquals(self.namespace.struct_Node3.PADDING_0.size, 7)
+        self.assertEquals(self.namespace.struct_Node3.PADDING_1.offset, 41)
+        self.assertEquals(self.namespace.struct_Node3.PADDING_1.size, 7)
+        self.assertEquals(self.namespace.struct_Node4.PADDING_0.offset, 1)
+        self.assertEquals(self.namespace.struct_Node4.PADDING_0.size, 1)
+        self.assertEquals(self.namespace.struct_Node4.PADDING_1.offset, 4)
+        self.assertEquals(self.namespace.struct_Node4.PADDING_1.size, 4)
+        self.assertEquals(self.namespace.struct_Node5.PADDING_0.offset, 6)
+        self.assertEquals(self.namespace.struct_Node5.PADDING_0.size, 2)
 
         
-
-
-
-
-
+import logging, sys
 if __name__ == "__main__":
+    #logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
     unittest.main()

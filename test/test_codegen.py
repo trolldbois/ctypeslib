@@ -17,8 +17,10 @@ class ConstantsTest(ClangTest):
         """
         self.convert("""
         int i1;
+        char c1;
         """)
         self.assertEqual(ctypes.sizeof(self.namespace.i1), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.c1), 1)
 
     #@unittest.skip('')
     def test_longlong(self):

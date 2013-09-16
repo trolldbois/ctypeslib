@@ -1,20 +1,20 @@
 /* padding */
 
-struct structName
+struct Name
 {
   short member1;
   int member2;
   long long member3;
 } __attribute__((packed));
 
-struct structName2
+struct Name2
 {
   short member1;
   int member2;
   long long member3;
 };
 
-struct structName3
+struct Name3
 {
   short member1;
   long member2;
@@ -24,7 +24,7 @@ struct structName3
   long member6;
 } __attribute__((packed));
 
-struct structName4
+struct Name4
 {
   short member1;
   long member2;
