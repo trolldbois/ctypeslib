@@ -30,7 +30,7 @@ class ConstantsTest(ClangTest):
         unsigned long long ui3 = 0xFFFFFFFFFFFFFFFFULL;
         unsigned long long ui2 = 0x8000000000000000ULL;
         unsigned long long ui1 = 0x7FFFFFFFFFFFFFFFULL;
-        """)
+        """, flags=['-target','x86_64'])
         self.assertEquals(self.namespace.i1, 0x7FFFFFFFFFFFFFFF)
         self.assertEquals(self.namespace.i2, -1)
         self.assertEquals(self.namespace.ui1, 0x7FFFFFFFFFFFFFFF)
@@ -157,12 +157,13 @@ class ConstantsTest(ClangTest):
             char varsize[];
         };
         """)
-        self.assertEqual(ctypes.sizeof(self.namespace.blah), 1)
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_blah), 1)
         cb = lambda x: x.array
         self.assertRaises(AttributeError, cb, self.namespace )
 
     @unittest.skip('')
     def test_docstring(self):
+        import os
         from ctypes import CDLL
         from ctypes.util import find_library
         if os.name == "nt":
@@ -172,21 +173,22 @@ class ConstantsTest(ClangTest):
         self.convert("""
         #include <malloc.h>
         """,
-                          generate_docstrings=True,
-                          searched_dlls=[libc]
+           #               generate_docstrings=True,
+           #               searched_dlls=[libc]
         )
         prototype = "void * malloc(size_t".replace(" ", "")
         docstring = self.namespace.malloc.__doc__.replace(" ", "")
         self.assertEqual(docstring[:len(prototype)], prototype)
         self.failUnless("malloc.h" in self.namespace.malloc.__doc__)
 
-    @unittest.skip('')
+    #@unittest.skip('')
     def test_emptystruct(self):
         self.convert("""
         typedef struct tagEMPTY {
         } EMPTY;
         """)
-        self.assertEqual(ctypes.sizeof(self.namespace.tagEMPTY), 0)
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_tagEMPTY), 0)
+        self.assertEqual(ctypes.sizeof(self.namespace.EMPTY), 0)
 
     def test_struct_named_twice(self):
         self.convert('''
@@ -208,11 +210,11 @@ class ConstantsTest(ClangTest):
         typedef struct p {
             x_n_t g[1];
         } *p_t;
-        ''')    
+        ''', flags=['-target','x86_64'])
         self.assertEqual(ctypes.sizeof(self.namespace.struct_x), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.x_n_t), ctypes.sizeof(ctypes.c_void_p))
-        self.assertEqual(ctypes.sizeof(self.namespace.struct_p), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.p_t), ctypes.sizeof(ctypes.c_void_p))
+        self.assertEqual(ctypes.sizeof(self.namespace.x_n_t), 8)
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_p), 8)
+        self.assertEqual(ctypes.sizeof(self.namespace.p_t), 8)
         self.assertSizes('x_n_t')
         self.assertSizes('p_t')
 

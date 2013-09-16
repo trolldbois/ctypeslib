@@ -441,8 +441,8 @@ typedef void* pointer_t;''', flags=_flags)
             mth = getattr(self, _ctype.kind.name)
             _type = mth(cursor)
         elif self.is_pointer_type(_ctype):
-            import code
-            code.interact(local=locals())
+            #import code
+            #code.interact(local=locals())
             # extern Function pointer 
             if _ctype.get_pointee().kind == TypeKind.UNEXPOSED:
                 log.debug('Ignoring unexposed pointer type.')
@@ -620,15 +620,26 @@ typedef void* pointer_t;''', flags=_flags)
     def CONSTANTARRAY(self, cursor):
         # The element type has been previously declared
         size = cursor.type.get_array_size()
-        _type = cursor.type.get_array_element_type().get_canonical()
+        # FIXME: useful or not ?
+        if size == -1 and cursor.type.kind == TypeKind.INCOMPLETEARRAY:
+            size = 0
+            # Fixes error in negative sized array.
+            # FIXME VARIABLEARRAY DEPENDENTSIZEDARRAY
+        _type = cursor.type.get_array_element_type()#.get_canonical()
         if self.is_fundamental_type(_type):
             _subtype = self.FundamentalType(_type)
+        #elif self.is_pointer_type(_type):
+        #    p_type = self.POINTER(cursor)
+        #Nothing special about a pointer type contantarray
         else:
+            #import code
+            #code.interact(local=locals())
             _subtype_decl = _type.get_declaration()
             _subtype_name = self.get_unique_name(_subtype_decl)
             if _subtype_name is None:
                 import code
                 code.interact(local=locals())
+                pass
             _subtype = self.get_registered(_subtype_name)
         obj = typedesc.ArrayType(_subtype, size)
         self.set_location(obj, cursor)
@@ -963,7 +974,7 @@ typedef void* pointer_t;''', flags=_flags)
                 log.warning('Fixup_struct: Member not a typedesc : %s'%(m))
                 raise TypeError('Fixup_struct: Member not a typedesc : %s'%(m))
             member = self.all[m]
-            log.debug('Fixup_struct: Member:%s offset:%d-%d expecting offset:%d'%(
+            log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d'%(
                     member.name, member.offset, member.offset + member.bits, offset))
             if member.offset > offset:
                 #create padding
@@ -988,7 +999,8 @@ typedef void* pointer_t;''', flags=_flags)
             p_name = 'PADDING_%d'%padding_nb
             padding = self._make_padding(p_name, offset, length)
             members.append(padding)
-        offset = members[-1].offset + members[-1].bits
+        if len(members) > 0:
+            offset = members[-1].offset + members[-1].bits
         # go
         s.members = members
         log.debug("FIXUP_STRUCT: size:%d offset:%d"%(s.size*8, offset))
@@ -1011,6 +1023,8 @@ typedef void* pointer_t;''', flags=_flags)
         name = cursor.displayname
         _id = cursor.get_usr()
         offset = cursor.semantic_parent.type.get_offset(name)
+        if offset < 0:
+            log.error('BAD RECORD, Bad offset: %d for %s'%(offset, name))
         # bitfield
         bits = None
         if cursor.is_bitfield():
@@ -1028,6 +1042,10 @@ typedef void* pointer_t;''', flags=_flags)
                 name = "anonymous_bitfield"
         else:
             bits = cursor.type.get_size() * 8
+            if bits < 0:
+                log.warning('Bad source code, bitsize == %d <0 on %s'%(bits, name))
+                bits =0
+        # after dealing with anon bitfields
         if name == '': 
             raise ValueError("Field has no displayname")
         # try to get a representation of the type
