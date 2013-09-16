@@ -106,7 +106,10 @@ class PointerType(object):
         self.typ = typ
         self.size = int(size)
         self.align = int(align)
-        self.name = "LP_%s"%(self.typ.name)
+        if type(typ) is str:
+            self.name = "LP_%s"%(self.typ)
+        else:
+            self.name = "LP_%s"%(self.typ.name)
 
 class Typedef(object):
     location = None

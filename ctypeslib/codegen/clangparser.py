@@ -567,44 +567,35 @@ typedef void* pointer_t;''', flags=_flags)
     def POINTER(self, cursor):
         # we shortcut to canonical typedefs and to pointee canonical defs
         _type = cursor.type.get_canonical().get_pointee().get_canonical()
+        _p_type_name = self.get_unique_name(_type.get_declaration())
         # get pointer size
         size = cursor.type.get_size() # not size of pointee
         align = cursor.type.get_align() 
         log.debug("POINTER: size:%d align:%d typ:%s"%(size, align, _type.kind))
         if self.is_fundamental_type(_type):
             p_type = self.FundamentalType(_type)
-        elif _type.kind == TypeKind.RECORD:
-            #children = [c for c in cursor.get_children()]
-            #assert len(children) == 1 # 'There is %d children - not expected in PointerType'%(len(children)))
-            #assert children[0].kind == CursorKind.TYPE_REF#, 'Wasnt expecting a %s in PointerType'%(children[0].kind))
+        else: #elif _type.kind == TypeKind.RECORD:
             # check registration
             decl = _type.get_declaration()
             decl_name = self.get_unique_name(decl)
             # Type is already defined OR will be defined later.
-            p_type = self.get_registered(decl_name) or decl_name
-            #p_type = children[0].get_definition().get_usr()
-            #if p_type in self.all:
-            #    p_type = self.all[p_type]
-            #else: # forward declaration 
-            #    child = children[0].type.get_declaration()
-            #    mth = getattr(self, child.kind.name)
-            #    if mth is None:
-            #        log.debug('POINTER: mth is None')
-            #        raise TypeError('unhandled POINTER TypeKind %s'%(child.kind))
-            #    log.debug('POINTER: mth is %s'%(mth.__name__))
-            #    res = mth(child)
-            #    p_type = res
+            if self.is_registered(decl_name):
+                p_type = self.get_registered(decl_name)
+            else: # forward declaration, without looping
+                log.debug('POINTER: %s type was not previously declared'%(decl_name))
+                p_type = self.parse_cursor(decl)
         #elif _type.kind == TypeKind.FUNCTIONPROTO:
         #    log.error('TypeKind.FUNCTIONPROTO not implemented')
         #    return None
-        else:
+        '''else:
             # 
             mth = getattr(self, _type.kind.name)
             import code
             code.interact(local=locals())
             p_type = mth(_type)
             #raise TypeError('Unknown scenario in PointerType - %s'%(_type))
-        log.debug("POINTER: p_type:'%s'"%(p_type.__dict__))
+        '''
+        log.debug("POINTER: p_type:'%s'"%(_p_type_name))
         # return the pointer        
         obj = typedesc.PointerType( p_type, size, align)
         self.set_location(obj, cursor)
@@ -613,14 +604,14 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _fixup_PointerType(self, p):
         #print '*** Fixing up PointerType', p.typ
-        #import code
-        #code.interact(local=locals())
+        import code
+        code.interact(local=locals())
         ##if type(p.typ.typ) != typedesc.FundamentalType:
         ##    p.typ.typ = self.all[p.typ.typ]
         if type(p.typ) == str:
             p.typ = self.all[p.typ]
 
-    ReferenceType = POINTER
+    ReferenceType = POINTER # ??
     _fixup_ReferenceType = _fixup_PointerType
     OffsetType = POINTER
     _fixup_OffsetType = _fixup_PointerType
@@ -921,6 +912,15 @@ typedef void* pointer_t;''', flags=_flags)
             obj = _type(name, align, None, bases, size, packed=packed)
             return self.register(name, obj)
         log.debug('XXX cursor %s is a definition'%(name))
+        # save the type in the registry. Useful for not looping in case of 
+        # members with forward references
+        obj = None
+        declared_instance = False
+        if not self.is_registered(name): 
+            obj = _type(name, align, None, bases, size, packed=packed)
+            self.register(name, obj)
+            self.set_location(obj, cursor)
+            declared_instance = True
         # capture members declaration
         members = []
         # Go and recurse through children to get this record member's _id
@@ -939,16 +939,13 @@ typedef void* pointer_t;''', flags=_flags)
             # FIXME LLVM-CLANG, patch http://lists.cs.uiuc.edu/pipermail/cfe-commits/Week-of-Mon-20130415/078445.html
             #if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
             #    packed = True
-        obj = None
         if self.is_registered(name): 
             # STRUCT_DECL as a child of TYPEDEF_DECL for example
-            log.debug('%s was previously registered'%(name))
+            # FIXME: make a test case for that.
+            if not declared_instance:
+                log.debug('_record_decl: %s was previously registered'%(name))
             obj = self.get_registered(name)
             obj.members = members
-        else:
-            obj = _type(name, align, members, bases, size, packed=packed)
-            self.register(name, obj)
-            self.set_location(obj, cursor)
         return obj
 
     def _make_padding(self, name, offset, length):
@@ -1082,37 +1079,20 @@ typedef void* pointer_t;''', flags=_flags)
         else:
             _decl_name = self.get_unique_name(cursor.type.get_declaration()) # .spelling ??
             if self.is_registered(_decl_name):
+                log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
                 _type = self.get_registered(_decl_name)
                 # then we shortcut
             else:
-                log.error('FIELD_DECL: found a type not previously declared: %s'%(_decl_name))
-                import code, sys
-                code.interact(local=locals())
-               #elif self.is_pointer_type(_canonical_type):
-                #    _type = self.POINTER(cursor)
-                #elif RECORD, FNPTR
-                ''' No need to try and get the subtypes, it will show up in children.
-                '''
-                log.debug("FIELD_DECL: displayname:'%s'"%(cursor.get_usr()))
+                log.debug("FIELD_DECL: name:'%s'"%(name))
                 log.debug("%s: nb children:%s"%(cursor.type.kind, 
                                 len(list(cursor.get_children()))))
+                # recurse into the right function
                 mth = getattr(self, _canonical_type.kind.name)
-                if mth is None:
-                    raise TypeError('unhandled Field TypeKind %s'%(_canonical_type.kind.name))
-                # Go and register the field's type from its declaration location
-                #print'PPPPPPPPPPPPP'
-                #import code, sys
-                #code.interact(local=locals())
-                #_type = mth(cursor.type.get_declaration())
                 _type = mth(cursor)
                 if _type is None:
-                    #raise TypeError('Field can not be None %s'%(name ))   
                     log.warning("Field %s is an %s type - ignoring field type"%(
                                 name,_canonical_type.kind.name))
                     return self.register( _id, None)
-        #else:
-        #    log.debug("FIELD_DECL: TypeKind:'%s'"%(t.kind.name))
-        #self.fields[record_name][name] = typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield())
         return typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield())
 
     def _fixup_Field(self, f):

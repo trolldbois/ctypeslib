@@ -171,8 +171,8 @@ class ConstantsTest(ClangTest):
         };
         """)
         self.assertEqual(ctypes.sizeof(self.namespace.struct_blah), 1)
-        cb = lambda x: x.array
-        self.assertRaises(AttributeError, cb, self.namespace )
+        # self brewn size modification
+        self.assertEqual(ctypes.sizeof(self.namespace.array), 0)
 
     @unittest.skip('')
     def test_docstring(self):
