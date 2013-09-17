@@ -1081,8 +1081,7 @@ typedef void* pointer_t;''', flags=_flags)
             _type = self.POINTER(cursor)
         else:
             children = list(cursor.get_children())
-            if _decl.kind == CursorKind.NO_DECL_FOUND:
-                assert len(children) > 0
+            if len(children) > 0 and _decl.kind == CursorKind.NO_DECL_FOUND:
                 # constantarray of typedef of pointer , and other cases ?
                 _decl_name = self.get_unique_name(list(cursor.get_children())[0])
             else:
@@ -1091,15 +1090,13 @@ typedef void* pointer_t;''', flags=_flags)
                 log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
                 _type = self.get_registered(_decl_name)
                 # then we shortcut
-            #elif cursor.type.kind == TypeKind.CONSTANTARRAY:
-            #    _array_type = 
             else:
                 # is it always the case ?
                 log.debug("FIELD_DECL: name:'%s'"%(name))
                 log.debug("FIELD_DECL: %s: nb children:%s"%(cursor.type.kind, 
                                 len(children)))
-                import code
-                code.interact(local=locals())
+                #import code
+                #code.interact(local=locals())
                 # recurse into the right function
                 mth = getattr(self, _canonical_type.kind.name)
                 _type = mth(cursor)
