@@ -636,14 +636,15 @@ typedef void* pointer_t;''', flags=_flags)
         _array_type = _type.get_array_element_type()#.get_canonical()
         if self.is_fundamental_type(_array_type):
             _subtype = self.FundamentalType(_array_type)
-        #elif self.is_pointer_type(_type):
-        #    p_type = self.POINTER(cursor)
-        #Nothing special about a pointer type contantarray
+        elif self.is_pointer_type(_array_type): 
+            import code
+            code.interact(local=locals())
+            # pointers to POD have no declaration ??
+            # FIXME test_struct_with_pointer x_n_t g[1]
+            _subtype = self.POINTER(cursor)
         else:
             _subtype_decl = _array_type.get_declaration()
             _subtype = self.parse_cursor(_subtype_decl)
-            #import code
-            #code.interact(local=locals())
             #if _subtype_decl.kind == CursorKind.NO_DECL_FOUND:
             #    pass
             #_subtype_name = self.get_unique_name(_subtype_decl)
@@ -892,7 +893,7 @@ typedef void* pointer_t;''', flags=_flags)
         # check for definition already parsed 
         if (self.is_registered(name) and
             self.get_registered(name).members is not None):
-            log.debug('_record_decl: %s is already registered with members')
+            log.debug('_record_decl: %s is already registered with members'%(name))
             return self.get_registered(name)
         # FIXME: lets ignore bases for now.
         #bases = attrs.get("bases", "").split() # that for cpp ?
@@ -1073,20 +1074,32 @@ typedef void* pointer_t;''', flags=_flags)
         # t-t-t-t-
         _type = None
         _canonical_type = cursor.type.get_canonical()
+        _decl = cursor.type.get_declaration()
         if self.is_fundamental_type(_canonical_type):
             _type = self.FundamentalType(_canonical_type)
         elif self.is_pointer_type(_canonical_type):
             _type = self.POINTER(cursor)
         else:
-            _decl_name = self.get_unique_name(cursor.type.get_declaration()) # .spelling ??
+            children = list(cursor.get_children())
+            if _decl.kind == CursorKind.NO_DECL_FOUND:
+                assert len(children) > 0
+                # constantarray of typedef of pointer , and other cases ?
+                _decl_name = self.get_unique_name(list(cursor.get_children())[0])
+            else:
+                _decl_name = self.get_unique_name(cursor.type.get_declaration()) # .spelling ??
             if self.is_registered(_decl_name):
                 log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
                 _type = self.get_registered(_decl_name)
                 # then we shortcut
+            #elif cursor.type.kind == TypeKind.CONSTANTARRAY:
+            #    _array_type = 
             else:
+                # is it always the case ?
                 log.debug("FIELD_DECL: name:'%s'"%(name))
-                log.debug("%s: nb children:%s"%(cursor.type.kind, 
-                                len(list(cursor.get_children()))))
+                log.debug("FIELD_DECL: %s: nb children:%s"%(cursor.type.kind, 
+                                len(children)))
+                import code
+                code.interact(local=locals())
                 # recurse into the right function
                 mth = getattr(self, _canonical_type.kind.name)
                 _type = mth(cursor)
