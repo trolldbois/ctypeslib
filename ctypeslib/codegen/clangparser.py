@@ -432,7 +432,7 @@ typedef void* pointer_t;''', flags=_flags)
                 else:
                     # Seen: function pointer
                     init_value.append( self.parse_cursor(child) )
-            #
+                #FIXME _ctype:CONSTANTARRAY
             if len(init_value) == 1:
                 init_value = init_value[0]
         # Get the type
@@ -463,22 +463,19 @@ typedef void* pointer_t;''', flags=_flags)
             if _ctype.get_pointee().kind == TypeKind.UNEXPOSED:
                 log.debug('Ignoring unexposed pointer type.')
                 return True
-            # Function pointers
-            # cursor.type.get_pointee().kind == TypeKind.UNEXPOSED BUT
-            # cursor.type.get_canonical().get_pointee().kind == TypeKind.FUNCTIONPROTO
-            mth = getattr(self, _ctype.get_pointee().kind.name)
-            _type = mth(_ctype.get_pointee())
-            # Function pointers argument are handled inside
-            # FIXME we should probably return a variable decl and not a function proto
-            if _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO:
+            elif _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO:
+                # Function pointers
+                # cursor.type.get_pointee().kind == TypeKind.UNEXPOSED BUT
+                # cursor.type.get_canonical().get_pointee().kind == TypeKind.FUNCTIONPROTO
+                mth = getattr(self, _ctype.get_pointee().kind.name)
+                _type = mth(_ctype.get_pointee())
+                # Function pointers argument are handled inside
                 if type(init_value) != list:
                     init_value = [init_value]
                 _type.arguments = init_value
                 init_value = _type
-                #obj = self.register(name, _type)
-                #self.set_location(obj, cursor)
-                #return True # 
-                # need to return a named variable
+            else: # Fundamental types, structs....
+                _type = self.POINTER(cursor )
         else:
             ## What else ?
             raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
@@ -812,7 +809,7 @@ typedef void* pointer_t;''', flags=_flags)
         #code.interact(local=locals())
         for token in tokens:
             value = token.spelling
-            if value == ';':
+            if value in ['[',']',';']:
                 continue
             if cursor.kind == CursorKind.INTEGER_LITERAL:
                 # strip type suffix for constants 

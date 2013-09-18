@@ -116,6 +116,14 @@ class ConstantsTest(ClangTest):
         # type casting will not work in ctypes anyway
         self.assertEqual(type(self.namespace.zero), str) # that is another problem.
 
+    def test_char_p(self):
+        self.convert("""
+        char x[10];
+        char s[] = "abcde";
+        char *p = "abcde";
+        """) 
+        self.assertEqual(self.namespace.x, 'x')
+
 
     #@unittest.skip('')
     # no macro support yet
