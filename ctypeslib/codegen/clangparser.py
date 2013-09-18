@@ -432,8 +432,8 @@ typedef void* pointer_t;''', flags=_flags)
                     # float, long double, char , char* are not exposed directly in level1.
                     init_value.append( self.parse_cursor(child) )
                 else:
-                    import code
-                    code.interact(local=locals())    
+                    #import code
+                    #code.interact(local=locals())    
                     init_value.append( self.parse_cursor(child) )
             # 
             if len(init_value) == 1:
@@ -477,9 +477,11 @@ typedef void* pointer_t;''', flags=_flags)
                 if type(init_value) != list:
                     init_value = [init_value]
                 _type.arguments = init_value
-                obj = self.register(name, _type)
-                self.set_location(obj, cursor)
-                return True # 
+                init_value = _type
+                #obj = self.register(name, _type)
+                #self.set_location(obj, cursor)
+                #return True # 
+                # need to return a named variable
         else:
             ## What else ?
             raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
@@ -705,7 +707,7 @@ typedef void* pointer_t;''', flags=_flags)
         #returns = attrs["returns"]
         #attributes = attrs.get("attributes", "").split()
         #extern = attrs.get("extern")
-        name = cursor.displayname
+        name = self.get_unique_name(cursor)
         returns = None
         attributes = None
         extern = None
@@ -735,7 +737,7 @@ typedef void* pointer_t;''', flags=_flags)
         #        mth = getattr(self, attr.kind.name)
         #        _type  = mth(attr)
         #        attributes.append(_type)
-        log.debug('FUNCTIONPROTO: can I get args ?')
+        #log.debug('FUNCTIONPROTO: can I get args ?')
         #import code
         #code.interact(local=locals())    
         obj = typedesc.FunctionType(returns, attributes)
@@ -1206,6 +1208,8 @@ typedef void* pointer_t;''', flags=_flags)
                 log.error('%s %s came in with a SourceLocation'%(_id, _item))
             elif location is None:
                 log.warning('item %s has no location.'%(_id))
+                # FIXME make this optional to be able to see internals
+                remove.append(_item.name)
             mth = getattr(self, "_fixup_" + type(_item).__name__)
             try:
                 mth(_item)
@@ -1220,7 +1224,7 @@ typedef void* pointer_t;''', flags=_flags)
         namespace = {}
         for i in self.all.values():
             if not isinstance(i, interesting):
-                #log.debug('ignoring %s'%( i) )
+                log.debug('ignoring %s'%( i) )
                 continue  # we don't want these
             name = getattr(i, "name", None)
             if name is not None:

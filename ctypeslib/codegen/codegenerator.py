@@ -398,7 +398,9 @@ class Generator(object):
     def FunctionType(self, tp):
         self._functiontypes += 1
         self.generate(tp.returns)
-        self.generate_all(tp.iterArgTypes())
+        self.generate_all(tp.arguments)
+        print >> self.stream, "%s = %s # Functiontype " % (
+                  self.type_name(tp), [self.type_name(a) for a in tp.arguments])
 
     def Argument(self, tp):
         self.generate(tp.typ)
@@ -446,6 +448,16 @@ class Generator(object):
         if tp.init is None:
             self._notfound_variables += 1
             return
+        elif type(tp.init) == typedesc.FunctionType:
+            print >> self.stream, "%s = %s " % (tp.name,
+                                             self.type_name(tp.init))
+        else:
+            print >> self.stream, \
+                  "%s = %s # Variable %s" % (tp.name,
+                                             tp.init,
+                                             self.type_name(tp.typ, False))
+        #
+        self.names.add(tp.name)
         #try:
         #    value = self.initialize(tp.typ, tp.init)
         #except (TypeError, ValueError, SyntaxError, NameError), detail:
@@ -455,11 +467,6 @@ class Generator(object):
         #    return
         #import code
         #code.interact(local=locals())
-        print >> self.stream, \
-              "%s = %s # Variable %s" % (tp.name,
-                                         tp.init,
-                                         self.type_name(tp.typ, False))
-        self.names.add(tp.name)
 
     _enumvalues = 0
     def EnumValue(self, tp):
@@ -695,7 +702,7 @@ class Generator(object):
     def generate(self, item):
         if item in self.done:
             return
-        #print item, item.__dict__
+        log.debug("generate %s, %s"%(item, item.__dict__))
         name=''
         if hasattr(item, 'name'):
             name = item.name
