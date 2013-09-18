@@ -432,7 +432,7 @@ typedef void* pointer_t;''', flags=_flags)
                 else:
                     # Seen: function pointer
                     init_value.append( self.parse_cursor(child) )
-            # 
+            #
             if len(init_value) == 1:
                 init_value = init_value[0]
         # Get the type
