@@ -418,22 +418,19 @@ typedef void* pointer_t;''', flags=_flags)
                 log.debug('Multiple children in a var_decl')
             init_value = []
             for child in children:
-                # token shortcut is not possible.
+                # POD init values handling.
+                # As of clang 3.3, int, double literals are exposed.
+                # float, long double, char , char* are not exposed directly in level1.
+                # but really it depends... 
                 if child.kind.is_unexposed():
-                    raise IOError('Wtf is that use case ?')
                     child_kind = list(child.get_children())[0].kind
+                    log.debug('Calling %s'%(child.kind.name))
                     init_value.append( self.parse_cursor(child) )
                 elif self.is_literal_cursor(child):
-                    ## Variable with initialized values ( probably only one )
-                    #mth = getattr(self, child.kind.name)
-                    # pod ariable are easy. some are unexposed.
                     log.debug('Calling %s'%(child.kind.name))
-                    # As of clang 3.3, int, double literals are exposed.
-                    # float, long double, char , char* are not exposed directly in level1.
                     init_value.append( self.parse_cursor(child) )
                 else:
-                    #import code
-                    #code.interact(local=locals())    
+                    # Seen: function pointer
                     init_value.append( self.parse_cursor(child) )
             # 
             if len(init_value) == 1:

@@ -232,18 +232,33 @@ class ConstantsTest(ClangTest):
         self.assertSizes('x_n_t')
         self.assertSizes('p_t')
 
-    def test_struct_with_struct_array_member(self):
+    def test_struct_with_struct_array_member_type(self):
         self.convert('''
         struct foo {
              int bar;
         };
-
         typedef struct foo foo_t[256];
-
         typedef struct {
             foo_t baz;
-        } __somestruct;
-        ''')
+        } somestruct;
+        ''', flags=['-target','i386-linux'])
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_foo), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.foo_t), 4*256)
+        self.assertEqual(ctypes.sizeof(self.namespace.somestruct), 4*256)
+
+    def test_struct_with_struct_array_member(self):
+        self.convert('''
+        typedef struct A {
+            int x
+        } structA_t;
+        struct B {
+            structA_t x[8];
+        };
+        ''', flags=['-target','i386-linux'])
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_A), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.structA_t), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_B), 4*8)
+
 
     def test_var_decl_and_scope(self):
         self.convert('''
@@ -251,7 +266,7 @@ class ConstantsTest(ClangTest):
 
         inline void foo() {
           int zig;
-        }
+        };
         ''')
 
     def test_extern_function_pointer(self):

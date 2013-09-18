@@ -240,7 +240,6 @@ class Generator(object):
         # namespace is available.
         #import code
         #code.interact(local=locals())
-        log.debug("%s %s"%(t, t.name))
         if isinstance(t, typedesc.Typedef):
             return t.name
         if isinstance(t, typedesc.PointerType):
@@ -703,7 +702,7 @@ class Generator(object):
     def generate(self, item):
         if item in self.done:
             return
-        log.debug("generate %s, %s"%(item, item.__dict__))
+        #log.debug("generate %s, %s"%(item, item.__dict__))
         name=''
         if hasattr(item, 'name'):
             name = item.name
