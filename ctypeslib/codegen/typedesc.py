@@ -21,15 +21,17 @@ class _HasArgs(object):
 
     def iterArgTypes(self):
         for a in self.arguments:
-            yield a.atype
+            yield a.typ
 
     def iterArgNames(self):
         for a in self.arguments:
             yield a.name
 
-    def fixup_argtypes(self, typemap):
-        for a in self.arguments:
-            a.atype = typemap[a.atype]
+    def fixup_argtypes(self, cb):
+        #for a in self.arguments:
+        #    getattr(cb, a.a.atype = typemap[a.atype]
+        import code
+        code.interact(local=locals())
 
 
 ################
@@ -106,6 +108,7 @@ class PointerType(object):
         self.typ = typ
         self.size = int(size)
         self.align = int(align)
+        # USELESS FIXME
         if type(typ) is str:
             self.name = "LP_%s"%(self.typ)
         else:

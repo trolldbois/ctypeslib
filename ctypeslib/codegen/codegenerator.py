@@ -238,6 +238,9 @@ class Generator(object):
         # Return a string containing an expression that can be used to
         # refer to the type. Assumes the 'from ctypes import *'
         # namespace is available.
+        #import code
+        #code.interact(local=locals())
+        log.debug("%s %s"%(t, t.name))
         if isinstance(t, typedesc.Typedef):
             return t.name
         if isinstance(t, typedesc.PointerType):
@@ -270,11 +273,14 @@ class Generator(object):
                 return "WINFUNCTYPE(%s)" % ", ".join(args)
             else:
                 return "CFUNCTYPE(%s)" % ", ".join(args)
+        elif isinstance(t, typedesc.Variable):
+            return "%s" % self.type_name(t.typ, generate)
+        elif isinstance(t, typedesc.Argument):
+            return "%s" % self.type_name(t.typ, generate)
         elif isinstance(t, typedesc.CvQualifiedType):
             # const and volatile are ignored
             return "%s" % self.type_name(t.typ, generate)
         elif isinstance(t, typedesc.FundamentalType):
-            #return ctypes_names[t.name] # FIXED clang
             return t.name
         elif isinstance(t, typedesc.Structure):
             return t.name
@@ -444,6 +450,8 @@ class Generator(object):
         #    value = self.initialize(tp.typ, tp.init)
         #except (TypeError, ValueError, SyntaxError, NameError), detail:
         #    log.error("Could not init %s %s %s"% (tp.name, tp.init, detail))
+        #    import code
+        #    code.interact(local=locals())
         #    return
         #import code
         #code.interact(local=locals())

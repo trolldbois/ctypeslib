@@ -278,12 +278,22 @@ typedef void* pointer_t;''', flags=_flags)
     def is_unexposed_type(self, t):
         return t.kind == TypeKind.UNEXPOSED
 
+    def is_literal_cursor(self, t):
+        return ( t.kind == CursorKind.INTEGER_LITERAL or
+                 t.kind == CursorKind.FLOATING_LITERAL or
+                 t.kind == CursorKind.IMAGINARY_LITERAL or
+                 t.kind == CursorKind.STRING_LITERAL or
+                 t.kind == CursorKind.CHARACTER_LITERAL)
+
     def get_ctypes_name(self, typekind):
         return self.ctypes_typename[typekind]
 
     def get_ctypes_size(self, typekind):
         return self.ctypes_sizes[typekind]
         
+    def parse_cursor(self, cursor):
+        mth = getattr(self, cursor.kind.name)
+        return mth(cursor)
 
     ################################
     # do-nothing element handlers
@@ -396,30 +406,40 @@ typedef void* pointer_t;''', flags=_flags)
         # get the name
         name = self.get_unique_name(cursor)
 
-        # the value is a literal in get_children()
+        # get the value of this variable 
         children = list(cursor.get_children())
         if len(children) == 0:
             init_value = "None"
         else:
+            #if (len(children) == 1):
+            #    raise IOError('Document this use case? var declaration without value?')
+            #    # function pointer
             if (len(children) != 1):
                 log.debug('Multiple children in a var_decl')
-                #import code
-                #code.interact(local=locals())
-            # token shortcut is not possible.
-            literal_kind = children[0].kind
-            if literal_kind.is_unexposed():
-                literal_kind = list(children[0].get_children())[0].kind
-            mth = getattr(self, literal_kind.name)
-            # pod ariable are easy. some are unexposed.
-            log.debug('Calling %s'%(literal_kind.name))
-            # As of clang 3.3, int, double literals are exposed.
-            # float, long double, char , char* are not exposed directly in level1.
-            init_value = mth(children[0])
-
+            init_value = []
+            for child in children:
+                # token shortcut is not possible.
+                if child.kind.is_unexposed():
+                    raise IOError('Wtf is that use case ?')
+                    child_kind = list(child.get_children())[0].kind
+                    init_value.append( self.parse_cursor(child) )
+                elif self.is_literal_cursor(child):
+                    ## Variable with initialized values ( probably only one )
+                    #mth = getattr(self, child.kind.name)
+                    # pod ariable are easy. some are unexposed.
+                    log.debug('Calling %s'%(child.kind.name))
+                    # As of clang 3.3, int, double literals are exposed.
+                    # float, long double, char , char* are not exposed directly in level1.
+                    init_value.append( self.parse_cursor(child) )
+                else:
+                    import code
+                    code.interact(local=locals())    
+                    init_value.append( self.parse_cursor(child) )
+            # 
+            if len(init_value) == 1:
+                init_value = init_value[0]
         # Get the type
         _ctype = cursor.type.get_canonical()
-        #import code
-        #code.interact(local=locals())
         # FIXME: Need working int128, long_double, etc...
         if self.is_fundamental_type(_ctype):
             ctypesname = self.get_ctypes_name(_ctype.kind)
@@ -442,26 +462,30 @@ typedef void* pointer_t;''', flags=_flags)
             mth = getattr(self, _ctype.kind.name)
             _type = mth(cursor)
         elif self.is_pointer_type(_ctype):
-            #import code
-            #code.interact(local=locals())
             # extern Function pointer 
             if _ctype.get_pointee().kind == TypeKind.UNEXPOSED:
                 log.debug('Ignoring unexposed pointer type.')
                 return True
-            # TypeKind.FUNCTIONPROTO:
+            # Function pointers
+            # cursor.type.get_pointee().kind == TypeKind.UNEXPOSED BUT
+            # cursor.type.get_canonical().get_pointee().kind == TypeKind.FUNCTIONPROTO
             mth = getattr(self, _ctype.get_pointee().kind.name)
             _type = mth(_ctype.get_pointee())
+            # Function pointers argument are handled inside
+            # FIXME we should probably return a variable decl and not a function proto
+            if _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO:
+                if type(init_value) != list:
+                    init_value = [init_value]
+                _type.arguments = init_value
+                obj = self.register(name, _type)
+                self.set_location(obj, cursor)
+                return True # 
         else:
             ## What else ?
             raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
-            # _type = cursor.get_usr()
-            #_type = cursor.type.get_declaration().kind.name
-            #if _type == '': 
-            #    _type = MAKE_NAME( cursor.get_usr() )
         log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s'%(name, 
                     _ctype.kind.name, _type.name, init_value,
                     getattr(cursor, 'location')))
-        #print _type.__class__.__name__
         obj = self.register(name, typedesc.Variable(name, _type, init_value) )
         self.set_location(obj, cursor)
         return True # dont parse literals again
@@ -616,10 +640,6 @@ typedef void* pointer_t;''', flags=_flags)
     OffsetType = POINTER
     _fixup_OffsetType = _fixup_PointerType
 
-    #########################
-    def parse_cursor(self, cursor):
-        mth = getattr(self, cursor.kind.name)
-        return mth(cursor)
     ############################
     
     @log_entity
@@ -697,8 +717,8 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _fixup_Function(self, func):
         #FIXME
-        #func.returns = self.all[func.returns]
-        #func.fixup_argtypes(self.all)
+        func.returns = self.get_registered(self.get_unique_name(func.returns.name))
+        func.fixup_argtypes(self)
         pass
 
     def FUNCTIONPROTO(self, cursor):
@@ -707,17 +727,15 @@ typedef void* pointer_t;''', flags=_flags)
         if self.is_fundamental_type(returns):
             returns = self.FundamentalType(returns)
         attributes = []
-        for attr in iter(cursor.argument_types()):
-            if self.is_fundamental_type(attr):
-                attributes.append(self.FundamentalType(attr))
-            else:
-                #mth = getattr(self, attr.kind.name)
-                #if mth is None:
-                #    raise TypeError('unhandled Field TypeKind %s'%(_type.kind.name))
-                #_type  = mth(cursor)
-                #if _type is None:
-                #    return None
-                attributes.append(attr)
+        #for attr in iter(cursor.argument_types()):
+        #    if self.is_fundamental_type(attr):
+        #        attributes.append(self.FundamentalType(attr))
+        #    else:
+        #        # I can get names if provided with the cursor and not the type
+        #        mth = getattr(self, attr.kind.name)
+        #        _type  = mth(attr)
+        #        attributes.append(_type)
+        log.debug('FUNCTIONPROTO: can I get args ?')
         #import code
         #code.interact(local=locals())    
         obj = typedesc.FunctionType(returns, attributes)
@@ -725,8 +743,9 @@ typedef void* pointer_t;''', flags=_flags)
         return obj
     
     def _fixup_FunctionType(self, func):
-        func.returns = self.all[func.returns]
-        func.fixup_argtypes(self.all)
+        #func.returns = self.all[func.returns]
+        #func.fixup_argtypes(self.all)
+        pass
 
     @log_entity
     def OperatorFunction(self, attrs):
@@ -1169,7 +1188,8 @@ typedef void* pointer_t;''', flags=_flags)
         # all of these should register()
         interesting = (typedesc.Typedef, typedesc.Enumeration, typedesc.EnumValue,
                        typedesc.Function, typedesc.Structure, typedesc.Union,
-                       typedesc.Variable, typedesc.Macro, typedesc.Alias )
+                       typedesc.Variable, typedesc.Macro, typedesc.Alias,
+                       typedesc.FunctionType )
                        #typedesc.Field) #???
 
         self.get_macros(self.cpp_data.get("functions"))
