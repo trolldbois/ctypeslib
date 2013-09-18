@@ -449,8 +449,9 @@ class Generator(object):
             self._notfound_variables += 1
             return
         elif type(tp.init) == typedesc.FunctionType:
-            print >> self.stream, "%s = %s " % (tp.name,
-                                             self.type_name(tp.init))
+            print >> self.stream, "%s = %s # args: %s" % (tp.name,
+                                             self.type_name(tp.init), 
+                                             [x for x in tp.typ.iterArgNames()])
         else:
             print >> self.stream, \
                   "%s = %s # Variable %s" % (tp.name,
