@@ -226,11 +226,11 @@ class Clang_Parser(object):
                 return None
             name = MAKE_NAME( _id )
         if cursor.kind == CursorKind.STRUCT_DECL:
-            name = '_struct_%s'%(name)
+            name = 'struct_%s'%(name)
         elif cursor.kind == CursorKind.UNION_DECL:
-            name = '_union_%s'%(name)
+            name = 'union_%s'%(name)
         elif cursor.kind == CursorKind.CLASS_DECL:
-            name = '_class_%s'%(name)
+            name = 'class_%s'%(name)
         elif cursor.kind == CursorKind.TYPE_REF:
             name = name.replace(' ', '_')
         return name
