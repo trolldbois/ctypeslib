@@ -111,6 +111,7 @@ class PointerType(object):
         # USELESS FIXME
         if type(typ) is str:
             self.name = "LP_%s"%(self.typ)
+            log.warning('FIXME Pointertype subtype name should not be str')
         else:
             self.name = "LP_%s"%(self.typ.name)
 
@@ -188,6 +189,7 @@ class CvQualifiedType(object):
         self.typ = typ
         self.const = const
         self.volatile = volatile
+        self.name = 'CV_QUAL_%s'%(self.typ.name)
 
 class Enumeration(object):
     location = None

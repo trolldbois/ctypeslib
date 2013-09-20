@@ -16,6 +16,9 @@ from . import util
 
 log = logging.getLogger('clangparser')
 
+## DEBUG
+import code 
+
 def decorator(dec):
     def new_decorator(f):
         g = dec(f)
@@ -177,7 +180,6 @@ class Clang_Parser(object):
     def register(self, name, obj):
         if name in self.all:
             log.debug('register: %s already existed: %s'%(name,obj.name))
-            import code
             code.interact(local=locals())
             raise RuntimeError('register: %s already existed: %s'%(name,obj.name))
         log.debug('register: %s '%(name))
@@ -399,7 +401,6 @@ typedef void* pointer_t;''', flags=_flags)
         if self.is_registered(name):
             return self.get_registered(name)
         log.warning('TYPE_REF with no saved decl in self.all')
-        #import code
         #code.interact(local=locals())
         return None
         # Should probably never get here.
@@ -414,7 +415,6 @@ typedef void* pointer_t;''', flags=_flags)
         if obj is None:
             log.warning('This TYPE_REF was not previously defined. %s. Adding it'%(name))
             # FIXME maybe do not fail and ignore record.
-            #import code
             #code.interact(local=locals())
             #raise TypeError('This TYPE_REF was not previously defined. %s. Adding it'%(name))
             return self.TYPEDEF_DECL(_definition)
@@ -438,7 +438,6 @@ typedef void* pointer_t;''', flags=_flags)
             if (len(children) != 1):
                 log.debug('Multiple children in a var_decl')
             init_value = []
-            #import code
             #code.interact(local=locals())
             for child in children:
                 # POD init values handling.
@@ -474,13 +473,9 @@ typedef void* pointer_t;''', flags=_flags)
             ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )
             init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
-        elif _ctype.kind == TypeKind.RECORD:
-            structname = self.get_unique_name(_ctype.get_declaration())
-            _type = self.get_registered(structname)
-        elif ( _ctype.kind == TypeKind.INCOMPLETEARRAY or 
-               _ctype.kind == TypeKind.CONSTANTARRAY ):
-            mth = getattr(self, _ctype.kind.name)
-            _type = mth(cursor)
+        elif self.is_array_type(_ctype) or _ctype.kind == TypeKind.RECORD:
+            _type = self.parse_cursor_type(_ctype)
+            #code.interact(local=locals())
         elif self.is_pointer_type(_ctype):
             # extern Function pointer 
             if _ctype.get_pointee().kind == TypeKind.UNEXPOSED:
@@ -546,13 +541,11 @@ typedef void* pointer_t;''', flags=_flags)
             p_type = self.POINTER(_type)
         #elif _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
         #    log.debug("_decl_cursor == CursorKind.NO_DECL_FOUND:")
-        #    import code
         #    code.interact(local=locals())        
         else:
             p_type = self.parse_cursor_type(_type)
         if p_type is None:
             print 'p_type is none in TYpedef_decl'
-            import code
             code.interact(local=locals())
         # final
         obj = self.register(name, typedesc.Typedef(name, p_type))
@@ -610,7 +603,6 @@ typedef void* pointer_t;''', flags=_flags)
         '''else:
             # 
             mth = getattr(self, _type.kind.name)
-            import code
             code.interact(local=locals())
             p_type = mth(_type)
             #raise TypeError('Unknown scenario in PointerType - %s'%(_type))
@@ -618,7 +610,6 @@ typedef void* pointer_t;''', flags=_flags)
         log.debug("POINTER: p_type:'%s'"%(_p_type_name))
         # return the pointer
         #print 'check p_type'
-        #import code
         #code.interact(local=locals())                
         obj = typedesc.PointerType( p_type, size, align)
         self.set_location(obj, p_type.location)
@@ -627,7 +618,6 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _fixup_PointerType(self, p):
         #print '*** Fixing up PointerType', p.typ
-        import code
         code.interact(local=locals())
         ##if type(p.typ.typ) != typedesc.FundamentalType:
         ##    p.typ.typ = self.all[p.typ.typ]
@@ -658,7 +648,6 @@ typedef void* pointer_t;''', flags=_flags)
         if self.is_fundamental_type(_array_type):
             _subtype = self.FundamentalType(_array_type)
         elif self.is_pointer_type(_array_type): 
-            #import code
             #code.interact(local=locals())
             # pointers to POD have no declaration ??
             # FIXME test_struct_with_pointer x_n_t g[1]
@@ -670,7 +659,6 @@ typedef void* pointer_t;''', flags=_flags)
             #    pass
             #_subtype_name = self.get_unique_name(_subtype_decl)
             #_subtype = self.get_registered(_subtype_name)
-        #import code
         #code.interact(local=locals())
         obj = typedesc.ArrayType(_subtype, size)
         self.set_location(obj, _subtype.location)
@@ -737,7 +725,6 @@ typedef void* pointer_t;''', flags=_flags)
         #        _type  = mth(attr)
         #        attributes.append(_type)
         #log.debug('FUNCTIONPROTO: can I get args ?')
-        #import code
         #code.interact(local=locals())    
         obj = typedesc.FunctionType(returns, attributes)
         self.set_location(obj, cursor)
@@ -810,7 +797,6 @@ typedef void* pointer_t;''', flags=_flags)
         log.debug('literal has %d tokens.[ %s ]'%(len(tokens), 
             str([str(t.spelling) for t in tokens])))
         final_value = []
-        #import code
         #code.interact(local=locals())
         for token in tokens:
             value = token.spelling
@@ -836,6 +822,12 @@ typedef void* pointer_t;''', flags=_flags)
 
     UNARY_OPERATOR = _literal_handling
     BINARY_OPERATOR = _literal_handling
+
+    #@log_entity
+    # FIXME: lets keep expresssion for later...
+    #def INIT_LIST_EXPR(self, cursor):
+        #code.interact(local=locals())
+        #return None
 
     # enumerations
 
@@ -878,9 +870,8 @@ typedef void* pointer_t;''', flags=_flags)
         Type is accessible by cursor.type.get_declaration() 
         '''
         if not isinstance(_cursor_type, clang.cindex.Type):
-            raise TypeError('Please call POINTER with a cursor.type')
+            raise TypeError('Please call RECORD with a cursor.type')
         _decl = _cursor_type.get_declaration() # is a record
-        #import code
         #code.interact(local=locals())
         #_decl_cursor = list(_decl.get_children())[0] # record -> decl
         name = self.get_unique_name(_decl)#_cursor)
@@ -1097,7 +1088,6 @@ typedef void* pointer_t;''', flags=_flags)
         elif self.is_pointer_type(_canonical_type):
             _type = self.POINTER(_canonical_type)
         elif self.is_array_type(_canonical_type):
-            #import code
             #code.interact(local=locals())
             _type = self.parse_cursor_type(_canonical_type)
         else:
@@ -1111,7 +1101,6 @@ typedef void* pointer_t;''', flags=_flags)
                 log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
                 _type = self.get_registered(_decl_name)
                 # then we shortcut
-                #import code
                 #code.interact(local=locals())
                 
             else:
@@ -1119,7 +1108,6 @@ typedef void* pointer_t;''', flags=_flags)
                 log.debug("FIELD_DECL: name:'%s'"%(name))
                 log.debug("FIELD_DECL: %s: nb children:%s"%(cursor.type.kind, 
                                 len(children)))
-                #import code
                 #code.interact(local=locals())
                 # recurse into the right function
                 mth = getattr(self, _canonical_type.kind.name)
@@ -1240,7 +1228,6 @@ typedef void* pointer_t;''', flags=_flags)
                 result.append(i)
 
         #print 'self.all', self.all
-        #import code
         #code.interact(local=locals())
 
         

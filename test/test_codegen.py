@@ -119,7 +119,7 @@ class ConstantsTest(ClangTest):
     def test_char_p(self):
         self.convert("""
         char x[10];
-        char s[] = "abcde";
+        char s[] = {'1',']'};
         char *p = "abcde";
         """) 
         self.assertEqual(self.namespace.x, None)
