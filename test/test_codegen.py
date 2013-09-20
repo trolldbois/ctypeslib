@@ -278,6 +278,9 @@ class ConstantsTest(ClangTest):
           int zig;
         };
         ''')
+        # FIXME: TranslationUnit PARSE_SKIP_FUNCTION_BODIES
+        self.assertEqual(self.namespace.zig, None)
+        #self.assertEqual(type(self.namespace.foo), None)
 
     def test_extern_function_pointer(self):
         self.convert('''

@@ -49,6 +49,7 @@ def log_entity(func):
 def MAKE_NAME(name):
     ''' Transforms an USR into a valid python name.
     '''
+    # FIXME see cindex.SpellingCache
     for k, v in [('<','_'), ('>','_'), ('::','__'), (',',''), (' ',''),
                  ("$", "DOLLAR"), (".", "DOT"), ("@", "_"), (":", "_")]:
         if k in name: # template
@@ -128,6 +129,14 @@ class Clang_Parser(object):
         self.flags = flags
         self.ctypes_sizes = {}
         self.make_ctypes_convertor(flags)
+        self.init_fundamental_types()
+
+    def init_fundamental_types(self):
+        # all fundamental typekind should refer to the FundamentalType method.
+        for _fund_type in self.ctypes_typename.keys():
+            if _fund_type != TypeKind.POINTER:
+                setattr(self,_fund_type.name,self.FundamentalType) 
+
         
 
     '''. reads 1 file
@@ -572,6 +581,7 @@ typedef void* pointer_t;''', flags=_flags)
             align = typ.get_align()
         return typedesc.FundamentalType( ctypesname, size, align )
 
+
     def _fixup_FundamentalType(self, t): pass
 
     @log_entity
@@ -690,24 +700,20 @@ typedef void* pointer_t;''', flags=_flags)
     @log_entity
     def FUNCTION_DECL(self, cursor):
         # name, returns, extern, attributes
-        #name = attrs["name"]
-        #returns = attrs["returns"]
-        #attributes = attrs.get("attributes", "").split()
-        #extern = attrs.get("extern")
         name = self.get_unique_name(cursor)
-        returns = None
+        returns = self.parse_cursor_type(cursor.type.get_result())
         attributes = None
         extern = None
         # FIXME:
         # cursor.get_arguments() or see def PARM_DECL()
         obj = typedesc.Function(name, returns, attributes, extern)
+        self.register(name,obj)
         self.set_location(obj, cursor)
         return obj
 
     def _fixup_Function(self, func):
-        #FIXME
-        func.returns = self.get_registered(self.get_unique_name(func.returns.name))
-        func.fixup_argtypes(self)
+        #func.returns = self.get_registered(self.get_unique_name(func.returns.name))
+        #func.fixup_argtypes(self)
         pass
 
     def FUNCTIONPROTO(self, cursor):
