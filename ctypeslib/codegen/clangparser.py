@@ -31,7 +31,7 @@ def decorator(dec):
 @decorator
 def log_entity(func):
     def fn(*args, **kwargs):
-        name = args[1].displayname
+        name = args[0].get_unique_name(args[1])
         if name == '':
             parent = args[1].semantic_parent
             if parent:
@@ -196,9 +196,13 @@ class Clang_Parser(object):
             obj.location = (cursor.location.file.name, cursor.location.line)
 
     def get_unique_name(self, cursor):
-        name = cursor.displayname
-        _id = cursor.get_usr()
+        name = ''
+        if hasattr(cursor, 'displayname'):
+            name = cursor.displayname
+        elif hasattr(cursor, 'spelling'):
+            name = cursor.spelling
         if name == '':
+            _id = cursor.get_usr()
             if _id == '': # anonymous is spelling == ''
                 return None
             name = MAKE_NAME( _id )
@@ -487,7 +491,7 @@ typedef void* pointer_t;''', flags=_flags)
                 _type.arguments = init_value
                 init_value = _type
             else: # Fundamental types, structs....
-                _type = self.POINTER(cursor )
+                _type = self.POINTER(_ctype )
         else:
             ## What else ?
             raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
@@ -527,6 +531,8 @@ typedef void* pointer_t;''', flags=_flags)
         # FIXME feels weird not to call self.fundamental
         if self.is_fundamental_type(_type):
             p_type = self.FundamentalType(_type)
+        elif self.is_pointer_type(_type):
+            p_type = self.POINTER(_type)
         #elif _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
         #    log.debug("_decl_cursor == CursorKind.NO_DECL_FOUND:")
         #    import code
@@ -596,13 +602,15 @@ typedef void* pointer_t;''', flags=_flags)
     def _fixup_FundamentalType(self, t): pass
 
     @log_entity
-    def POINTER(self, cursor):
+    def POINTER(self, _cursor_type):
+        if not isinstance(_cursor_type, clang.cindex.Type):
+            raise TypeError('Please call POINTER with a cursor.type')
         # we shortcut to canonical typedefs and to pointee canonical defs
-        _type = cursor.type.get_canonical().get_pointee().get_canonical()
-        _p_type_name = self.get_unique_name(_type.get_declaration())
+        _type = _cursor_type.get_pointee().get_canonical()
+        _p_type_name = self.get_unique_name(_type)
         # get pointer size
-        size = cursor.type.get_size() # not size of pointee
-        align = cursor.type.get_align() 
+        size = _cursor_type.get_size() # not size of pointee
+        align = _cursor_type.get_align() 
         log.debug("POINTER: size:%d align:%d typ:%s"%(size, align, _type.kind))
         if self.is_fundamental_type(_type):
             p_type = self.FundamentalType(_type)
@@ -628,9 +636,12 @@ typedef void* pointer_t;''', flags=_flags)
             #raise TypeError('Unknown scenario in PointerType - %s'%(_type))
         '''
         log.debug("POINTER: p_type:'%s'"%(_p_type_name))
-        # return the pointer        
+        # return the pointer
+        #print 'check p_type'
+        #import code
+        #code.interact(local=locals())                
         obj = typedesc.PointerType( p_type, size, align)
-        self.set_location(obj, cursor)
+        self.set_location(obj, p_type.location)
         return obj
 
 
@@ -665,11 +676,11 @@ typedef void* pointer_t;''', flags=_flags)
         if self.is_fundamental_type(_array_type):
             _subtype = self.FundamentalType(_array_type)
         elif self.is_pointer_type(_array_type): 
-            import code
-            code.interact(local=locals())
+            #import code
+            #code.interact(local=locals())
             # pointers to POD have no declaration ??
             # FIXME test_struct_with_pointer x_n_t g[1]
-            _subtype = self.POINTER(cursor)
+            _subtype = self.POINTER(_array_type)
         else:
             _subtype_decl = _array_type.get_declaration()
             _subtype = self.parse_cursor(_subtype_decl)
@@ -795,7 +806,7 @@ typedef void* pointer_t;''', flags=_flags)
         if self.is_fundamental_type(_type):
             _argtype = self.FundamentalType(_type)
         elif self.is_pointer_type(_type):
-            _argtype = self.POINTER(cursor)
+            _argtype = self.POINTER(_type)
         else:
             _argtype_decl = _type.get_declaration()
             _argtype_name = self.get_unique_name(_argtype_decl)
@@ -1105,7 +1116,7 @@ typedef void* pointer_t;''', flags=_flags)
         if self.is_fundamental_type(_canonical_type):
             _type = self.FundamentalType(_canonical_type)
         elif self.is_pointer_type(_canonical_type):
-            _type = self.POINTER(cursor)
+            _type = self.POINTER(_canonical_type)
         elif self.is_array_type(_canonical_type):
             _type = self.parse_cursor_type(cursor)
         else:
@@ -1119,8 +1130,8 @@ typedef void* pointer_t;''', flags=_flags)
                 log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
                 _type = self.get_registered(_decl_name)
                 # then we shortcut
-                import code
-                code.interact(local=locals())
+                #import code
+                #code.interact(local=locals())
                 
             else:
                 # is it always the case ?
