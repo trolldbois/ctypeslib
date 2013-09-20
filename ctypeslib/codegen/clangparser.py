@@ -275,6 +275,12 @@ typedef void* pointer_t;''', flags=_flags)
     def is_pointer_type(self, t):
         return t.kind == TypeKind.POINTER
 
+    def is_array_type(self, t):
+        return (t.kind == TypeKind.CONSTANTARRAY or
+                t.kind == TypeKind.INCOMPLETEARRAY or
+                t.kind == TypeKind.VARIABLEARRAY or
+                t.kind == TypeKind.DEPENDENTSIZEDARRAY )
+
     def is_unexposed_type(self, t):
         return t.kind == TypeKind.UNEXPOSED
 
@@ -293,6 +299,10 @@ typedef void* pointer_t;''', flags=_flags)
         
     def parse_cursor(self, cursor):
         mth = getattr(self, cursor.kind.name)
+        return mth(cursor)
+
+    def parse_cursor_type(self, cursor):
+        mth = getattr(self, cursor.type.kind.name)
         return mth(cursor)
 
     ################################
@@ -417,6 +427,8 @@ typedef void* pointer_t;''', flags=_flags)
             if (len(children) != 1):
                 log.debug('Multiple children in a var_decl')
             init_value = []
+            #import code
+            #code.interact(local=locals())
             for child in children:
                 # POD init values handling.
                 # As of clang 3.3, int, double literals are exposed.
@@ -1094,6 +1106,8 @@ typedef void* pointer_t;''', flags=_flags)
             _type = self.FundamentalType(_canonical_type)
         elif self.is_pointer_type(_canonical_type):
             _type = self.POINTER(cursor)
+        elif self.is_array_type(_canonical_type):
+            _type = self.parse_cursor_type(cursor)
         else:
             children = list(cursor.get_children())
             if len(children) > 0 and _decl.kind == CursorKind.NO_DECL_FOUND:
@@ -1105,6 +1119,9 @@ typedef void* pointer_t;''', flags=_flags)
                 log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
                 _type = self.get_registered(_decl_name)
                 # then we shortcut
+                import code
+                code.interact(local=locals())
+                
             else:
                 # is it always the case ?
                 log.debug("FIELD_DECL: name:'%s'"%(name))

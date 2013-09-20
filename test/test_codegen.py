@@ -122,7 +122,9 @@ class ConstantsTest(ClangTest):
         char s[] = "abcde";
         char *p = "abcde";
         """) 
-        self.assertEqual(self.namespace.x, 'x')
+        self.assertEqual(self.namespace.x, None)
+        self.assertEqual(self.namespace.s, "abcde")
+        self.assertEqual(self.namespace.p, "abcde")
 
 
     #@unittest.skip('')
