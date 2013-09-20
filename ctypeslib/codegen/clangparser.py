@@ -19,6 +19,11 @@ log = logging.getLogger('clangparser')
 ## DEBUG
 import code 
 
+
+class InvalidCodeError(TypeError):
+    pass
+
+
 def decorator(dec):
     def new_decorator(f):
         g = dec(f)
@@ -174,25 +179,28 @@ class Clang_Parser(object):
             return
         log.debug('Found a %s|%s|%s'%(node.kind.name, node.displayname, node.spelling))
         # build stuff.
-        stop_recurse = mth(node)
-        # Signature of mth is:
-        # if the fn returns True, do not recurse into children.
-        # anything else will be ignored.
-        if stop_recurse is True:
-            return        
-        # if fn returns something, if this element has children, treat them.
-        for child in node.get_children():
-            self.startElement( child )
+        try:
+            stop_recurse = mth(node)
+            # Signature of mth is:
+            # if the fn returns True, do not recurse into children.
+            # anything else will be ignored.
+            if stop_recurse is True:
+                return        
+            # if fn returns something, if this element has children, treat them.
+            for child in node.get_children():
+                self.startElement( child )
+        except InvalidCodeError, e:
+            pass 
         # startElement returns None.
         return None
 
     def register(self, name, obj):
         if name in self.all:
             log.debug('register: %s already existed: %s'%(name,obj.name))
-            code.interact(local=locals())
+            #code.interact(local=locals())
             raise RuntimeError('register: %s already existed: %s'%(name,obj.name))
         log.debug('register: %s '%(name))
-        self.all[name]=obj
+        self.all[name] = obj
         return obj
 
     def get_registered(self, name):
@@ -218,11 +226,11 @@ class Clang_Parser(object):
                 return None
             name = MAKE_NAME( _id )
         if cursor.kind == CursorKind.STRUCT_DECL:
-            name = 'struct_%s'%(name)
+            name = '_struct_%s'%(name)
         elif cursor.kind == CursorKind.UNION_DECL:
-            name = 'union_%s'%(name)
+            name = '_union_%s'%(name)
         elif cursor.kind == CursorKind.CLASS_DECL:
-            name = 'class_%s'%(name)
+            name = '_class_%s'%(name)
         elif cursor.kind == CursorKind.TYPE_REF:
             name = name.replace(' ', '_')
         return name
@@ -409,25 +417,17 @@ typedef void* pointer_t;''', flags=_flags)
         name = self.get_unique_name(cursor)
         if self.is_registered(name):
             return self.get_registered(name)
-        log.warning('TYPE_REF with no saved decl in self.all')
-        #code.interact(local=locals())
-        return None
+        #log.warning('TYPE_REF with no saved decl in self.all')
+        #return None
         # Should probably never get here.
         # I'm a field. ?
         _definition = cursor.get_definition() 
         if _definition is None: 
-            _definition = cursor.type.get_declaration() 
-            
-        #_id = _definition.get_usr()
-        name = self.get_unique_name(_definition)
-        obj = self.get_registered(name)
-        if obj is None:
-            log.warning('This TYPE_REF was not previously defined. %s. Adding it'%(name))
-            # FIXME maybe do not fail and ignore record.
+            #log.warning('no definition in this type_ref ?')
             #code.interact(local=locals())
-            #raise TypeError('This TYPE_REF was not previously defined. %s. Adding it'%(name))
-            return self.TYPEDEF_DECL(_definition)
-        return obj
+            #raise IOError('I doubt this case is possible')
+            _definition = cursor.type.get_declaration() 
+        return self.parse_cursor(_definition)   
 
     # Declarations     
     
@@ -535,6 +535,8 @@ typedef void* pointer_t;''', flags=_flags)
         ''' At some point the target type is declared.
         '''
         name = self.get_unique_name(cursor)
+        if self.is_registered(name):
+            return self.get_registered(name)
         _type = cursor.type.get_canonical()
         log.debug("TYPEDEF_DECL: name:%s"%(name))
         log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind))
@@ -555,7 +557,7 @@ typedef void* pointer_t;''', flags=_flags)
             p_type = self.parse_cursor_type(_type)
         if p_type is None:
             print 'p_type is none in TYpedef_decl'
-            code.interact(local=locals())
+            #code.interact(local=locals())
         # final
         obj = self.register(name, typedesc.Typedef(name, p_type))
         self.set_location(obj, cursor)
@@ -628,7 +630,7 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _fixup_PointerType(self, p):
         #print '*** Fixing up PointerType', p.typ
-        code.interact(local=locals())
+        #code.interact(local=locals())
         ##if type(p.typ.typ) != typedesc.FundamentalType:
         ##    p.typ.typ = self.all[p.typ.typ]
         if type(p.typ) == str:
@@ -912,11 +914,14 @@ typedef void* pointer_t;''', flags=_flags)
         # FIXME: lets ignore bases for now.
         #bases = attrs.get("bases", "").split() # that for cpp ?
         bases = [] # FIXME: support CXX
+        size = cursor.type.get_size()
         align = cursor.type.get_align() 
         if align < 0 :
-            log.error('invalid structure %s %s'%(name, cursor.location))
-            return True
-        size = cursor.type.get_size()
+            log.error('invalid structure %s %s align:%d size:%d'%(
+                        name, cursor.location, align, size))
+            #return None
+            raise InvalidCodeError('invalid structure %s %s align:%d size:%d'%(
+                                            name, cursor.location, align, size))
         packed = False # FIXME
         log.debug('_record_decl: name: %s size:%d'%(name, size))
         # Declaration vs Definition point
@@ -1116,8 +1121,7 @@ typedef void* pointer_t;''', flags=_flags)
                                 len(children)))
                 #code.interact(local=locals())
                 # recurse into the right function
-                mth = getattr(self, _canonical_type.kind.name)
-                _type = mth(cursor)
+                _type = self.parse_cursor_type(_canonical_type)
                 if _type is None:
                     log.warning("Field %s is an %s type - ignoring field type"%(
                                 name,_canonical_type.kind.name))
