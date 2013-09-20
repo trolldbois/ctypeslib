@@ -212,6 +212,8 @@ class Clang_Parser(object):
             name = 'union_%s'%(name)
         elif cursor.kind == CursorKind.CLASS_DECL:
             name = 'class_%s'%(name)
+        elif cursor.kind == CursorKind.TYPE_REF:
+            name = name.replace(' ', '_')
         return name
 
     ########################################################################
@@ -305,9 +307,9 @@ typedef void* pointer_t;''', flags=_flags)
         mth = getattr(self, cursor.kind.name)
         return mth(cursor)
 
-    def parse_cursor_type(self, cursor):
-        mth = getattr(self, cursor.type.kind.name)
-        return mth(cursor)
+    def parse_cursor_type(self, _cursor_type):
+        mth = getattr(self, _cursor_type.kind.name)
+        return mth(_cursor_type)
 
     ################################
     # do-nothing element handlers
@@ -393,6 +395,12 @@ typedef void* pointer_t;''', flags=_flags)
     
     @log_entity
     def TYPE_REF(self, cursor):
+        name = self.get_unique_name(cursor)
+        if self.is_registered(name):
+            return self.get_registered(name)
+        log.warning('TYPE_REF with no saved decl in self.all')
+        #import code
+        #code.interact(local=locals())
         return None
         # Should probably never get here.
         # I'm a field. ?
@@ -419,7 +427,6 @@ typedef void* pointer_t;''', flags=_flags)
     def VAR_DECL(self, cursor):
         # get the name
         name = self.get_unique_name(cursor)
-
         # get the value of this variable 
         children = list(cursor.get_children())
         if len(children) == 0:
@@ -506,6 +513,10 @@ typedef void* pointer_t;''', flags=_flags)
         if type(t.typ) == str: #typedesc.FundamentalType:
             t.typ = self.all[t.typ]
 
+
+    @log_entity
+    def TYPEDEF(self, cursor):
+        return None
     '''
         Typedef_decl has 1 child, a typeref.
         the Typeref is himself.
@@ -538,40 +549,9 @@ typedef void* pointer_t;''', flags=_flags)
         #    import code
         #    code.interact(local=locals())        
         else:
-            '''
-            # record types, pointers, arrays
-            children = list(cursor.get_children())
-            if len(children) == 0:
-                raise TypeError("Got a typedef '%s' as non fndamental with 0 children"%(name))
-            # in case of POD Array, we have a literal
-            if (len(children) != 1):
-                log.debug('Multiple children in a var_decl')
-            ###
-            '''         
-            # get the typedef source declaration
-            mth = getattr(self, _type.kind.name)
-            #import code
-            #code.interact(local=locals())
-            p_type = mth(cursor)
-        '''
-        elif self.is_pointer_type(_type): # could go with getattr
-            p_type = self.POINTER(cursor)
-        elif _type.kind == TypeKind.RECORD: # could go with getattr
-            # Typedef and struct_decl will have the same name. 
-            decl = _type.get_declaration() 
-            decl_name = self.get_unique_name(decl)
-            # Type is already defined OR will be defined later.
-            p_type = self.get_registered(decl_name) or decl_name
-        else: # could go with getattr
-            log.debug('TYPEDEF_DECL: type is %s'%(_type.kind.name))
-            import code
-            code.interact(local=locals())            
-            # _type.kind == TypeKind.CONSTANTARRAY or
-            #  _type.kind == TypeKind.FUNCTIONPROTO
-            pass
-            return None
-        '''
+            p_type = self.parse_cursor_type(_type)
         if p_type is None:
+            print 'p_type is none in TYpedef_decl'
             import code
             code.interact(local=locals())
         # final
@@ -662,10 +642,12 @@ typedef void* pointer_t;''', flags=_flags)
     ############################
     
     @log_entity
-    def CONSTANTARRAY(self, cursor):
+    def CONSTANTARRAY(self, _cursor_type):
+        if not isinstance(_cursor_type, clang.cindex.Type):
+            raise TypeError('Please call CONSTANTARRAY with a cursor.type')
         # The element type has been previously declared
         # we need to get the canonical typedef, in some cases
-        _type = cursor.type.get_canonical()
+        _type = _cursor_type.get_canonical()
         size = _type.get_array_size()
         # FIXME: useful or not ?
         if size == -1 and _type.kind == TypeKind.INCOMPLETEARRAY:
@@ -691,7 +673,7 @@ typedef void* pointer_t;''', flags=_flags)
         #import code
         #code.interact(local=locals())
         obj = typedesc.ArrayType(_subtype, size)
-        self.set_location(obj, cursor)
+        self.set_location(obj, _subtype.location)
         return obj
 
     def _fixup_ArrayType(self, a):
@@ -889,22 +871,19 @@ typedef void* pointer_t;''', flags=_flags)
     # structures, unions, classes
     
     @log_entity
-    def RECORD(self, cursor):
+    def RECORD(self, _cursor_type):
         ''' A record is a NOT a declaration. A record is the occurrence of of
         previously defined record type. So no action is needed. Type is already 
         known.
         Type is accessible by cursor.type.get_declaration() 
         '''
-        
-        if cursor.type.kind == TypeKind.CONSTANTARRAY:
-            raise TypeError('no way this record is an array')
-            _decl = cursor.type.get_array_element_type().get_declaration()
-        else:
-            _decl = cursor.type.get_declaration()
-        
-        _decl = cursor.type.get_declaration() # is a record
-        _decl_cursor = list(_decl.get_children())[0] # record -> decl
-        name = self.get_unique_name(_decl_cursor)
+        if not isinstance(_cursor_type, clang.cindex.Type):
+            raise TypeError('Please call POINTER with a cursor.type')
+        _decl = _cursor_type.get_declaration() # is a record
+        #import code
+        #code.interact(local=locals())
+        #_decl_cursor = list(_decl.get_children())[0] # record -> decl
+        name = self.get_unique_name(_decl)#_cursor)
         if self.is_registered(name):
             obj = self.get_registered(name)
         else:
@@ -1118,7 +1097,9 @@ typedef void* pointer_t;''', flags=_flags)
         elif self.is_pointer_type(_canonical_type):
             _type = self.POINTER(_canonical_type)
         elif self.is_array_type(_canonical_type):
-            _type = self.parse_cursor_type(cursor)
+            #import code
+            #code.interact(local=locals())
+            _type = self.parse_cursor_type(_canonical_type)
         else:
             children = list(cursor.get_children())
             if len(children) > 0 and _decl.kind == CursorKind.NO_DECL_FOUND:
