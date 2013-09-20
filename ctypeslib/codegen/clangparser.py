@@ -1006,6 +1006,10 @@ typedef void* pointer_t;''', flags=_flags)
 
     def _fixup_Structure(self, s):
         log.debug('Struct/Union_FIX: %s '%(s.name))
+        if s.members is None:
+            log.debug('Struct/Union_FIX: no members')
+            s.members = []
+            return
         ## No need to lookup members in a global var.
         ## Just fix the padding        
         members = []
