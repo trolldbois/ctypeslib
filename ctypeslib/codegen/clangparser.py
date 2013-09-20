@@ -936,7 +936,7 @@ typedef void* pointer_t;''', flags=_flags)
         # Declaration vs Definition point
         # when a struct decl happen before the definition, we have no members
         # in the first declaration instance.
-        if not cursor.is_definition():
+        if not self.is_registered(name) and not cursor.is_definition():
             # juste save the spot, don't look at members == None
             log.debug('XXX cursor %s is not on a definition'%(name))
             obj = _type(name, align, None, bases, size, packed=packed)
