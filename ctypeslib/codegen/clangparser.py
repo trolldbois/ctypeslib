@@ -599,6 +599,10 @@ typedef void* pointer_t;''', flags=_flags)
         log.debug("POINTER: size:%d align:%d typ:%s"%(size, align, _type.kind))
         if self.is_fundamental_type(_type):
             p_type = self.FundamentalType(_type)
+        elif self.is_pointer_type(_type) or self.is_array_type(_type):
+            p_type = self.parse_cursor_type(_type)
+        elif _type.kind == TypeKind.FUNCTIONPROTO:
+            p_type = self.parse_cursor_type(_type)
         else: #elif _type.kind == TypeKind.RECORD:
             # check registration
             decl = _type.get_declaration()
@@ -608,6 +612,7 @@ typedef void* pointer_t;''', flags=_flags)
                 p_type = self.get_registered(decl_name)
             else: # forward declaration, without looping
                 log.debug('POINTER: %s type was not previously declared'%(decl_name))
+                #code.interact(local=locals())
                 p_type = self.parse_cursor(decl)
         #elif _type.kind == TypeKind.FUNCTIONPROTO:
         #    log.error('TypeKind.FUNCTIONPROTO not implemented')
@@ -703,6 +708,8 @@ typedef void* pointer_t;''', flags=_flags)
     def FUNCTION_DECL(self, cursor):
         # name, returns, extern, attributes
         name = self.get_unique_name(cursor)
+        if self.is_registered(name):
+            return self.get_registered(name)
         returns = self.parse_cursor_type(cursor.type.get_result())
         attributes = None
         extern = None
@@ -718,9 +725,11 @@ typedef void* pointer_t;''', flags=_flags)
         #func.fixup_argtypes(self)
         pass
 
-    def FUNCTIONPROTO(self, cursor):
+    def FUNCTIONPROTO(self, _cursor_type):
+        if not isinstance(_cursor_type, clang.cindex.Type):
+            raise TypError('Please call FUNCTIONPROTO with a _cursor_type')
         # id, returns, attributes
-        returns = cursor.get_result()
+        returns = _cursor_type.get_result()
         if self.is_fundamental_type(returns):
             returns = self.FundamentalType(returns)
         attributes = []
@@ -735,7 +744,7 @@ typedef void* pointer_t;''', flags=_flags)
         #log.debug('FUNCTIONPROTO: can I get args ?')
         #code.interact(local=locals())    
         obj = typedesc.FunctionType(returns, attributes)
-        self.set_location(obj, cursor)
+        self.set_location(obj, None)
         return obj
     
     def _fixup_FunctionType(self, func):
@@ -782,8 +791,8 @@ typedef void* pointer_t;''', flags=_flags)
         _name = cursor.spelling
         if self.is_fundamental_type(_type):
             _argtype = self.FundamentalType(_type)
-        elif self.is_pointer_type(_type):
-            _argtype = self.POINTER(_type)
+        elif self.is_pointer_type(_type) or self.is_array_type(_type):
+            _argtype = self.parse_cursor_type(_type)
         else:
             _argtype_decl = _type.get_declaration()
             _argtype_name = self.get_unique_name(_argtype_decl)
