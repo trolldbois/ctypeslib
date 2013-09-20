@@ -427,7 +427,7 @@ typedef void* pointer_t;''', flags=_flags)
             #code.interact(local=locals())
             #raise IOError('I doubt this case is possible')
             _definition = cursor.type.get_declaration() 
-        return self.parse_cursor(_definition)   
+        return None #self.parse_cursor(_definition)   
 
     # Declarations     
     
@@ -436,6 +436,9 @@ typedef void* pointer_t;''', flags=_flags)
     def VAR_DECL(self, cursor):
         # get the name
         name = self.get_unique_name(cursor)
+        # double declaration ?
+        if self.is_registered(name):
+            return self.get_registered(name)
         # get the value of this variable 
         children = list(cursor.get_children())
         if len(children) == 0:
@@ -793,10 +796,17 @@ typedef void* pointer_t;''', flags=_flags)
             _argtype = self.FundamentalType(_type)
         elif self.is_pointer_type(_type) or self.is_array_type(_type):
             _argtype = self.parse_cursor_type(_type)
+        elif self.is_unexposed_type(_type):
+            return None
         else:
             _argtype_decl = _type.get_declaration()
             _argtype_name = self.get_unique_name(_argtype_decl)
-            _argtype = self.get_registered(_argtype_name)
+            if not self.is_registered(_argtype_name):
+                log.error('this param type is not declared')
+                #code.interact(local=locals())
+                _argtype = self.parse_cursor_type(_type)
+            else:
+                _argtype = self.get_registered(_argtype_name)
         obj = typedesc.Argument(_name, _argtype)
         self.set_location(obj, cursor)
         return obj
@@ -851,13 +861,12 @@ typedef void* pointer_t;''', flags=_flags)
     @log_entity
     def ENUM_DECL(self, cursor):
         ''' Get the enumeration type'''
-        # id, name
-        #print '** ENUMERATION', cursor.displayname
         name = self.get_unique_name(cursor)
+        if self.is_registered(name):
+            return self.get_registered(name)
         #    #raise ValueError('could try get_usr()')
         align = cursor.type.get_align() 
         size = cursor.type.get_size() 
-        #print align, size
         obj = self.register(name, typedesc.Enumeration(name, size, align))
         self.set_location(obj, cursor)
         return obj
@@ -1074,6 +1083,7 @@ typedef void* pointer_t;''', flags=_flags)
         offset = cursor.semantic_parent.type.get_offset(name)
         if offset < 0:
             log.error('BAD RECORD, Bad offset: %d for %s'%(offset, name))
+            # FIXME if c++ class ?
         # bitfield
         bits = None
         if cursor.is_bitfield():
@@ -1134,7 +1144,7 @@ typedef void* pointer_t;''', flags=_flags)
                 if _type is None:
                     log.warning("Field %s is an %s type - ignoring field type"%(
                                 name,_canonical_type.kind.name))
-                    return self.register( _id, None)
+                    return None
         return typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield())
 
     def _fixup_Field(self, f):
@@ -1260,6 +1270,8 @@ typedef void* pointer_t;''', flags=_flags)
             self._unhandled.append(name)
             #return True
         def p(node, **args):
+            if isinstance(node, clang.cindex.Type):
+                return None
             for child in node.get_children():
                 self.startElement( child ) 
         return p
