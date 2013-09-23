@@ -836,10 +836,13 @@ typedef void* pointer_t;''', flags=_flags)
             elif cursor.kind == CursorKind.FLOATING_LITERAL:
                 # strip type suffix for constants 
                 value = value.replace('f','').replace('F','')
-            elif cursor.kind == CursorKind.CHARACTER_LITERAL:
-                # strip wchar_t type prefix for string
-                if value[:1] == 'L': # wchar_t x = L'x'; 
-                    value = value[1:]
+            elif (cursor.kind == CursorKind.CHARACTER_LITERAL or
+                  cursor.kind == CursorKind.STRING_LITERAL):
+                # strip wchar_t type prefix for string/character
+                for prefix in ['u8R','u8','UR','uR','LR','u','U','L']:
+                    if value[:len(prefix)] == prefix:
+                        value = value[len(prefix):]
+                        break # just one prefix is possible 
             # add token
             final_value.append(value)
         # return the EXPR    

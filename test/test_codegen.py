@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 try:
     from cStringIO import StringIO
@@ -103,6 +104,29 @@ class ConstantsTest(ClangTest):
         self.assertEqual(type(self.namespace.X), unicode)
         self.assertEqual(self.namespace.w_zero, '\0')
         self.assertEqual(type(self.namespace.w_zero), unicode)
+
+    def test_unicode(self):
+        ''' unicode conversion test from unittest in clang'''
+        self.convert("""
+//char const *aa = "Àéîõü";
+//char const *a = "ÐÐŸÑÐºÐ°";
+//wchar_t const *b = L"ÐÐŸÑÐºÐ°";
+//wchar_t const *b2 = L"\x4f60\x597d\x10300";
+char const *c = u8"1ÐÐŸÑÐºÐ°";
+//char16_t const *e = u"2ÐÐŸÑÐºÐ°";
+//char32_t const *f = U"3ÐÐŸÑÐºÐ°";
+//char const *d = u8R"(4ÐÐŸÑÐºÐ°)";
+//char16_t const *g = uR"(5ÐÐŸÑÐºÐ°)";
+//char32_t const *h = UR"(6ÐÐŸÑÐºÐ°)";
+//wchar_t const *i = LR"(7ÐÐŸÑÐºÐ°)";
+        """, ['-x','c++']) # force c++ lang for wchar
+        #self.assertEqual(self.namespace.aa, "Àéîõü")
+        self.assertEqual(self.namespace.a, "ÐÐŸÑÐºÐ°")
+        #self.assertEqual(self.namespace.b, "ÐÐŸÑÐºÐ°")
+        #self.assertEqual(self.namespace.b2, "Àéîõü")
+        #self.assertEqual(type(self.namespace.aa), unicode)
+        #self.assertEqual(self.namespace.w_zero, '\0')
+        #self.assertEqual(type(self.namespace.w_zero), unicode)
 
     #@unittest.skip('')
     def test_char(self):
