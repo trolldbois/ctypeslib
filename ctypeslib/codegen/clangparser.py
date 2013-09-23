@@ -450,7 +450,6 @@ typedef void* pointer_t;''', flags=_flags)
             if (len(children) != 1):
                 log.debug('Multiple children in a var_decl')
             init_value = []
-            #code.interact(local=locals())
             for child in children:
                 # POD init values handling.
                 # As of clang 3.3, int, double literals are exposed.
@@ -846,7 +845,6 @@ typedef void* pointer_t;''', flags=_flags)
                 #strip string terminators
                 value = value[1:-1]
             # add token
-            #value = unicode(value,'utf-8')
             final_value.append(value)
         # return the EXPR    
         return ' '.join(final_value)

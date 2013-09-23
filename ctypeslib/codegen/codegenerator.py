@@ -242,15 +242,16 @@ class Generator(object):
             return t.name
         if isinstance(t, typedesc.PointerType):
             #print '** type_name we have pointer ',t
-            if ASSUME_STRINGS:
-                x = get_real_type(t.typ)
-                if isinstance(x, typedesc.FundamentalType):
-                    if x.name == "char":
-                        self.need_STRING()
-                        return "STRING"
-                    elif x.name == "wchar_t":
-                        self.need_WSTRING()
-                        return "WSTRING"
+            # Following block is not useful if we use POINTER_T
+            #if ASSUME_STRINGS:
+            #    x = get_real_type(t.typ)
+            #    if isinstance(x, typedesc.FundamentalType):
+            #        if x.name == "c_char":
+            #            self.need_STRING()
+            #            return "STRING"
+            #        elif x.name == "c_wchar":
+            #            self.need_WSTRING()
+            #            return "WSTRING"
             # Size of pointer is handled in headers now.
             #result = "POINTER%d(%s)" %(t.size*8, self.type_name(t.typ, generate))
             result = "POINTER_T(%s)" %(self.type_name(t.typ, generate))
@@ -449,7 +450,9 @@ class Generator(object):
             print >> self.stream, "%s = %s # args: %s" % (tp.name,
                                              self.type_name(tp.init), 
                                              [x for x in tp.typ.iterArgNames()])
-        elif type(tp.init) == str or type(tp.init) == unicode:
+        elif (type(tp.typ) == typedesc.PointerType and 
+              type(tp.typ.typ) == typedesc.FundamentalType and
+               ( tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar") ):
             print >> self.stream, \
                   "%s = %s # Variable %s" % (tp.name,
                                              repr(tp.init),
