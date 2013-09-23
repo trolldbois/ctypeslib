@@ -432,7 +432,7 @@ typedef void* pointer_t;''', flags=_flags)
     # Declarations     
     
     
-    def _get_var_decl_init_value(self, cursor, expected_literal_types):
+    def _get_var_decl_init_value(self, cursor, expected_literal_types=None):
         init_value = None
         # get the value of this variable 
         children = list(cursor.get_children())
@@ -445,6 +445,9 @@ typedef void* pointer_t;''', flags=_flags)
             init_value = []
             #code.interact(local=locals())
             for child in children:
+                if (expected_literal_types is not None and 
+                    child.type not in expected_literal_types):
+                    continue # ignore this tokens
                 # POD init values handling.
                 # As of clang 3.3, int, double literals are exposed.
                 # float, long double, char , char* are not exposed directly in level1.
