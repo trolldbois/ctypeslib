@@ -836,6 +836,10 @@ typedef void* pointer_t;''', flags=_flags)
             elif cursor.kind == CursorKind.FLOATING_LITERAL:
                 # strip type suffix for constants 
                 value = value.replace('f','').replace('F','')
+            elif cursor.kind == CursorKind.CHARACTER_LITERAL:
+                # strip wchar_t type prefix for string
+                if value[:1] == 'L': # wchar_t x = L'x'; 
+                    value = value[1:]
             # add token
             final_value.append(value)
         # return the EXPR    
