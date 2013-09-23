@@ -116,6 +116,7 @@ class TestBasicFunctions(unittest.TestCase):
 
 
   def test_import(self):
+    ''' Test that we dont break ctypes'''
     #''' replace c_char_p '''
     self.assertNotEquals( ctypes.c_char_p.__name__ , 'c_char_p', 'c_char_p is not our CString')
     #''' keep orig class '''
