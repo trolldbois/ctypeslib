@@ -431,25 +431,19 @@ typedef void* pointer_t;''', flags=_flags)
 
     # Declarations     
     
-    ''' The cursor is on a Variable declaration.'''
-    @log_entity
-    def VAR_DECL(self, cursor):
-        # get the name
-        name = self.get_unique_name(cursor)
-        # double declaration ?
-        if self.is_registered(name):
-            return self.get_registered(name)
+    
+    def _get_var_decl_init_value(self, cursor, expected_literal_types):
+        init_value = None
         # get the value of this variable 
         children = list(cursor.get_children())
         if len(children) == 0:
             init_value = "None"
         else:
-            #if (len(children) == 1):
-            #    raise IOError('Document this use case? var declaration without value?')
-            #    # function pointer
+            # We should filter out literal children base on the variable type
             if (len(children) != 1):
                 log.debug('Multiple children in a var_decl')
             init_value = []
+            #code.interact(local=locals())
             for child in children:
                 # POD init values handling.
                 # As of clang 3.3, int, double literals are exposed.
@@ -468,6 +462,17 @@ typedef void* pointer_t;''', flags=_flags)
                 #FIXME _ctype:CONSTANTARRAY
             if len(init_value) == 1:
                 init_value = init_value[0]
+        return init_value
+        
+    ''' The cursor is on a Variable declaration.'''
+    @log_entity
+    def VAR_DECL(self, cursor):
+        # get the name
+        name = self.get_unique_name(cursor)
+        # double declaration ?
+        if self.is_registered(name):
+            return self.get_registered(name)
+        init_value = self._get_var_decl_init_value(cursor,None)
         # Get the type
         _ctype = cursor.type.get_canonical()
         # FIXME: Need working int128, long_double, etc...
