@@ -472,7 +472,6 @@ typedef void* pointer_t;''', flags=_flags)
         # double declaration ?
         if self.is_registered(name):
             return self.get_registered(name)
-        init_value = self._get_var_decl_init_value(cursor,None)
         # Get the type
         _ctype = cursor.type.get_canonical()
         # FIXME: Need working int128, long_double, etc...
@@ -488,7 +487,6 @@ typedef void* pointer_t;''', flags=_flags)
             log.error('PATCH NEEDED: %s type is not exposed by clang'%(name))
             ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )
-            init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
         elif self.is_array_type(_ctype) or _ctype.kind == TypeKind.RECORD:
             _type = self.parse_cursor_type(_ctype)
             #code.interact(local=locals())
@@ -503,16 +501,23 @@ typedef void* pointer_t;''', flags=_flags)
                 # cursor.type.get_canonical().get_pointee().kind == TypeKind.FUNCTIONPROTO
                 mth = getattr(self, _ctype.get_pointee().kind.name)
                 _type = mth(_ctype.get_pointee())
-                # Function pointers argument are handled inside
-                if type(init_value) != list:
-                    init_value = [init_value]
-                _type.arguments = init_value
-                init_value = _type
             else: # Fundamental types, structs....
                 _type = self.POINTER(_ctype )
         else:
             ## What else ?
             raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
+        # get the init_value and special cases
+        init_value = self._get_var_decl_init_value(cursor,None)
+        if self.is_unexposed_type(_ctype): # string are not exposed
+            init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
+        elif ( self.is_pointer_type(_ctype) and 
+                _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO):
+            # Function pointers argument are handled inside
+            if type(init_value) != list:
+                init_value = [init_value]
+            _type.arguments = init_value
+            init_value = _type
+
         log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s'%(name, 
                     _ctype.kind.name, _type.name, init_value,
                     getattr(cursor, 'location')))
