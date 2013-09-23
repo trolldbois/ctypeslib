@@ -841,9 +841,12 @@ typedef void* pointer_t;''', flags=_flags)
                 # strip wchar_t type prefix for string/character
                 for prefix in ['u8R','u8','UR','uR','LR','u','U','L']:
                     if value[:len(prefix)] == prefix:
-                        value = value[len(prefix):]
+                        value = unicode(value[len(prefix):],'utf-8')
                         break # just one prefix is possible 
+                #strip string terminators
+                value = value[1:-1]
             # add token
+            #value = unicode(value,'utf-8')
             final_value.append(value)
         # return the EXPR    
         return ' '.join(final_value)

@@ -11,14 +11,12 @@ import clangparser
 import logging
 log = logging.getLogger('codegen')
 
+import code
+
 # This should be configurable
 ASSUME_STRINGS = True
 
-try:
-    import cStringIO as StringIO
-except ImportError:
-    import StringIO
-
+import StringIO # need unicode support, no cStringIO
 
 # XXX Should this be in ctypes itself?
 ctypes_names = {
@@ -451,6 +449,11 @@ class Generator(object):
             print >> self.stream, "%s = %s # args: %s" % (tp.name,
                                              self.type_name(tp.init), 
                                              [x for x in tp.typ.iterArgNames()])
+        elif type(tp.init) == str or type(tp.init) == unicode:
+            print >> self.stream, \
+                  "%s = %s # Variable %s" % (tp.name,
+                                             repr(tp.init),
+                                             self.type_name(tp.typ, False))
         else:
             print >> self.stream, \
                   "%s = %s # Variable %s" % (tp.name,
@@ -785,6 +788,7 @@ class Generator(object):
         
         self.output.write(self.imports.getvalue())
         self.output.write("\n\n")
+        #code.interact(local=locals())
         self.output.write(self.stream.getvalue())
 
         text = "__all__ = [%s]" % ", ".join([repr(str(n)) for n in self.names])

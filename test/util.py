@@ -8,10 +8,7 @@ from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
 import unittest
 from ctypeslib.codegen import clangparser, codegenerator
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from StringIO import StringIO
 
 import tempfile
 def mktemp(suffix):
@@ -129,7 +126,13 @@ class ClangTest(unittest.TestCase):
         # DEBUG
         #print ofi.getvalue()
         # DEBUG 
-        exec ofi.getvalue() in namespace
+        ofi.seek(0)
+        ignore_coding = ofi.readline()
+        #exec ofi.getvalue() in namespace
+        output = ''.join(ofi.readlines())
+        #import code
+        #code.interact(local=locals())
+        exec output in namespace
         self.namespace = ADict(namespace)
         return
 
