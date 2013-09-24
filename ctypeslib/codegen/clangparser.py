@@ -220,7 +220,7 @@ class Clang_Parser(object):
             name = cursor.displayname
         elif hasattr(cursor, 'spelling'):
             name = cursor.spelling
-        if name == '':
+        if name == '' and hasattr(cursor,'get_usr'):
             _id = cursor.get_usr()
             if _id == '': # anonymous is spelling == ''
                 return None
