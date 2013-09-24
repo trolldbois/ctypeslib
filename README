@@ -20,7 +20,10 @@ The original ctypeslib is written by
 author="Thomas Heller",
 author_email="theller@ctypes.org",
 
-
+Stable Distribution is available through pypi:
+  https://pypi.python.org/pypi/ctypeslib2/
+  sudo easy_install ctypeslib2 
+  
 Usage
 -----
 usage: clang2py [-h] [--debug] [-c] [-d] [-k TYPEKIND] [-l DLLS] [-o OUTPUT]
