@@ -457,7 +457,10 @@ typedef void* pointer_t;''', flags=_flags)
         children = list(children_iter)
         # get the value of this variable 
         if len(children) == 0:
-            return "None"
+            log.debug('0 children in a var_decl')
+            if self.is_array_type(_ctype):
+                return []
+            return None
         #
         if (len(children) != 1):
             log.debug('Multiple children in a var_decl')

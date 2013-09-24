@@ -444,10 +444,11 @@ class Generator(object):
         # no tp.init value we can't generate code for it anyway, so we
         # drop it.
         #code.interact(local=locals())
-        if tp.init is None:
-            self._notfound_variables += 1
-            return
-        elif isinstance(tp.init, typedesc.FunctionType):
+        #if tp.init is None:
+        #    self._notfound_variables += 1
+        #    return
+        #el
+        if isinstance(tp.init, typedesc.FunctionType):
             print >> self.stream, "%s = %s # args: %s" % (tp.name,
                                              self.type_name(tp.init), 
                                              [x for x in tp.typ.iterArgNames()])

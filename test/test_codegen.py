@@ -153,7 +153,7 @@ class ConstantsTest(ClangTest):
         char s[] = {'1',']'};
         char *p = "abcde";
         """) 
-        self.assertEqual(self.namespace.x, None)
+        self.assertEqual(self.namespace.x, [])
         self.assertEqual(self.namespace.s, "abcde")
         self.assertEqual(self.namespace.p, "abcde")
 
@@ -213,10 +213,10 @@ class ConstantsTest(ClangTest):
         int tab2[3] = {1,2,3};
         int tab3[] = {1,2,3};
         ''')
-        self.assertEqual(self.namespace.c1, None)
+        self.assertEqual(self.namespace.c1, [])
         self.assertEqual(self.namespace.c2, ['a','b','c'])
         self.assertEqual(self.namespace.c3, ['a','b','c'])
-        self.assertEqual(self.namespace.tab1, None)
+        self.assertEqual(self.namespace.tab1, [])
         self.assertEqual(self.namespace.tab2, [1,2,3])
         self.assertEqual(self.namespace.tab3, [1,2,3])
 
