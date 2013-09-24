@@ -204,6 +204,22 @@ class ConstantsTest(ClangTest):
         self.assertEqual(ctypes.sizeof(self.namespace.union_u), 4)
 
 
+    def test_array(self):
+        self.convert('''
+        char c1[];
+        char c2[3] = {'a','b','c'};
+        char c3[] = {'a','b','c'};
+        int tab1[];
+        int tab2[3] = {1,2,3};
+        int tab3[] = {1,2,3};
+        ''')
+        self.assertEqual(self.namespace.c1, None)
+        self.assertEqual(self.namespace.c2, ['a','b','c'])
+        self.assertEqual(self.namespace.c3, ['a','b','c'])
+        self.assertEqual(self.namespace.tab1, None)
+        self.assertEqual(self.namespace.tab2, [1,2,3])
+        self.assertEqual(self.namespace.tab3, [1,2,3])
+
     #@unittest.skip('')
     def test_incomplete_array(self):
         self.convert("""

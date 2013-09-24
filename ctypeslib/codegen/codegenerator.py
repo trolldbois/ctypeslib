@@ -462,7 +462,9 @@ class Generator(object):
                 # char
                 init_value = repr(tp.init)
             else:
+                ### DEBUG int() float() 
                 init_value = tp.init
+                #init_value = repr(tp.init)
             
             print >> self.stream, "%s = %s # Variable %s" % (tp.name,
                                              init_value,

@@ -467,7 +467,6 @@ typedef void* pointer_t;''', flags=_flags)
             # variable type
             ok_types = self.get_literal_kind_affinity(child.kind)
             log.debug('_ctype: %s Child.kind: %s'%(_ctype.kind, child.kind))
-            code.interact(local=locals())
             #if (_ctype.kind not 
             #    in self.get_literal_kind_affinity(child.kind)):
             #    continue
@@ -475,9 +474,14 @@ typedef void* pointer_t;''', flags=_flags)
             # As of clang 3.3, int, double literals are exposed.
             # float, long double, char , char* are not exposed directly in level1.
             # but really it depends... 
-            if child.kind.is_unexposed():
+            if self.is_array_type(_ctype):
+                if child.kind == CursorKind.INIT_LIST_EXPR:
+                    # init value will use INIT_LIST_EXPR
+                    init_value.append( self.parse_cursor(child) )
+                # else nothing.
+            elif child.kind.is_unexposed():
                 # recurse until we find a literal kind
-                self._get_var_decl_init_value(_ctype, child.get_children())
+                init_value = self._get_var_decl_init_value(_ctype, child.get_children())
                 #child_kind = list(child.get_children())[0].kind
                 #log.debug('Calling %s'%(child.kind.name))
                 #init_value.append( self.parse_cursor(child) )
@@ -489,7 +493,8 @@ typedef void* pointer_t;''', flags=_flags)
                 # Seen: function pointer
                 init_value.append( self.parse_cursor(child) )
             #FIXME _ctype:CONSTANTARRAY -> INIT_LIST_EXPR
-        if len(init_value) == 1:
+            #code.interact(local=locals())
+        if isinstance(init_value, list) and len(init_value) == 1:
             init_value = init_value[0]
         return init_value
         
@@ -867,8 +872,8 @@ typedef void* pointer_t;''', flags=_flags)
         #code.interact(local=locals())
         for token in tokens:
             value = token.spelling
-            #log.debug('token:%s is cursor %s'%(token.spelling, token.cursor.kind))
-            #log.debug('cursor.type:%s  cursor.kind: %s'%(cursor.type.kind, cursor.kind))
+            log.debug('token:%s is cursor %s'%(token.spelling, token.cursor.kind))
+            log.debug('cursor.type:%s  cursor.kind: %s'%(cursor.type.kind, cursor.kind))
             #code.interact(local=locals())
             # if value in ['[',']',';']: continue
             if token.kind != TokenKind.LITERAL:
@@ -877,9 +882,15 @@ typedef void* pointer_t;''', flags=_flags)
                 # strip type suffix for constants 
                 value = value.replace('L','').replace('U','')
                 value = value.replace('l','').replace('u','')
+                if value[:2] == '0x' or value[:2] == '0X' :
+                    value = '0x%s'%value[2:] #"int(%s,16)"%(value)
+                else:
+                    value = int(value)
+                # TODO if 0x , get hex
             elif cursor.kind == CursorKind.FLOATING_LITERAL:
                 # strip type suffix for constants 
                 value = value.replace('f','').replace('F','')
+                value = float(value)
             elif (cursor.kind == CursorKind.CHARACTER_LITERAL or
                   cursor.kind == CursorKind.STRING_LITERAL):
                 # strip wchar_t type prefix for string/character
@@ -891,9 +902,10 @@ typedef void* pointer_t;''', flags=_flags)
                 value = value[1:-1]
             # add token
             final_value.append(value)
-            #code.interact(local=locals())
         # return the EXPR    
-        return ' '.join(final_value)
+        if len(final_value) == 1:
+            return final_value[0]
+        return final_value
 
     INTEGER_LITERAL = _literal_handling
     FLOATING_LITERAL = _literal_handling
