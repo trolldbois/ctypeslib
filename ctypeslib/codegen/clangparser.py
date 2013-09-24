@@ -2,7 +2,7 @@
 
 import clang
 from clang.cindex import Index
-from clang.cindex import CursorKind, TypeKind
+from clang.cindex import CursorKind, TypeKind, TokenKind
 import ctypes
 
 import logging
@@ -125,6 +125,7 @@ class Clang_Parser(object):
         TypeKind.LONGDOUBLE : 'TBD' ,
         TypeKind.POINTER : 'POINTER_T'
     }
+    
     def __init__(self, flags):
         self.all = {}
         self.cpp_data = {}
@@ -316,6 +317,25 @@ typedef void* pointer_t;''', flags=_flags)
                  t.kind == CursorKind.STRING_LITERAL or
                  t.kind == CursorKind.CHARACTER_LITERAL)
 
+    def get_literal_kind_affinity(self, literal_kind):
+        ''' return the list of fundamental types that are adequate for which 
+        this literal_kind is adequate'''
+        if literal_kind == CursorKind.INTEGER_LITERAL:
+            return [TypeKind.USHORT, TypeKind.UINT, TypeKind.ULONG, 
+                    TypeKind.ULONGLONG, TypeKind.UINT128, 
+                    TypeKind.SHORT, TypeKind.INT, TypeKind.LONG, 
+                    TypeKind.LONGLONG, TypeKind.INT128, ]
+        elif literal_kind == CursorKind.STRING_LITERAL:
+            return [TypeKind.CHAR16, TypeKind.CHAR32, TypeKind.CHAR_S, 
+                    TypeKind.SCHAR, TypeKind.WCHAR ] ## DEBUG
+        elif literal_kind == CursorKind.CHARACTER_LITERAL:
+            return [TypeKind.CHAR_U, TypeKind.UCHAR]
+        elif literal_kind == CursorKind.FLOATING_LITERAL:
+            return [TypeKind.FLOAT, TypeKind.DOUBLE, TypeKind.LONGDOUBLE]
+        elif literal_kind == CursorKind.IMAGINARY_LITERAL:
+            return []
+        return []
+
     def get_ctypes_name(self, typekind):
         return self.ctypes_typename[typekind]
 
@@ -432,39 +452,45 @@ typedef void* pointer_t;''', flags=_flags)
     # Declarations     
     
     
-    def _get_var_decl_init_value(self, cursor, expected_literal_types=None):
+    def _get_var_decl_init_value(self, _ctype, children_iter):
         init_value = None
+        children = list(children_iter)
         # get the value of this variable 
-        children = list(cursor.get_children())
         if len(children) == 0:
-            init_value = "None"
-        else:
-            # We should filter out literal children base on the variable type
-            if (len(children) != 1):
-                log.debug('Multiple children in a var_decl')
-            init_value = []
-            #code.interact(local=locals())
-            for child in children:
-                if (expected_literal_types is not None and 
-                    child.type not in expected_literal_types):
-                    continue # ignore this tokens
-                # POD init values handling.
-                # As of clang 3.3, int, double literals are exposed.
-                # float, long double, char , char* are not exposed directly in level1.
-                # but really it depends... 
-                if child.kind.is_unexposed():
-                    child_kind = list(child.get_children())[0].kind
-                    log.debug('Calling %s'%(child.kind.name))
-                    init_value.append( self.parse_cursor(child) )
-                elif self.is_literal_cursor(child):
-                    log.debug('Calling %s'%(child.kind.name))
-                    init_value.append( self.parse_cursor(child) )
-                else:
-                    # Seen: function pointer
-                    init_value.append( self.parse_cursor(child) )
-                #FIXME _ctype:CONSTANTARRAY
-            if len(init_value) == 1:
-                init_value = init_value[0]
+            return "None"
+        #
+        if (len(children) != 1):
+            log.debug('Multiple children in a var_decl')
+        init_value = []
+        for child in children:
+            # We should filter out literal children based on the 
+            # variable type
+            ok_types = self.get_literal_kind_affinity(child.kind)
+            log.debug('_ctype: %s Child.kind: %s'%(_ctype.kind, child.kind))
+            code.interact(local=locals())
+            #if (_ctype.kind not 
+            #    in self.get_literal_kind_affinity(child.kind)):
+            #    continue
+            ## POD init values handling.
+            # As of clang 3.3, int, double literals are exposed.
+            # float, long double, char , char* are not exposed directly in level1.
+            # but really it depends... 
+            if child.kind.is_unexposed():
+                # recurse until we find a literal kind
+                self._get_var_decl_init_value(_ctype, child.get_children())
+                #child_kind = list(child.get_children())[0].kind
+                #log.debug('Calling %s'%(child.kind.name))
+                #init_value.append( self.parse_cursor(child) )
+                
+            elif self.is_literal_cursor(child):
+                log.debug('Calling %s'%(child.kind.name))
+                init_value.append( self.parse_cursor(child) )
+            else:
+                # Seen: function pointer
+                init_value.append( self.parse_cursor(child) )
+            #FIXME _ctype:CONSTANTARRAY -> INIT_LIST_EXPR
+        if len(init_value) == 1:
+            init_value = init_value[0]
         return init_value
         
     ''' The cursor is on a Variable declaration.'''
@@ -507,11 +533,13 @@ typedef void* pointer_t;''', flags=_flags)
             else: # Fundamental types, structs....
                 _type = self.POINTER(_ctype )
         else:
-            ## What else ?
+            # What else ?
             raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
-        # get the init_value and special cases
-        init_value = self._get_var_decl_init_value(cursor,None)
-        if self.is_unexposed_type(_ctype): # string are not exposed
+        ## get the init_value and special cases
+        init_value = self._get_var_decl_init_value(cursor.type, 
+                                                   list(cursor.get_children()))
+        if self.is_unexposed_type(_ctype): 
+            # string are not exposed
             init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
         elif ( self.is_pointer_type(_ctype) and 
                 _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO):
@@ -520,7 +548,7 @@ typedef void* pointer_t;''', flags=_flags)
                 init_value = [init_value]
             _type.arguments = init_value
             init_value = _type
-
+        # finished
         log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s'%(name, 
                     _ctype.kind.name, _type.name, init_value,
                     getattr(cursor, 'location')))
@@ -839,7 +867,11 @@ typedef void* pointer_t;''', flags=_flags)
         #code.interact(local=locals())
         for token in tokens:
             value = token.spelling
-            if value in ['[',']',';']:
+            #log.debug('token:%s is cursor %s'%(token.spelling, token.cursor.kind))
+            #log.debug('cursor.type:%s  cursor.kind: %s'%(cursor.type.kind, cursor.kind))
+            #code.interact(local=locals())
+            # if value in ['[',']',';']: continue
+            if token.kind != TokenKind.LITERAL:
                 continue
             if cursor.kind == CursorKind.INTEGER_LITERAL:
                 # strip type suffix for constants 
@@ -872,11 +904,11 @@ typedef void* pointer_t;''', flags=_flags)
     UNARY_OPERATOR = _literal_handling
     BINARY_OPERATOR = _literal_handling
 
-    #@log_entity
-    # FIXME: lets keep expresssion for later...
-    #def INIT_LIST_EXPR(self, cursor):
-        #code.interact(local=locals())
-        #return None
+    @log_entity
+    def INIT_LIST_EXPR(self, cursor):
+        values = [ self.parse_cursor(child) 
+                        for child in list(cursor.get_children())]
+        return values
 
     # enumerations
 
