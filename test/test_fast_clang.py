@@ -22,7 +22,7 @@ class CompareSizes(ClangTest):
                 self.assertSizes(name)
 
     #@unittest.skip('')
-    @unittest.expectedFailure # packed attribute
+    #@unittest.expectedFailure # packed attribute
     def test_records(self):
         """Test sizes of records."""
         targets = ['struct_Name', 'struct_Name2','struct_Node','struct_Node2','myEnum',
