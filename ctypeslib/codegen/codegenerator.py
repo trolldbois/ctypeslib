@@ -443,24 +443,29 @@ class Generator(object):
         # is not in the libraries that we search.  Anyway, if it has
         # no tp.init value we can't generate code for it anyway, so we
         # drop it.
+        #code.interact(local=locals())
         if tp.init is None:
             self._notfound_variables += 1
             return
-        elif type(tp.init) == typedesc.FunctionType:
+        elif isinstance(tp.init, typedesc.FunctionType):
             print >> self.stream, "%s = %s # args: %s" % (tp.name,
                                              self.type_name(tp.init), 
                                              [x for x in tp.typ.iterArgNames()])
-        elif (type(tp.typ) == typedesc.PointerType and 
-              type(tp.typ.typ) == typedesc.FundamentalType and
-               ( tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar") ):
-            print >> self.stream, \
-                  "%s = %s # Variable %s" % (tp.name,
-                                             repr(tp.init),
-                                             self.type_name(tp.typ, False))
         else:
-            print >> self.stream, \
-                  "%s = %s # Variable %s" % (tp.name,
-                                             tp.init,
+            if ( isinstance(tp.typ, typedesc.PointerType) and 
+                 isinstance(tp.typ.typ, typedesc.FundamentalType) and
+                 (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
+                # char *
+                init_value = repr(tp.init)
+            elif ( isinstance(tp.typ, typedesc.FundamentalType) and
+                 (tp.typ.name == "c_char" or tp.typ.name == "c_wchar")):
+                # char
+                init_value = repr(tp.init)
+            else:
+                init_value = tp.init
+            
+            print >> self.stream, "%s = %s # Variable %s" % (tp.name,
+                                             init_value,
                                              self.type_name(tp.typ, False))
         #
         self.names.add(tp.name)

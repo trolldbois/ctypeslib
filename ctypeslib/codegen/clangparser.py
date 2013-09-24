@@ -220,7 +220,7 @@ class Clang_Parser(object):
             name = cursor.displayname
         elif hasattr(cursor, 'spelling'):
             name = cursor.spelling
-        if name == '' and hasattr(cursor,'get_usr'):
+        if name == '' and hasattr(cursor,'get_usr'): #FIXME: should not get Type
             _id = cursor.get_usr()
             if _id == '': # anonymous is spelling == ''
                 return None
@@ -859,6 +859,7 @@ typedef void* pointer_t;''', flags=_flags)
                 value = value[1:-1]
             # add token
             final_value.append(value)
+            #code.interact(local=locals())
         # return the EXPR    
         return ' '.join(final_value)
 

@@ -143,7 +143,7 @@ class ConstantsTest(ClangTest):
         """) 
         self.assertEqual(self.namespace.x, 'x')
         self.assertEqual(type(self.namespace.x), str)
-        self.assertEqual(self.namespace.zero, '\0') # not very true...
+        self.assertEqual(self.namespace.zero, '\x00') # not very true...
         # type casting will not work in ctypes anyway
         self.assertEqual(type(self.namespace.zero), str) # that is another problem.
 
