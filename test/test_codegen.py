@@ -154,7 +154,7 @@ class ConstantsTest(ClangTest):
         char *p = "abcde";
         """) 
         self.assertEqual(self.namespace.x, [])
-        self.assertEqual(self.namespace.s, "abcde")
+        self.assertEqual(self.namespace.s, ['1',']'])
         self.assertEqual(self.namespace.p, "abcde")
 
 
