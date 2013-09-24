@@ -872,13 +872,22 @@ typedef void* pointer_t;''', flags=_flags)
         #code.interact(local=locals())
         for token in tokens:
             value = token.spelling
-            log.debug('token:%s is cursor %s'%(token.spelling, token.cursor.kind))
+            log.debug('token:%s/%s tk.cursor.kd:%s'%(token.spelling, token.kind, token.cursor.kind))
             log.debug('cursor.type:%s  cursor.kind: %s'%(cursor.type.kind, cursor.kind))
             #code.interact(local=locals())
             # if value in ['[',']',';']: continue
-            if token.kind != TokenKind.LITERAL:
-                continue
-            if cursor.kind == CursorKind.INTEGER_LITERAL:
+            if ( token.kind != TokenKind.LITERAL and 
+                 token.cursor.kind != cursor.kind):
+                # we might ignore these tokens
+                #code.interact(local=locals())
+                if (token.kind == TokenKind.PUNCTUATION and 
+                    token.cursor.kind == CursorKind.UNARY_OPERATOR):
+                    pass
+                else:
+                    continue
+            #if token.kind not in [TokenKind.LITERAL]:
+            #    continue
+            if token.cursor.kind == CursorKind.INTEGER_LITERAL:
                 # strip type suffix for constants 
                 value = value.replace('L','').replace('U','')
                 value = value.replace('l','').replace('u','')
@@ -886,13 +895,12 @@ typedef void* pointer_t;''', flags=_flags)
                     value = '0x%s'%value[2:] #"int(%s,16)"%(value)
                 else:
                     value = int(value)
-                # TODO if 0x , get hex
-            elif cursor.kind == CursorKind.FLOATING_LITERAL:
+            elif token.cursor.kind == CursorKind.FLOATING_LITERAL:
                 # strip type suffix for constants 
                 value = value.replace('f','').replace('F','')
                 value = float(value)
-            elif (cursor.kind == CursorKind.CHARACTER_LITERAL or
-                  cursor.kind == CursorKind.STRING_LITERAL):
+            elif (token.cursor.kind == CursorKind.CHARACTER_LITERAL or
+                  token.cursor.kind == CursorKind.STRING_LITERAL):
                 # strip wchar_t type prefix for string/character
                 for prefix in ['u8R','u8','UR','uR','LR','u','U','L']:
                     if value[:len(prefix)] == prefix:
@@ -903,6 +911,13 @@ typedef void* pointer_t;''', flags=_flags)
             # add token
             final_value.append(value)
         # return the EXPR    
+        if (cursor.kind == CursorKind.UNARY_OPERATOR and len(final_value)>1 and
+                final_value[0] in ['-','+'] and 
+                isinstance(final_value[1],(int,float)) ):
+            _t =final_value.pop(0) 
+            if _t == '-':            
+                final_value[0] = -final_value[0]
+        #code.interact(local=locals())
         if len(final_value) == 1:
             return final_value[0]
         return final_value
