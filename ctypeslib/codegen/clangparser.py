@@ -1,13 +1,12 @@
 """clangparser - use clang to get preprocess a source code."""
 
 import clang
-from clang.cindex import Index
+from clang.cindex import Index, TranslationUnit
 from clang.cindex import CursorKind, TypeKind, TokenKind
 
 import logging
 
 import typedesc
-import sys
 import re
 
 from . import util
@@ -66,23 +65,12 @@ def MAKE_NAME(name):
         return "_" + name
     return name
 
-WORDPAT = re.compile("^[a-zA-Z_][a-zA-Z0-9_]*$")
-
-def CHECK_NAME(name):
-    if WORDPAT.match(name):
-        return name
-    return None
-
-''' 
-clang2py test1.cpp -target "x86_64-pc-linux-gnu" 
-clang2py test1.cpp -target i386-pc-linux-gnu
-
-'''
 class Clang_Parser(object):
-    '''clang2py test1.cpp -target "x86_64-pc-linux-gnu" 
+    '''Will parse libclang AST tree to create a representation of Types and
+    different others source code objects objets as described in Typedesc.
 
-   clang2py test1.cpp -target i386-pc-linux-gnu
-
+    For each Declaration a declaration will be saved, and the type of that 
+    declaration will be cached and saved.
     '''
     # clang.cindex.CursorKind
     ## Declarations: 1-39
@@ -133,6 +121,8 @@ class Clang_Parser(object):
         self.tu = None
         self.flags = flags
         self.ctypes_sizes = {}
+        self.tu_options = (TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD | 
+                           TranslationUnit.PARSE_SKIP_FUNCTION_BODIES )
         self.make_ctypes_convertor(flags)
         self.init_fundamental_types()
 
@@ -156,7 +146,7 @@ class Clang_Parser(object):
     '''
     def parse(self, filename):
         index = Index.create()
-        self.tu = index.parse(filename, self.flags)
+        self.tu = index.parse(filename, self.flags, options=self.tu_options)
         if not self.tu:
             log.warning("unable to load input")
             return
@@ -1257,6 +1247,7 @@ typedef void* pointer_t;''', flags=_flags)
     ################
     
     # Do not traverse into function bodies and other compound statements
+    # now fixed by TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     @log_entity
     def COMPOUND_STMT(self, cursor):
       return True
