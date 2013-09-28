@@ -4,7 +4,8 @@ Type descriptions are collections of typedesc instances.
 
 import typedesc, sys, os
 import textwrap
-import struct, ctypes
+import struct
+import ctypes
 
 import clangparser
 
@@ -526,7 +527,7 @@ class Generator(object):
         # per target architecture. No need to defer to ctypes logic for that.
         if fields:
             print >> self.stream, "%s._pack_ = True # source:%s" % (
-                        body.struct.name, 'PATCH NEEDED %s'%body.struct.packed)
+                        body.struct.name, body.struct.packed)
 
         if body.struct.bases:
             #print body, type(body.struct).__name__, body.struct.name, len(body.struct.bases)
@@ -738,8 +739,16 @@ class Generator(object):
         # go to specific treatment
         mth(item)
 
+    def generate_comment(self, item):
+        if item.comment is None:
+            return
+        for l in textwrap.wrap(item.comment, 78):
+            print >> self.stream, "# %s" % (l)
+
     def generate_all(self, items):
         for item in items:
+            if self.generate_comments:
+                self.generate_comment(item)
             self.generate(item)
 
     def cmpitems(a, b):

@@ -1040,7 +1040,6 @@ typedef void* pointer_t;''', flags=_flags)
             #return None
             raise InvalidCodeError('invalid structure %s %s align:%d size:%d'%(
                                             name, cursor.location, align, size))
-        packed = False # FIXME
         log.debug('_record_decl: name: %s size:%d'%(name, size))
         # Declaration vs Definition point
         # when a struct decl happen before the definition, we have no members
@@ -1048,7 +1047,7 @@ typedef void* pointer_t;''', flags=_flags)
         if not self.is_registered(name) and not cursor.is_definition():
             # juste save the spot, don't look at members == None
             log.debug('XXX cursor %s is not on a definition'%(name))
-            obj = _type(name, align, None, bases, size, packed=packed)
+            obj = _type(name, align, None, bases, size, packed=False)
             return self.register(name, obj)
         log.debug('XXX cursor %s is a definition'%(name))
         # save the type in the registry. Useful for not looping in case of 
@@ -1056,7 +1055,7 @@ typedef void* pointer_t;''', flags=_flags)
         obj = None
         declared_instance = False
         if not self.is_registered(name): 
-            obj = _type(name, align, None, bases, size, packed=packed)
+            obj = _type(name, align, None, bases, size, packed=False)
             self.register(name, obj)
             self.set_location(obj, cursor)
             self.set_comment(obj, cursor)
@@ -1067,7 +1066,6 @@ typedef void* pointer_t;''', flags=_flags)
         # Members fields will not be "parsed" here, but later.
         for childnum, child in enumerate(cursor.get_children()):
             if child.kind == clang.cindex.CursorKind.FIELD_DECL:
-                # LLVM-CLANG, issue https://github.com/trolldbois/python-clang/issues/2
                 # CIndexUSR.cpp:800+ // Bit fields can be anonymous.
                 _cid = self.get_unique_name(child)
                 ## FIXME 2: no get_usr() for members of builtin struct
@@ -1076,9 +1074,9 @@ typedef void* pointer_t;''', flags=_flags)
                 # END FIXME
                 members.append( self.FIELD_DECL(child) )
                 continue
-            # FIXME LLVM-CLANG, patch http://lists.cs.uiuc.edu/pipermail/cfe-commits/Week-of-Mon-20130415/078445.html
-            #if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
-            #    packed = True
+            # LLVM-CLANG, patched 
+            if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
+                obj.packed = True
         if self.is_registered(name): 
             # STRUCT_DECL as a child of TYPEDEF_DECL for example
             # FIXME: make a test case for that.
