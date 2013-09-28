@@ -200,10 +200,16 @@ class Clang_Parser(object):
     def is_registered(self, name):
         return name in self.all
 
-    ''' Location is also used for codegeneration ordering.'''
     def set_location(self, obj, cursor):
-        if hasattr(cursor, 'location') and cursor.location.file is not None:
+        """ Location is also used for codegeneration ordering."""
+        if ( hasattr(cursor, 'location') and cursor.location is not None 
+             and cursor.location.file is not None):
             obj.location = (cursor.location.file.name, cursor.location.line)
+
+    def set_comment(self, obj, cursor):
+        """ If a comment is available, add it to the typedesc."""
+        if isinstance(obj, typedesc.T):
+            obj.comment = cursor.brief_comment
 
     def get_unique_name(self, cursor):
         name = ''
@@ -552,6 +558,7 @@ typedef void* pointer_t;''', flags=_flags)
                     getattr(cursor, 'location')))
         obj = self.register(name, typedesc.Variable(name, _type, init_value) )
         self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
         return True # dont parse literals again
 
     def _fixup_Variable(self, t):
@@ -602,6 +609,7 @@ typedef void* pointer_t;''', flags=_flags)
         # final
         obj = self.register(name, typedesc.Typedef(name, p_type))
         self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
         return obj
         
     def _fixup_Typedef(self, t):
@@ -670,7 +678,7 @@ typedef void* pointer_t;''', flags=_flags)
         #print 'check p_type'
         #code.interact(local=locals())                
         obj = typedesc.PointerType( p_type, size, align)
-        self.set_location(obj, p_type.location)
+        obj.location = p_type.location
         return obj
 
 
@@ -719,7 +727,7 @@ typedef void* pointer_t;''', flags=_flags)
             #_subtype = self.get_registered(_subtype_name)
         #code.interact(local=locals())
         obj = typedesc.ArrayType(_subtype, size)
-        self.set_location(obj, _subtype.location)
+        obj.location = _subtype.location
         return obj
 
     def _fixup_ArrayType(self, a):
@@ -737,6 +745,7 @@ typedef void* pointer_t;''', flags=_flags)
         volatile = attrs.get("volatile", None)
         obj = typedesc.CvQualifiedType(typ, const, volatile)
         self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
         return obj
 
     def _fixup_CvQualifiedType(self, c):
@@ -759,6 +768,7 @@ typedef void* pointer_t;''', flags=_flags)
         obj = typedesc.Function(name, returns, attributes, extern)
         self.register(name,obj)
         self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
         return obj
 
     def _fixup_Function(self, func):
@@ -800,6 +810,7 @@ typedef void* pointer_t;''', flags=_flags)
         returns = attrs["returns"]
         obj = typedesc.OperatorFunction(name, returns)
         self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
         return obj
 
     def _fixup_OperatorFunction(self, func):
@@ -847,6 +858,7 @@ typedef void* pointer_t;''', flags=_flags)
                 _argtype = self.get_registered(_argtype_name)
         obj = typedesc.Argument(_name, _argtype)
         self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
         return obj
 
     # DEPRECATED
@@ -958,6 +970,7 @@ typedef void* pointer_t;''', flags=_flags)
         size = cursor.type.get_size() 
         obj = self.register(name, typedesc.Enumeration(name, size, align))
         self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
         return obj
 
     def _fixup_Enumeration(self, e): pass
@@ -1046,6 +1059,7 @@ typedef void* pointer_t;''', flags=_flags)
             obj = _type(name, align, None, bases, size, packed=packed)
             self.register(name, obj)
             self.set_location(obj, cursor)
+            self.set_comment(obj, cursor)
             declared_instance = True
         # capture members declaration
         members = []
