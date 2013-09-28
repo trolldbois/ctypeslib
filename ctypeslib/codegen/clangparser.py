@@ -100,13 +100,14 @@ class Clang_Parser(object):
                       "Destructor", "OperatorMethod",
                       "Converter"])
 
+    # FIXME, macro definition __SIZEOF_DOUBLE__
     ctypes_typename = {
         TypeKind.VOID : 'void' ,
         TypeKind.BOOL : 'c_bool' ,
         TypeKind.CHAR_U : 'c_ubyte' ,
         TypeKind.UCHAR : 'c_ubyte' ,
-        TypeKind.CHAR16 : 'c_wchar' ,
-        TypeKind.CHAR32 : 'c_wchar*2' ,
+        TypeKind.CHAR16 : 'c_wchar' , # char16_t
+        TypeKind.CHAR32 : 'c_wchar' , # char32_t
         TypeKind.USHORT : 'TBD' ,
         TypeKind.UINT : 'TBD' ,
         TypeKind.ULONG : 'TBD' ,
@@ -114,7 +115,7 @@ class Clang_Parser(object):
         TypeKind.UINT128 : 'c_uint128' , # FIXME
         TypeKind.CHAR_S : 'c_char' , 
         TypeKind.SCHAR : 'c_char' , #? 
-        TypeKind.WCHAR : 'c_wchar' , 
+        TypeKind.WCHAR : 'c_wchar' , # 
         TypeKind.SHORT : 'TBD' ,
         TypeKind.INT : 'TBD' ,
         TypeKind.LONG : 'TBD' ,
@@ -905,12 +906,27 @@ typedef void* pointer_t;''', flags=_flags)
             elif (token.cursor.kind == CursorKind.CHARACTER_LITERAL or
                   token.cursor.kind == CursorKind.STRING_LITERAL):
                 # strip wchar_t type prefix for string/character
-                for prefix in ['u8R','u8','UR','uR','LR','u','U','L']:
-                    if value[:len(prefix)] == prefix:
-                        value = unicode(value[len(prefix):],'utf-8')
+                # indicatively: u8 for utf-8, u for utf-16, U for utf32
+                # assume that the source file is utf-8
+                # utf-32 not supported in 2.7, lets keep all in utf8
+                # FIXME python 3
+                # max prefix len is 3 char
+                if token.cursor.kind == CursorKind.CHARACTER_LITERAL:
+                    prefix = value[:3].split("'")[0]
+                elif token.cursor.kind == CursorKind.STRING_LITERAL:
+                    prefix = value[:3].split('"')[0]
+                value = value[len(prefix)+1:-1] # strip delimitors
+                # string literal only: R for raw strings
+                # we need to remove the raw-char-sequence prefix,suffix
+                if 'R' in prefix:
+                    # if there is no '(' in the 17 first char, its not valid
+                    offset = value[:17].index('(')
+                    value = value[offset+1:-offset-1]
+                # then we strip encoding
+                for encoding in ['u8','L','u','U']:
+                    if encoding in prefix: # could be Ru ou uR
+                        value = unicode(value,'utf-8')
                         break # just one prefix is possible 
-                #strip string terminators
-                value = value[1:-1]
             # add token
             final_value.append(value)
         # return the EXPR    
