@@ -3,11 +3,9 @@
 import clang
 from clang.cindex import Index
 from clang.cindex import CursorKind, TypeKind, TokenKind
-import ctypes
 
 import logging
 
-import codegenerator
 import typedesc
 import sys
 import re
@@ -1021,8 +1019,6 @@ typedef void* pointer_t;''', flags=_flags)
     def _record_decl(self, _type, cursor):
         ''' a structure and an union have the same handling.'''
         name = self.get_unique_name(cursor)
-        if name in codegenerator.dont_assert_size:
-            return typedesc.Ignored(name)
         # TODO unittest: try redefinition.
         # check for definition already parsed 
         if (self.is_registered(name) and
