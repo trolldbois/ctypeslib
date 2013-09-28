@@ -207,11 +207,13 @@ class Generator(object):
                  known_symbols=None,
                  searched_dlls=None,
                  preloaded_dlls=[],
-                 generate_docstrings=False):
+                 generate_docstrings=False,
+                 generate_locations=False):
         self.output = output
         self.stream = StringIO.StringIO()
         self.imports = StringIO.StringIO()
 ##        self.stream = self.imports = self.output
+        self.generate_locations = generate_locations
         self.generate_comments = generate_comments
         self.generate_docstrings = generate_docstrings
         self.known_symbols = known_symbols or {}
@@ -313,34 +315,6 @@ class Generator(object):
         else:
             print >> self.stream, code, '# Macro'
             self.names.add(macro.name)
-
-    def StructureHead(self, head):
-        for struct in head.struct.bases:
-            self.generate(struct.get_head())
-            self.more.add(struct)
-        # verbose output with location.
-        if self.generate_comments and head.struct.location:
-            print >> self.stream, "# %s %s" % head.struct.location
-        basenames = [self.type_name(b) for b in head.struct.bases]
-        if basenames:
-            ### method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
-            print >> self.stream, "class %s(%s):" % (head.struct.name, ", ".join(basenames))
-        else:
-            ### methods = [m for m in head.struct.members if type(m) is typedesc.Method]
-            if type(head.struct) == typedesc.Structure:
-                print >> self.stream, "class %s(Structure):" % head.struct.name
-            elif type(head.struct) == typedesc.Union:
-                print >> self.stream, "class %s(Union):" % head.struct.name
-        print >> self.stream, "    pass\n"
-        self.names.add(head.struct.name)
-
-    _structures = 0
-    def Structure(self, struct):
-        self._structures += 1
-        self.generate(struct.get_head())
-        self.generate(struct.get_body())
-
-    Union = Structure
         
     _typedefs = 0
     def Typedef(self, tp):
@@ -503,6 +477,36 @@ class Generator(object):
             self.names.add(tp.name)
 
 
+    _structures = 0
+    def Structure(self, struct):
+        self._structures += 1
+        self.generate(struct.get_head())
+        self.generate(struct.get_body())
+        return
+
+    Union = Structure
+
+    def StructureHead(self, head):
+        for struct in head.struct.bases:
+            self.generate(struct.get_head())
+            self.more.add(struct)
+        # verbose output with location.
+        if self.generate_locations and head.struct.location:
+            print >> self.stream, "# %s %s" % head.struct.location
+        basenames = [self.type_name(b) for b in head.struct.bases]
+        if basenames:
+            ### method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
+            print >> self.stream, "class %s(%s):" % (head.struct.name, ", ".join(basenames))
+        else:
+            ### methods = [m for m in head.struct.members if type(m) is typedesc.Method]
+            if type(head.struct) == typedesc.Structure:
+                print >> self.stream, "class %s(Structure):" % head.struct.name
+            elif type(head.struct) == typedesc.Union:
+                print >> self.stream, "class %s(Union):" % head.struct.name
+        print >> self.stream, "    pass\n"
+        self.names.add(head.struct.name)
+
+
     def StructureBody(self, body):
         fields = []
         methods = []
@@ -556,7 +560,7 @@ class Generator(object):
         if len(fields) > 0:
             print >> self.stream, "%s._fields_ = [" % body.struct.name
 
-            if self.generate_comments and body.struct.location:
+            if self.generate_locations and body.struct.location:
                 print >> self.stream, "    # %s %s" % body.struct.location
             index = 0
             for f in fields:
@@ -584,6 +588,10 @@ class Generator(object):
 ##            align = body.struct.align // 8
 ##            print >> self.stream, "assert alignment(%s) == %s, alignment(%s)" % \
 ##                  (body.struct.name, align, body.struct.name)
+
+
+
+
 
     def find_dllname(self, func):
         if hasattr(func, "dllname"):
@@ -665,7 +673,7 @@ class Generator(object):
 
             argnames = [a or "p%d" % (i+1) for i, a in enumerate(func.iterArgNames())]
 
-            if self.generate_comments and func.location:
+            if self.generate_locations and func.location:
                 print >> self.stream, "# %s %s" % func.location
             print >> self.stream, "%s = %s.%s" % (func.name, libname, func.name)
             print >> self.stream, "%s.restype = %s" % (func.name, self.type_name(func.returns))
@@ -845,6 +853,7 @@ def generate_code(srcfiles,
                   types=None,
                   preloaded_dlls=[],
                   generate_docstrings=False,
+                  generate_locations=False,
                   flags=[]
                   ): 
     # expressions is a sequence of compiled regular expressions,
@@ -891,6 +900,7 @@ def generate_code(srcfiles,
 
     ################
     gen = Generator(outfile,
+                    generate_locations=generate_locations,
                     generate_comments=generate_comments,
                     generate_docstrings=generate_docstrings,
                     known_symbols=known_symbols,

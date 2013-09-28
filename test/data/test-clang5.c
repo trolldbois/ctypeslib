@@ -64,7 +64,7 @@ struct Node5 {
 };
 
 
-/* padding in bitfields */
+/** padding in bitfields */
 typedef struct
 {
   long a:3;
