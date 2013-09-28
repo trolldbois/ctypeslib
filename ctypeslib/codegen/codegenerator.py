@@ -739,7 +739,7 @@ class Generator(object):
         # go to specific treatment
         mth(item)
 
-    def generate_comment(self, item):
+    def print_comment(self, item):
         if item.comment is None:
             return
         for l in textwrap.wrap(item.comment, 78):
@@ -748,7 +748,7 @@ class Generator(object):
     def generate_all(self, items):
         for item in items:
             if self.generate_comments:
-                self.generate_comment(item)
+                self.print_comment(item)
             self.generate(item)
 
     def cmpitems(a, b):
