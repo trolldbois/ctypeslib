@@ -122,7 +122,8 @@ class Clang_Parser(object):
         self.flags = flags
         self.ctypes_sizes = {}
         self.tu_options = (TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD | 
-                           TranslationUnit.PARSE_SKIP_FUNCTION_BODIES )
+                           TranslationUnit.PARSE_SKIP_FUNCTION_BODIES |
+                           TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION )
         self.make_ctypes_convertor(flags)
         self.init_fundamental_types()
 
