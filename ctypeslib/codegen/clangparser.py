@@ -1263,10 +1263,29 @@ typedef void* pointer_t;''', flags=_flags)
     # now fixed by TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     @log_entity
     def COMPOUND_STMT(self, cursor):
-      return True
+        return True
 
+    # now fixed by TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
+    @log_entity
+    def MACRO_DEFINITION(self, cursor):
+        #code.interact(local=locals()) 
+        name = self.get_unique_name(cursor)
+        # Tokens !!!
+        tokens = [t.spelling for t in list(cursor.get_tokens())]
+        if len(tokens) > 2:
+            full = ' '.join(tokens[2:])
+            log.debug('MACRO: #define %s %s [%s]'%(tokens[0],tokens[1],full))
+        else:
+            log.debug('MACRO: #define %s %s'%(tokens[0],tokens[1]))
+        self.register(name, typedesc.Alias(name, tokens[1]))
+        return True
+    
+    
     
     ################
+
+    def _fixup_Alias(self, m):
+        pass
 
     def _fixup_Macro(self, m):
         pass
@@ -1331,8 +1350,8 @@ typedef void* pointer_t;''', flags=_flags)
                 _item.location = location.file.name, location.line
                 log.error('%s %s came in with a SourceLocation'%(_id, _item))
             elif location is None:
-                log.warning('item %s has no location.'%(_id))
                 # FIXME make this optional to be able to see internals
+                # FIXME macro/alias are here 
                 remove.append(_item.name)
             mth = getattr(self, "_fixup_" + type(_item).__name__)
             try:
