@@ -288,6 +288,8 @@ class Generator(object):
     ################################################################
 
     def Alias(self, alias):
+        if self.generate_comments:
+            self.print_comment(alias)
         if alias.typ is not None: # we can resolve it
             self.generate(alias.typ)
             if alias.alias in self.names:
@@ -319,6 +321,8 @@ class Generator(object):
     _typedefs = 0
     def Typedef(self, tp):
         #print 'Typedef', tp.name, tp.typ
+        if self.generate_comments:
+            self.print_comment(tp)
         sized_types = {
             "uint8_t":  "c_uint8",
             "uint16_t": "c_uint16",
@@ -391,6 +395,8 @@ class Generator(object):
     _notfound_variables = 0
     def Variable(self, tp):
         self._variables += 1
+        if self.generate_comments:
+            self.print_comment(tp)
         dllname = self.find_dllname(tp)
         if dllname:
             self.generate(tp.typ)
@@ -461,6 +467,8 @@ class Generator(object):
     _enumtypes = 0
     def Enumeration(self, tp):
         self._enumtypes += 1
+        if self.generate_comments:
+            self.print_comment(tp)
         print >> self.stream
         if tp.name:
             print >> self.stream, "# values for enumeration '%s'" % tp.name
@@ -493,6 +501,8 @@ class Generator(object):
         # verbose output with location.
         if self.generate_locations and head.struct.location:
             print >> self.stream, "# %s %s" % head.struct.location
+        if self.generate_comments:
+            self.print_comment(head.struct)
         basenames = [self.type_name(b) for b in head.struct.bases]
         if basenames:
             ### method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
@@ -661,6 +671,8 @@ class Generator(object):
     def Function(self, func):
         dllname = self.find_dllname(func)
         if dllname:
+            if self.generate_comments:
+                self.print_comment(func)
             self.generate(func.returns)
             self.generate_all(func.iterArgTypes())
             args = [self.type_name(a) for a in func.iterArgTypes()]
@@ -755,8 +767,6 @@ class Generator(object):
 
     def generate_all(self, items):
         for item in items:
-            if self.generate_comments:
-                self.print_comment(item)
             self.generate(item)
 
     def cmpitems(a, b):
