@@ -909,8 +909,10 @@ typedef void* pointer_t;''', flags=_flags)
                 token.spelling, token.kind.name, token.cursor.kind.name, 
                 cursor.kind.name))
             #code.interact(local=locals())
-            # if value in ['[',']',';']: continue
-            if ( token.kind != TokenKind.LITERAL and 
+            # token is not a literal, nor a identifier ( other variable )
+            # and cursor.kind != token.cursor.kind ( its a subexpression )
+            if ( token.kind != TokenKind.IDENTIFIER and 
+                 token.kind != TokenKind.LITERAL and 
                  token.cursor.kind != cursor.kind):
                 # not a literal ? we might ignore these tokens
                 # EXCEPT in the case of a punctiation (-) with a cursor parent 
