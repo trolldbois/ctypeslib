@@ -908,24 +908,14 @@ typedef void* pointer_t;''', flags=_flags)
             log.debug('token:%s tk.kd:%11s tk.cursor.kd:%15s cursor.kd:%15s'%(
                 token.spelling, token.kind.name, token.cursor.kind.name, 
                 cursor.kind.name))
-            #code.interact(local=locals())
-            # token is not a literal, nor a identifier ( other variable )
-            # and cursor.kind != token.cursor.kind ( its a subexpression )
-            if ( token.kind != TokenKind.IDENTIFIER and 
-                 token.kind != TokenKind.LITERAL and 
-                 token.cursor.kind != cursor.kind):
-                # not a literal ? we might ignore these tokens
-                # EXCEPT in the case of a punctiation (-) with a cursor parent 
-                # that is an unary_operator.
-                #code.interact(local=locals())
-                if (token.kind == TokenKind.PUNCTUATION and 
-                    token.cursor.kind == CursorKind.UNARY_OPERATOR):
-                    pass
-                else:
-                    log.debug('IGNORE token %s'%(value))
-                    continue
-            #if token.kind not in [TokenKind.LITERAL]:
-            #    continue
+            # Punctuation is probably not part of the init_value, 
+            # but only in specific case: ';' endl, or part of list_expr
+            if ( token.kind == TokenKind.PUNCTUATION and 
+                 ( token.cursor.kind == CursorKind.INVALID_FILE or
+                   token.cursor.kind == CursorKind.INIT_LIST_EXPR)):
+                log.debug('IGNORE token %s'%(value))
+                continue
+            # Cleanup specific c-lang or c++ prefix/suffix for POD types.
             if token.cursor.kind == CursorKind.INTEGER_LITERAL:
                 # strip type suffix for constants 
                 value = value.replace('L','').replace('U','')
