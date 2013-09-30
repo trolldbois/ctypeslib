@@ -259,7 +259,13 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.func_ptr._restype_, ctypes.c_int)
         self.assertEqual(self.namespace.func_ptr._argtypes_[0].__name__, 'LP_c_char')
         self.assertEqual(self.namespace.func_ptr._argtypes_[1].__name__, 'c_int')
-    
+
+    def test_operation(self):
+        self.convert('''
+        int i = -1+2;
+        ''')
+        self.assertEqual(self.namespace.i, 1 )
+  
     # we are not actually looking at signed/unsigned types...
     @unittest.expectedFailure
     def test_uint_minus_one(self):
