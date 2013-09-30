@@ -16,10 +16,14 @@ log = logging.getLogger('clangparser')
 ## DEBUG
 import code 
 
-
-class InvalidCodeError(TypeError):
+class InvalidDefinitionError(TypeError):
+    """When a structure is invalid in the source code,  sizeof, alignof returns
+    negatives value. We detect it and do our best."""
     pass
 
+class DuplicateDefinitionException(KeyError):
+    """When we encounter a duplicate declaration/definition name."""
+    pass
 
 def decorator(dec):
     def new_decorator(f):
@@ -180,7 +184,7 @@ class Clang_Parser(object):
             # if fn returns something, if this element has children, treat them.
             for child in node.get_children():
                 self.startElement( child )
-        except InvalidCodeError, e:
+        except InvalidDefinitionError, e:
             pass 
         # startElement returns None.
         return None
@@ -189,7 +193,8 @@ class Clang_Parser(object):
         if name in self.all:
             log.debug('register: %s already existed: %s'%(name,obj.name))
             #code.interact(local=locals())
-            raise RuntimeError('register: %s already existed: %s'%(name,obj.name))
+            raise DuplicateDefinitionException(
+                            'register: %s already existed: %s'%(name,obj.name))
         log.debug('register: %s '%(name))
         self.all[name] = obj
         return obj
@@ -1038,7 +1043,7 @@ typedef void* pointer_t;''', flags=_flags)
             log.error('invalid structure %s %s align:%d size:%d'%(
                         name, cursor.location, align, size))
             #return None
-            raise InvalidCodeError('invalid structure %s %s align:%d size:%d'%(
+            raise InvalidDefinitionError('invalid structure %s %s align:%d size:%d'%(
                                             name, cursor.location, align, size))
         log.debug('_record_decl: name: %s size:%d'%(name, size))
         # Declaration vs Definition point
