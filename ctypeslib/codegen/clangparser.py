@@ -454,6 +454,8 @@ typedef void* pointer_t;''', flags=_flags)
     
     
     def _get_var_decl_init_value(self, _ctype, children_iter):
+        """gather initialisation values by parsing children nodes of a VAR_DECL.
+        """
         init_value = None
         children = list(children_iter)
         # get the value of this variable 
@@ -462,8 +464,9 @@ typedef void* pointer_t;''', flags=_flags)
             if self.is_array_type(_ctype):
                 return []
             return None
-        #
+        # seen in function pointer with args, 
         if (len(children) != 1):
+            # test_codegen.py test_extern_function_pointer_multiarg
             log.debug('Multiple children in a var_decl')
         init_value = []
         for child in children:
@@ -489,14 +492,15 @@ typedef void* pointer_t;''', flags=_flags)
                 #child_kind = list(child.get_children())[0].kind
                 #log.debug('Calling %s'%(child.kind.name))
                 #init_value.append( self.parse_cursor(child) )
-                
+            elif child.kind == CursorKind.PARM_DECL:
+                # Seen: function pointer
+                init_value.append( self.parse_cursor(child) )                
             elif self.is_literal_cursor(child):
                 log.debug('Calling %s'%(child.kind.name))
                 init_value.append( self.parse_cursor(child) )
             else:
                 # Seen: function pointer
                 init_value.append( self.parse_cursor(child) )
-            #FIXME _ctype:CONSTANTARRAY -> INIT_LIST_EXPR
             #code.interact(local=locals())
         if isinstance(init_value, list) and len(init_value) == 1:
             init_value = init_value[0]
@@ -866,34 +870,38 @@ typedef void* pointer_t;''', flags=_flags)
         self.set_comment(obj, cursor)
         return obj
 
-    # DEPRECATED
-    # Function is not used any more, as variable assignate are goten directly
-    # from the token.
-    # We can't use a shortcut by getting tokens
-    ## init_value = ' '.join([t.spelling for t in children[0].get_tokens() 
-    ##                         if t.spelling != ';'])
-    # because some literal might need cleaning.
     @log_entity
     def _literal_handling(self, cursor):
+        """Parse all literal associated with this cursor.
+        
+        We can't use a shortcut by getting tokens
+            ## init_value = ' '.join([t.spelling for t in children[0].get_tokens() 
+            ##                         if t.spelling != ';'])
+        because some literal might need cleaning."""
         tokens = list(cursor.get_tokens())
         log.debug('literal has %d tokens.[ %s ]'%(len(tokens), 
             str([str(t.spelling) for t in tokens])))
         final_value = []
         #code.interact(local=locals())
+        log.debug('cursor.type:%s'%(cursor.type.kind.name))
         for token in tokens:
             value = token.spelling
-            log.debug('token:%s/%s tk.cursor.kd:%s'%(token.spelling, token.kind, token.cursor.kind))
-            log.debug('cursor.type:%s  cursor.kind: %s'%(cursor.type.kind, cursor.kind))
+            log.debug('token:%s tk.kd:%11s tk.cursor.kd:%15s cursor.kd:%15s'%(
+                token.spelling, token.kind.name, token.cursor.kind.name, 
+                cursor.kind.name))
             #code.interact(local=locals())
             # if value in ['[',']',';']: continue
             if ( token.kind != TokenKind.LITERAL and 
                  token.cursor.kind != cursor.kind):
-                # we might ignore these tokens
+                # not a literal ? we might ignore these tokens
+                # EXCEPT in the case of a punctiation (-) with a cursor parent 
+                # that is an unary_operator.
                 #code.interact(local=locals())
                 if (token.kind == TokenKind.PUNCTUATION and 
                     token.cursor.kind == CursorKind.UNARY_OPERATOR):
                     pass
                 else:
+                    log.debug('IGNORE token %s'%(value))
                     continue
             #if token.kind not in [TokenKind.LITERAL]:
             #    continue
@@ -1275,14 +1283,16 @@ typedef void* pointer_t;''', flags=_flags)
     def MACRO_DEFINITION(self, cursor):
         #code.interact(local=locals()) 
         name = self.get_unique_name(cursor)
-        # Tokens !!!
+        # Tokens !!! .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION, 
+        # COMMENT ? } etc. see TokenKinds.def
         tokens = [t.spelling for t in list(cursor.get_tokens())]
-        if len(tokens) > 2:
-            full = ' '.join(tokens[2:])
-            log.debug('MACRO: #define %s %s [%s]'%(tokens[0],tokens[1],full))
-        else:
-            log.debug('MACRO: #define %s %s'%(tokens[0],tokens[1]))
-        self.register(name, typedesc.Alias(name, tokens[1]))
+        define = ' '.join(tokens[1:])
+        log.debug('MACRO: #define %s %s'%(tokens[0], define))
+        try:
+            self.register(name, typedesc.Alias(name, define))
+        except DuplicateDefinitionException, e:
+            log.info('Redefinition of %s -> %s'%(name, define))
+            pass
         return True
     
     
