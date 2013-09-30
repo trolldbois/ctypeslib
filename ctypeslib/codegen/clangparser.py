@@ -918,8 +918,9 @@ typedef void* pointer_t;''', flags=_flags)
             elif token.kind == TokenKind.COMMENT:
                 log.debug('Ignore comment %s'%(value))
                 continue
-            elif token.cursor.kind == CursorKind.VAR_DECL:
-                log.error('clang BUG - ignoring next token %s'%(value))
+            #elif token.cursor.kind == CursorKind.VAR_DECL:
+            elif token.location not in cursor.extent:
+                log.error('FIXME BUG: token.location not in cursor.extent %s'%(value))
                 # FIXME
                 # there is most probably a BUG in clang or python-clang
                 # when on #define with no value, a token is taken from 
@@ -928,6 +929,9 @@ typedef void* pointer_t;''', flags=_flags)
                 #   #define A
                 #   extern int i;
                 # // this will give "extern" the last token of Macro("A")
+                # Lexer is choking ?
+                # FIXME BUG: token.location not in cursor.extent
+                #code.interact(local=locals())
                 continue
             # Cleanup specific c-lang or c++ prefix/suffix for POD types.
             if token.cursor.kind == CursorKind.INTEGER_LITERAL:
@@ -1311,6 +1315,8 @@ typedef void* pointer_t;''', flags=_flags)
         used with TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD"""
         # TODO: optionalize macro parsing. It takes a LOT of time.
         name = self.get_unique_name(cursor)
+        #if name == 'A':
+        #    code.interact(local=locals())
         # Tokens !!! .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION, 
         # COMMENT ? } etc. see TokenKinds.def
         comment = None
