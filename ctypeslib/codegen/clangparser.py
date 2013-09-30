@@ -915,6 +915,9 @@ typedef void* pointer_t;''', flags=_flags)
                    token.cursor.kind == CursorKind.INIT_LIST_EXPR)):
                 log.debug('IGNORE token %s'%(value))
                 continue
+            elif token.kind == TokenKind.COMMENT:
+                log.debug('Ignore comment %s'%(value))
+                continue
             # Cleanup specific c-lang or c++ prefix/suffix for POD types.
             if token.cursor.kind == CursorKind.INTEGER_LITERAL:
                 # strip type suffix for constants 
@@ -1291,23 +1294,43 @@ typedef void* pointer_t;''', flags=_flags)
     def COMPOUND_STMT(self, cursor):
         return True
 
-    # now fixed by TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
     @log_entity
     def MACRO_DEFINITION(self, cursor):
-        #code.interact(local=locals()) 
+        """Parse MACRO_DEFINITION, only present if the TranslationUnit is 
+        used with TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD"""
         name = self.get_unique_name(cursor)
         # Tokens !!! .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION, 
         # COMMENT ? } etc. see TokenKinds.def
-        tokens = [t.spelling for t in list(cursor.get_tokens())]
-        define_str = ' '.join(tokens[1:])
-        define = tokens[1:]
-        log.debug('MACRO: #define %s %s'%(tokens[0], define))
+        comment = None
+        tokens = self._literal_handling(cursor)
+        # Macro name is tokens[0]
+        # get Macro value(s)
+        value = True
+        if isinstance(tokens, list):
+            if len(tokens) == 2 :
+                value = tokens[1]
+            else:
+                value = tokens[1:]
+        # macro comment maybe in tokens. Not in cursor.raw_comment
+        for t in cursor.get_tokens():
+            if t.kind == TokenKind.COMMENT:
+                comment = t.spelling
+        # special case. internal __null
+        # FIXME, there are probable a lot of others.
+        if name == 'NULL' or value == '__null':
+            value = None
+        log.debug('MACRO: #define %s %s'%(tokens[0], value))
+        obj = typedesc.Macro(name, None, value)
         try:
-            self.register(name, typedesc.Alias(name, define))
+            self.register(name, obj)
         except DuplicateDefinitionException, e:
-            log.info('Redefinition of %s -> %s'%(name, define))
+            log.info('Redefinition of %s -> %s'%(name, value))
+            # HACK FIXME
+            self.all[name] = obj
             pass
-        self.set_location(self.get_registered(name), cursor)
+        self.set_location(obj, cursor)
+        # set the comment in the obj 
+        obj.comment = comment
         return True
     
     

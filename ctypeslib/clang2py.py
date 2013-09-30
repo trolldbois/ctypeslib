@@ -54,7 +54,7 @@ def main(argv=None):
     parser.add_argument("--debug", dest="debug", action="store_const", 
                  const=True, help='setLevel to DEBUG')
     parser.add_argument("-c", dest="generate_comments", action="store_true", 
-                 help="include source doxygen-style comments", default=True)
+                 help="include source doxygen-style comments", default=False)
     parser.add_argument("-d", dest="generate_docstrings", action="store_true",
                  help="include docstrings containing C prototype and source file location",
                  default=False)
@@ -62,13 +62,15 @@ def main(argv=None):
                  help="include source file location in comments", default=False)
     parser.add_argument("-k", action="store",
                       dest="kind", help="kind of type descriptions to include: "
-                      "d = #defines, "
-                      "e = enumerations, "
-                      "f = functions, "
-                      "s = structures, "
-                      "t = typedefs",
+                        "a = Alias,"
+                        "d = Variable,"
+                        "e = Enumeration,"
+                        "f = Function,"
+                        "m = Macro, #define"
+                        "s = Records, Structure,Union,Class "
+                        "t = Typedef,",
                       metavar="TYPEKIND",
-                      default=None)
+                      default="adefmst")
 
     parser.add_argument("-l",
                       dest="dlls",

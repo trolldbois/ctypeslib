@@ -290,10 +290,14 @@ class Generator(object):
     def Alias(self, alias):
         if self.generate_comments:
             self.print_comment(alias)
-        print >> self.stream, "%s = %s # define" % (alias.name, alias.alias)
+        print >> self.stream, "%s = %s # alias" % (alias.name, alias.alias)
         return            
 
     def Macro(self, macro):
+        if self.generate_comments:
+            self.print_comment(macro)
+        print >> self.stream, "%s = %s # macro" % (macro.name, macro.body)
+        return            
         # We don't know if we can generate valid, error free Python
         # code. All we can do is to try to compile the code.  If the
         # compile fails, we know it cannot work, so we comment out the
@@ -301,7 +305,7 @@ class Generator(object):
         #
         # If the compilation succeeds, it may still fail at runtime
         # when the macro is called.
-        code = "def %s%s: return %s # macro" % (macro.name, macro.args, macro.body)
+        #code = "def %s%s: return %s # macro" % (macro.name, macro.args, macro.body)
         try:
             compile(code, "<string>", "exec")
         except SyntaxError:

@@ -107,10 +107,10 @@ class ADict(dict):
 
 class ClangTest(unittest.TestCase):
     namespace = None
-    def gen(self, fname, flags=[]):
+
+    def _gen(self, ofi, fname, flags=[]):
         """Take a file input and generate the code.
         """ 
-        ofi = StringIO()
         # leave the new parser accessible for tests
         self.parser = clangparser.Clang_Parser(flags)
         with open(fname):
@@ -121,6 +121,13 @@ class ClangTest(unittest.TestCase):
         gen = codegenerator.Generator(ofi)
         gen.generate_headers(self.parser)
         gen.generate_code(items)
+        return gen
+        
+    def gen(self, fname, flags=[]):
+        """Take a file input and generate the code.
+        """ 
+        ofi = StringIO()
+        gen = self._gen(ofi, fname, flags)
         # load code 
         namespace = {}
         # DEBUG
