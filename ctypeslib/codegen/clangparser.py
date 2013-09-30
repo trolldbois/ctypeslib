@@ -920,6 +920,14 @@ typedef void* pointer_t;''', flags=_flags)
                 continue
             elif token.cursor.kind == CursorKind.VAR_DECL:
                 log.error('clang BUG - ignoring next token %s'%(value))
+                # FIXME
+                # there is most probably a BUG in clang or python-clang
+                # when on #define with no value, a token is taken from 
+                # next line. Which break stuff.
+                # example:
+                #   #define A
+                #   extern int i;
+                # // this will give "extern" the last token of Macro("A")
                 continue
             # Cleanup specific c-lang or c++ prefix/suffix for POD types.
             if token.cursor.kind == CursorKind.INTEGER_LITERAL:
@@ -1301,6 +1309,7 @@ typedef void* pointer_t;''', flags=_flags)
     def MACRO_DEFINITION(self, cursor):
         """Parse MACRO_DEFINITION, only present if the TranslationUnit is 
         used with TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD"""
+        # TODO: optionalize macro parsing. It takes a LOT of time.
         name = self.get_unique_name(cursor)
         # Tokens !!! .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION, 
         # COMMENT ? } etc. see TokenKinds.def
