@@ -976,6 +976,7 @@ typedef void* pointer_t;''', flags=_flags)
 
     @log_entity
     def _operator_handling(self, cursor):
+        """return a string with the literal that are part of the operation."""
         values = self._literal_handling(cursor)
         retval = ''.join([str(val) for val in values])
         return retval
@@ -983,19 +984,9 @@ typedef void* pointer_t;''', flags=_flags)
     UNARY_OPERATOR = _operator_handling
     BINARY_OPERATOR = _operator_handling
 
-    #@log_entity
-    #def BINARY_OPERATOR(self, cursor):
-    #    values = self._literal_handling(cursor)
-    #    if (cursor.kind == CursorKind.UNARY_OPERATOR and len(values)>1 and
-    #            values[0] in ['-','+'] and 
-    #            isinstance(values[1],(int,float)) ):
-    #        _t = values.pop(0) 
-    #        if _t == '-':            
-    #            values[0] = -values[0]
-    #    return values
-
     @log_entity
     def INIT_LIST_EXPR(self, cursor):
+        """Returns a list of literal values."""
         values = [self.parse_cursor(child)
                     for child in list(cursor.get_children())]
         return values
