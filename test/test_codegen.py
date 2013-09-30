@@ -293,7 +293,7 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.minusone, 4294967295)
 
     # no macro support yet
-    @unittest.expectedFailure
+    #@unittest.expectedFailure
     def test_macro(self):
         self.convert("""
         #define A  0.9642

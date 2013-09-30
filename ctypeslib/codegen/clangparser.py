@@ -918,6 +918,9 @@ typedef void* pointer_t;''', flags=_flags)
             elif token.kind == TokenKind.COMMENT:
                 log.debug('Ignore comment %s'%(value))
                 continue
+            elif token.cursor.kind == CursorKind.VAR_DECL:
+                log.error('clang BUG - ignoring next token %s'%(value))
+                continue
             # Cleanup specific c-lang or c++ prefix/suffix for POD types.
             if token.cursor.kind == CursorKind.INTEGER_LITERAL:
                 # strip type suffix for constants 

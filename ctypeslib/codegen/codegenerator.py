@@ -294,6 +294,11 @@ class Generator(object):
         return            
 
     def Macro(self, macro):
+        if macro.location is None:
+            log.info('Ignoring %s with no location'%(macro.name))
+            return
+        if self.generate_locations:
+            print >> self.stream, "# %s:%s" % (macro.location)
         if self.generate_comments:
             self.print_comment(macro)
         print >> self.stream, "%s = %s # macro" % (macro.name, macro.body)
@@ -496,7 +501,7 @@ class Generator(object):
             self.more.add(struct)
         # verbose output with location.
         if self.generate_locations and head.struct.location:
-            print >> self.stream, "# %s %s" % head.struct.location
+            print >> self.stream, "# %s:%d" % head.struct.location
         if self.generate_comments:
             self.print_comment(head.struct)
         basenames = [self.type_name(b) for b in head.struct.bases]
