@@ -290,16 +290,8 @@ class Generator(object):
     def Alias(self, alias):
         if self.generate_comments:
             self.print_comment(alias)
-        if alias.typ is not None: # we can resolve it
-            self.generate(alias.typ)
-            if alias.alias in self.names:
-                print >> self.stream, "%s = %s # alias" % (alias.name, alias.alias)
-                self.names.add(alias.name)
-                return
-        # we cannot resolve it
-        print >> self.stream, "# %s = %s # alias" % (alias.name, alias.alias)
-        print "# unresolved alias: %s = %s" % (alias.name, alias.alias)
-            
+        print >> self.stream, "%s = %s # define" % (alias.name, alias.alias)
+        return            
 
     def Macro(self, macro):
         # We don't know if we can generate valid, error free Python
@@ -877,8 +869,9 @@ def generate_code(srcfiles,
         parser.parse(srcfile)
         items += parser.get_result()
     log.debug('Input was parsed')
-    #import code
+
     #code.interact(local=locals())
+
     # filter symbols to generate
     todo = []
 

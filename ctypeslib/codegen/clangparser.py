@@ -1299,13 +1299,15 @@ typedef void* pointer_t;''', flags=_flags)
         # Tokens !!! .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION, 
         # COMMENT ? } etc. see TokenKinds.def
         tokens = [t.spelling for t in list(cursor.get_tokens())]
-        define = ' '.join(tokens[1:])
+        define_str = ' '.join(tokens[1:])
+        define = tokens[1:]
         log.debug('MACRO: #define %s %s'%(tokens[0], define))
         try:
             self.register(name, typedesc.Alias(name, define))
         except DuplicateDefinitionException, e:
             log.info('Redefinition of %s -> %s'%(name, define))
             pass
+        self.set_location(self.get_registered(name), cursor)
         return True
     
     
