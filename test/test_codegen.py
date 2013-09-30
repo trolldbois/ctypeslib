@@ -262,9 +262,27 @@ class ConstantsTest(ClangTest):
 
     def test_operation(self):
         self.convert('''
-        int i = -1+2;
+        int i = -1;
+        int i2 = -1+2*3/2;
+        int i3 = +2;
+        int j = -i;
         ''')
-        self.assertEqual(self.namespace.i, 1 )
+        self.assertEqual(self.namespace.i, -1 )
+        self.assertEqual(self.namespace.i2, -1 )
+        self.assertEqual(self.namespace.i3, -1 )
+        self.assertEqual(self.namespace.j, 1 )
+
+    @unittest.expectedFailure
+    def test_array_operation(self):
+        self.convert('''
+        int i = 1;
+        int a[2] = {1,-2};
+        int b[2] = {+1,-2-2+2};
+        int c[2] = {+i,-i*2};
+        ''')
+        self.assertEqual(self.namespace.a, [1,-2] )
+        self.assertEqual(self.namespace.b, [1,-2] )
+        self.assertEqual(self.namespace.c, [1,-2] ) # unsuported ref_expr
   
     # we are not actually looking at signed/unsigned types...
     @unittest.expectedFailure
