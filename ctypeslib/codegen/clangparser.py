@@ -963,12 +963,12 @@ typedef void* pointer_t;''', flags=_flags)
             # add token
             final_value.append(value)
         # return the EXPR    
-        if (cursor.kind == CursorKind.UNARY_OPERATOR and len(final_value)>1 and
-                final_value[0] in ['-','+'] and 
-                isinstance(final_value[1],(int,float)) ):
-            _t =final_value.pop(0) 
-            if _t == '-':            
-                final_value[0] = -final_value[0]
+        #if (cursor.kind == CursorKind.UNARY_OPERATOR and len(final_value)>1 and
+        #        final_value[0] in ['-','+'] and 
+        #        isinstance(final_value[1],(int,float)) ):
+        #    _t =final_value.pop(0) 
+        #    if _t == '-':            
+        #        final_value[0] = -final_value[0]
         #code.interact(local=locals())
         if len(final_value) == 1:
             return final_value[0]
@@ -980,8 +980,19 @@ typedef void* pointer_t;''', flags=_flags)
     STRING_LITERAL = _literal_handling
     CHARACTER_LITERAL = _literal_handling
 
-    UNARY_OPERATOR = _literal_handling
+    #UNARY_OPERATOR = _literal_handling
     BINARY_OPERATOR = _literal_handling
+
+    @log_entity
+    def UNARY_OPERATOR(self, cursor):
+        values = self._literal_handling(cursor)
+        if (cursor.kind == CursorKind.UNARY_OPERATOR and len(values)>1 and
+                values[0] in ['-','+'] and 
+                isinstance(values[1],(int,float)) ):
+            _t = values.pop(0) 
+            if _t == '-':            
+                values[0] = -values[0]
+        return values
 
     @log_entity
     def INIT_LIST_EXPR(self, cursor):
