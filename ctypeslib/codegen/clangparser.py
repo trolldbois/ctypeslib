@@ -468,10 +468,27 @@ typedef void* pointer_t;''', flags=_flags)
         if (len(children) != 1):
             # test_codegen.py test_extern_function_pointer_multiarg
             log.debug('Multiple children in a var_decl')
-        init_value = []
-        for child in children:
+            init_value = []
+            for child in children:
+                if child.kind == CursorKind.PARM_DECL:
+                    # UT: test_extern_function_pointer_multiarg
+                    init_value.append( self.parse_cursor(child) )                
+                elif self.is_array_type(_ctype):
+                    # UT: test_array char c3[10] = {'a','b','c'};
+                    # NOT char c2[] = {'a','b','c'};
+                    if child.kind == CursorKind.INIT_LIST_EXPR:
+                        init_value = self.parse_cursor(child)
+                        return init_value 
+                    else:
+                        # ignore non rvalue literals
+                        pass
+                else:
+                    raise TypeError('Unkown test case - please fix.')
+        else:
+            child = children[0]
             # We should filter out literal children based on the 
             # variable type
+            # FIXME, list UT name.
             ok_types = self.get_literal_kind_affinity(child.kind)
             log.debug('_ctype: %s Child.kind: %s'%(_ctype.kind, child.kind))
             #if (_ctype.kind not 
@@ -484,25 +501,27 @@ typedef void* pointer_t;''', flags=_flags)
             if self.is_array_type(_ctype):
                 if child.kind == CursorKind.INIT_LIST_EXPR:
                     # init value will use INIT_LIST_EXPR
-                    init_value.append( self.parse_cursor(child) )
-                # else nothing.
+                    init_value = self.parse_cursor(child)
+                else:
+                    # UT: test_char_p, with "char x[10];"
+                    init_value = []
+                return init_value
             elif child.kind.is_unexposed():
                 # recurse until we find a literal kind
                 init_value = self._get_var_decl_init_value(_ctype, child.get_children())
                 #child_kind = list(child.get_children())[0].kind
                 #log.debug('Calling %s'%(child.kind.name))
                 #init_value.append( self.parse_cursor(child) )
-            elif child.kind == CursorKind.PARM_DECL:
-                # Seen: function pointer
-                init_value.append( self.parse_cursor(child) )                
             elif self.is_literal_cursor(child):
                 log.debug('Calling %s'%(child.kind.name))
-                init_value.append( self.parse_cursor(child) )
+                init_value = self.parse_cursor(child)
             else:
-                # Seen: function pointer
-                init_value.append( self.parse_cursor(child) )
+                log.debug('Calling %s'%(child.kind.name))
+                init_value = self.parse_cursor(child)
             #code.interact(local=locals())
-        if isinstance(init_value, list) and len(init_value) == 1:
+        # Can't be an array_type
+        assert not self.is_array_type(_ctype) 
+        if (isinstance(init_value, list) and len(init_value) == 1):
             init_value = init_value[0]
         return init_value
         
