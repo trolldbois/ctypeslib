@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name="ctypeslib2",
-    version="2.0-pre1",
+    version="2.0-pre2",
     description="ctypeslib2 - FFI toolkit, relies on clang",
     long_description=open("README").read(),
     author="Loic Jaquemet",
@@ -28,6 +28,6 @@ setup(
                ],
     package_data={'ctypeslib': ['data/headers.tpl']},
     scripts = ['scripts/clang2py'],
-    install_requires = ["clang>=3.4"],
+    install_requires = ["clang>=3.3-svn191928"],
     test_suite= "test.alltests",
 )
