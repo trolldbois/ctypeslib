@@ -40,6 +40,17 @@ class Pointer(ClangTest):
         self.gen('test/data/test-ctypes0.c', flags)
         self.assertEquals(ctypes.sizeof(self.namespace.union_invalid1), 16)
 
+    def test_member_pointer(self):
+        flags = ['-target','x86_64-linux','-x','c++']
+        self.convert('''
+        struct Blob {
+          int i;
+        };
+        int Blob::*member_pointer;
+        ''', flags)
+        self.assertEquals(ctypes.sizeof(self.namespace.Blob.member_pointer), 16)
+        
+ 
         
 if __name__ == "__main__":
     unittest.main()
