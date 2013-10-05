@@ -361,6 +361,16 @@ typedef void* pointer_t;''', flags=_flags)
     ################################
     # do-nothing element handlers
 
+    def _pass_through_children(self, node, **args):
+        if isinstance(node, clang.cindex.Type):
+            return None
+        for child in node.get_children():
+            self.startElement( child ) 
+
+    """Undexposed declaration. Go and see children. """
+    UNEXPOSED_DECL = _pass_through_children
+    
+
 
     ###########################################
     # ATTRIBUTES
@@ -581,13 +591,6 @@ typedef void* pointer_t;''', flags=_flags)
             init_value = init_value[0]
         return init_value
         
-    def _fixup_Variable(self, t):
-        # FIXME, should never happen, DELETE.
-        #raise RuntimeError('_fixup_Variable shoudl never happen. test and delete')
-        if type(t.typ) == str: #typedesc.FundamentalType:
-            t.typ = self.all[t.typ]
-
-
     @log_entity
     def TEMPLATE_REF(self, cursor):
         # FIXME
@@ -1430,12 +1433,11 @@ typedef void* pointer_t;''', flags=_flags)
                 # FIXME make this optional to be able to see internals
                 # FIXME macro/alias are here 
                 remove.append(_item.name)
-            mth = getattr(self, "_fixup_" + type(_item).__name__)
-            try:
+            # try fixup if needed
+            fixup_cb_name = "_fixup_" + type(_item).__name__
+            if hasattr(self, fixup_cb_name):
+                mth = getattr(self, fixup_cb_name)
                 mth(_item)
-            except IOError,e:#KeyError,e: # XXX better exception catching
-                log.warning('function "%s" missing, err:%s, remove %s'%("_fixup_" + type(_item).__name__, e, _id) )
-                remove.append(_id)
             
         for _x in remove:
             del self.all[_x]
@@ -1463,17 +1465,6 @@ typedef void* pointer_t;''', flags=_flags)
         #print 'clangparser get_result:',result
         return result
     
-    #catch-all
-    def __getattr__(self, name):
-        if name not in self._unhandled:
-            log.warning('%s is not handled'%(name))
-            self._unhandled.append(name)
-            #return True
-        def p(node, **args):
-            if isinstance(node, clang.cindex.Type):
-                return None
-            for child in node.get_children():
-                self.startElement( child ) 
-        return p
+    
 
 
