@@ -107,12 +107,16 @@ class ADict(dict):
 
 class ClangTest(unittest.TestCase):
     namespace = None
-
+    full_parsing_options = False
+    
     def _gen(self, ofi, fname, flags=[]):
         """Take a file input and generate the code.
         """ 
         # leave the new parser accessible for tests
         self.parser = clangparser.Clang_Parser(flags)
+        if self.full_parsing_options:
+            self.parser.activate_macros_parsing()
+            self.parser.activate_comment_parsing()
         with open(fname):
             pass
         self.parser.parse(fname)

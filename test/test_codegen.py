@@ -295,6 +295,7 @@ class ConstantsTest(ClangTest):
     # no macro support yet
     #@unittest.expectedFailure
     def test_macro(self):
+        self.full_parsing_options = True 
         self.convert("""
         #define A  0.9642
         #define B  1.0
