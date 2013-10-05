@@ -40,6 +40,7 @@ class Pointer(ClangTest):
         self.gen('test/data/test-ctypes0.c', flags)
         self.assertEquals(ctypes.sizeof(self.namespace.union_invalid1), 16)
 
+    @unittest.expectedFailure
     def test_member_pointer(self):
         flags = ['-target','x86_64-linux','-x','c++']
         self.convert('''
