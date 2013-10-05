@@ -62,15 +62,16 @@ def main(argv=None):
                  help="include source file location in comments", default=False)
     parser.add_argument("-k", action="store",
                       dest="kind", help="kind of type descriptions to include: "
-                        "a = Alias,"
-                        "d = Variable,"
-                        "e = Enumeration,"
-                        "f = Function,"
-                        "m = Macro, #define"
-                        "s = Records, Structure,Union,Class "
-                        "t = Typedef,",
+                        "a = Alias,\n"
+                        "d = Variable,\n"
+                        "e = Enumeration,\n"
+                        "f = Function,\n"
+                        "m = Macro, #define\n"
+                        "s = Records, Structure,Union,Class \n"
+                        "t = Typedef,\n"
+                        "default = 'defst'\n",
                       metavar="TYPEKIND",
-                      default="adefmst")
+                      default="defst")
 
     parser.add_argument("-l",
                       dest="dlls",
@@ -198,17 +199,21 @@ def main(argv=None):
             if isinstance(item, type):
                 known_symbols[name] = mod.__name__
 
+    type_table = {"a": [typedesc.Alias],
+           "d": [typedesc.Variable],
+           "e": [typedesc.Enumeration],#, typedesc.EnumValue],
+           "f": [typedesc.Function],
+           "m": [typedesc.Macro],
+           "s": [typedesc.Structure],
+           "t": [typedesc.Typedef],
+           }
     if options.kind:
         types = []
         for char in options.kind:
-            typ = {"a": [typedesc.Alias],
-                   "d": [typedesc.Variable],
-                   "e": [typedesc.Enumeration, typedesc.EnumValue],
-                   "f": [typedesc.Function],
-                   "m": [typedesc.Macro],
-                   "s": [typedesc.Structure],
-                   "t": [typedesc.Typedef],
-                   }[char]
+            try:
+                typ = type_table[char]
+            except KeyError, e:
+                parser.error("%s is not a valid choice for a TYPEKIND"%(char))
             types.extend(typ)
         options.kind = tuple(types)
 

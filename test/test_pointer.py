@@ -48,7 +48,10 @@ class Pointer(ClangTest):
         };
         int Blob::*member_pointer;
         ''', flags)
-        self.assertEquals(ctypes.sizeof(self.namespace.Blob.member_pointer), 16)
+        self.assertEquals(self.namespace.struct_Blob.i.size, 4)
+        #FIXME
+        self.fail('member pointer')
+        #self.assertTrue(isinstance(self.namespace.member_pointer,POINTER_T) )
         
  
         

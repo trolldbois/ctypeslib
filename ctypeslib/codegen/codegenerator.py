@@ -867,9 +867,16 @@ def generate_code(srcfiles,
                   generate_locations=False,
                   flags=[]
                   ): 
+
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
     parser = clangparser.Clang_Parser(flags)
+    # if macros are not needed, use a faster TranslationUnit
+    if typedesc.Macro in types:
+        parser.activate_macros_parsing()
+    if generate_comments is True:
+        parser.activate_comment_parsing()
+    #
     items = []
     for srcfile in srcfiles:
         

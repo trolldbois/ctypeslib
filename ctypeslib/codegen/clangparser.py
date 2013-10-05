@@ -125,12 +125,19 @@ class Clang_Parser(object):
         self.tu = None
         self.flags = flags
         self.ctypes_sizes = {}
-        self.tu_options = (TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD | 
-                           TranslationUnit.PARSE_SKIP_FUNCTION_BODIES |
-                           TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION )
+        self.init_parsing_options()
         self.make_ctypes_convertor(flags)
         self.init_fundamental_types()
+    
+    def init_parsing_options(self):
+        self.tu_options = TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
+    
+    def activate_macros_parsing(self):
+        self.tu_options |= TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
 
+    def activate_comment_parsing(self):
+        self.tu_options |= TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION 
+        
     def init_fundamental_types(self):
         # all fundamental typekind should refer to the FundamentalType method.
         for _fund_type in self.ctypes_typename.keys():
@@ -354,20 +361,6 @@ typedef void* pointer_t;''', flags=_flags)
     ################################
     # do-nothing element handlers
 
-    #def Class(self, attrs): pass
-    def Destructor(self, attrs): pass
-    
-    cvs_revision = None
-    def GCC_XML(self, attrs):
-        rev = attrs["cvs_revision"]
-        self.cvs_revision = tuple(map(int, rev.split(".")))
-
-    def Namespace(self, attrs): pass
-
-    def Base(self, attrs): pass
-    def Ellipsis(self, attrs): pass
-    def OperatorMethod(self, attrs): pass
-
 
     ###########################################
     # ATTRIBUTES
@@ -391,17 +384,6 @@ typedef void* pointer_t;''', flags=_flags)
     ################################
     # real element handlers
 
-    #def CPP_DUMP(self, attrs):
-    #    name = attrs["name"]
-    #    # Insert a new list for each named section into self.cpp_data,
-    #    # and point self.cdata to it.  self.cdata will be set to None
-    #    # again at the end of each section.
-    #    self.cpp_data[name] = self.cdata = []
-
-    #def characters(self, content):
-    #    if self.cdata is not None:
-    #        self.cdata.append(content)
-
     #def File(self, attrs):
     #    name = attrs["name"]
     #    if sys.platform == "win32" and " " in name:
@@ -413,6 +395,9 @@ typedef void* pointer_t;''', flags=_flags)
     #    return typedesc.File(name)
     #
     #def _fixup_File(self, f): pass
+
+    ################################
+    # EXPRESSIONS handlers
 
     '''clang does not expose some types for some expression.
     Example: the type of a token group in a Char_s or char variable.
@@ -432,6 +417,9 @@ typedef void* pointer_t;''', flags=_flags)
     @log_entity
     def DECL_REF_EXPR(self, cursor):
         return cursor.displayname
+
+    ################################
+    # TYPE REFERENCES handlers
     
     @log_entity
     def TYPE_REF(self, cursor):
@@ -450,9 +438,77 @@ typedef void* pointer_t;''', flags=_flags)
             _definition = cursor.type.get_declaration() 
         return None #self.parse_cursor(_definition)   
 
-    # Declarations     
+    ################################
+    """
+    DECLARATIONS handlers
+     VAR_DECL are Variable declarations. Initialisation value are collected 
+              within _get_var_decl_init_value
+    """
     
-    
+    @log_entity
+    def VAR_DECL(self, cursor):
+        """ The cursor is on a Variable declaration."""
+        # get the name
+        name = self.get_unique_name(cursor)
+        # double declaration ?
+        if self.is_registered(name):
+            return self.get_registered(name)
+        # Get the type
+        _ctype = cursor.type.get_canonical()
+        # FIXME: Need working int128, long_double, etc...
+        if self.is_fundamental_type(_ctype):
+            ctypesname = self.get_ctypes_name(_ctype.kind)
+            _type = typedesc.FundamentalType( ctypesname, 0, 0 )
+            # FIXME: because c_long_double_t or c_unint128 are not real ctypes
+            # we can make variable with them.
+            # just write the value as-is.
+            ### if literal_kind != CursorKind.DECL_REF_EXPR:
+            ###    init_value = '%s(%s)'%(ctypesname, init_value)
+        elif self.is_unexposed_type(_ctype): # string are not exposed
+            log.error('PATCH NEEDED: %s type is not exposed by clang'%(name))
+            ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
+            _type = typedesc.FundamentalType( ctypesname, 0, 0 )
+        elif self.is_array_type(_ctype) or _ctype.kind == TypeKind.RECORD:
+            _type = self.parse_cursor_type(_ctype)
+            #code.interact(local=locals())
+        elif self.is_pointer_type(_ctype):
+            # extern Function pointer 
+            if _ctype.get_pointee().kind == TypeKind.UNEXPOSED:
+                log.debug('Ignoring unexposed pointer type.')
+                return True
+            elif _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO:
+                # Function pointers
+                # cursor.type.get_pointee().kind == TypeKind.UNEXPOSED BUT
+                # cursor.type.get_canonical().get_pointee().kind == TypeKind.FUNCTIONPROTO
+                mth = getattr(self, _ctype.get_pointee().kind.name)
+                _type = mth(_ctype.get_pointee())
+            else: # Fundamental types, structs....
+                _type = self.POINTER(_ctype )
+        else:
+            # What else ?
+            raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
+        ## get the init_value and special cases
+        init_value = self._get_var_decl_init_value(cursor.type, 
+                                                   list(cursor.get_children()))
+        if self.is_unexposed_type(_ctype): 
+            # string are not exposed
+            init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
+        elif ( self.is_pointer_type(_ctype) and 
+                _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO):
+            # Function pointers argument are handled inside
+            if type(init_value) != list:
+                init_value = [init_value]
+            _type.arguments = init_value
+            init_value = _type
+        # finished
+        log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s'%(name, 
+                    _ctype.kind.name, _type.name, init_value,
+                    getattr(cursor, 'location')))
+        obj = self.register(name, typedesc.Variable(name, _type, init_value) )
+        self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
+        return True # dont parse literals again
+
     def _get_var_decl_init_value(self, _ctype, children_iter):
         """gather initialisation values by parsing children nodes of a VAR_DECL.
         """
@@ -525,74 +581,18 @@ typedef void* pointer_t;''', flags=_flags)
             init_value = init_value[0]
         return init_value
         
-    ''' The cursor is on a Variable declaration.'''
-    @log_entity
-    def VAR_DECL(self, cursor):
-        # get the name
-        name = self.get_unique_name(cursor)
-        # double declaration ?
-        if self.is_registered(name):
-            return self.get_registered(name)
-        # Get the type
-        _ctype = cursor.type.get_canonical()
-        # FIXME: Need working int128, long_double, etc...
-        if self.is_fundamental_type(_ctype):
-            ctypesname = self.get_ctypes_name(_ctype.kind)
-            _type = typedesc.FundamentalType( ctypesname, 0, 0 )
-            # FIXME: because c_long_double_t or c_unint128 are not real ctypes
-            # we can make variable with them.
-            # just write the value as-is.
-            ### if literal_kind != CursorKind.DECL_REF_EXPR:
-            ###    init_value = '%s(%s)'%(ctypesname, init_value)
-        elif self.is_unexposed_type(_ctype): # string are not exposed
-            log.error('PATCH NEEDED: %s type is not exposed by clang'%(name))
-            ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
-            _type = typedesc.FundamentalType( ctypesname, 0, 0 )
-        elif self.is_array_type(_ctype) or _ctype.kind == TypeKind.RECORD:
-            _type = self.parse_cursor_type(_ctype)
-            #code.interact(local=locals())
-        elif self.is_pointer_type(_ctype):
-            # extern Function pointer 
-            if _ctype.get_pointee().kind == TypeKind.UNEXPOSED:
-                log.debug('Ignoring unexposed pointer type.')
-                return True
-            elif _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO:
-                # Function pointers
-                # cursor.type.get_pointee().kind == TypeKind.UNEXPOSED BUT
-                # cursor.type.get_canonical().get_pointee().kind == TypeKind.FUNCTIONPROTO
-                mth = getattr(self, _ctype.get_pointee().kind.name)
-                _type = mth(_ctype.get_pointee())
-            else: # Fundamental types, structs....
-                _type = self.POINTER(_ctype )
-        else:
-            # What else ?
-            raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
-        ## get the init_value and special cases
-        init_value = self._get_var_decl_init_value(cursor.type, 
-                                                   list(cursor.get_children()))
-        if self.is_unexposed_type(_ctype): 
-            # string are not exposed
-            init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.'%(init_value)
-        elif ( self.is_pointer_type(_ctype) and 
-                _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO):
-            # Function pointers argument are handled inside
-            if type(init_value) != list:
-                init_value = [init_value]
-            _type.arguments = init_value
-            init_value = _type
-        # finished
-        log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s'%(name, 
-                    _ctype.kind.name, _type.name, init_value,
-                    getattr(cursor, 'location')))
-        obj = self.register(name, typedesc.Variable(name, _type, init_value) )
-        self.set_location(obj, cursor)
-        self.set_comment(obj, cursor)
-        return True # dont parse literals again
-
     def _fixup_Variable(self, t):
+        # FIXME, should never happen, DELETE.
+        #raise RuntimeError('_fixup_Variable shoudl never happen. test and delete')
         if type(t.typ) == str: #typedesc.FundamentalType:
             t.typ = self.all[t.typ]
 
+
+    @log_entity
+    def TEMPLATE_REF(self, cursor):
+        # FIXME
+        log.warning('unsupported tempalte reference')
+        return None
 
     @log_entity
     def TYPEDEF(self, cursor):
@@ -632,7 +632,7 @@ typedef void* pointer_t;''', flags=_flags)
         else:
             p_type = self.parse_cursor_type(_type)
         if p_type is None:
-            print 'p_type is none in TYpedef_decl'
+            log.error('p_type is none in TYpedef_decl')
             #code.interact(local=locals())
         # final
         obj = self.register(name, typedesc.Typedef(name, p_type))
@@ -920,7 +920,7 @@ typedef void* pointer_t;''', flags=_flags)
                 continue
             #elif token.cursor.kind == CursorKind.VAR_DECL:
             elif token.location not in cursor.extent:
-                log.error('FIXME BUG: token.location not in cursor.extent %s'%(value))
+                log.debug('FIXME BUG: token.location not in cursor.extent %s'%(value))
                 # FIXME
                 # there is most probably a BUG in clang or python-clang
                 # when on #define with no value, a token is taken from 
@@ -1063,6 +1063,12 @@ typedef void* pointer_t;''', flags=_flags)
     def UNION_DECL(self, cursor):
         '''The cursor is on the declaration of a union.'''
         return self._record_decl(typedesc.Union, cursor)
+
+    @log_entity
+    def CLASS_DECL(self, cursor):
+        '''The cursor is on the declaration of a calss.'''
+        ## FIXME
+        return self._record_decl(typedesc.Structure, cursor)
 
     def _record_decl(self, _type, cursor):
         ''' a structure and an union have the same handling.'''
@@ -1460,7 +1466,7 @@ typedef void* pointer_t;''', flags=_flags)
     #catch-all
     def __getattr__(self, name):
         if name not in self._unhandled:
-            log.debug('%s is not handled'%(name))
+            log.warning('%s is not handled'%(name))
             self._unhandled.append(name)
             #return True
         def p(node, **args):
