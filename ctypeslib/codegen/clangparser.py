@@ -361,15 +361,17 @@ typedef void* pointer_t;''', flags=_flags)
     ################################
     # do-nothing element handlers
 
+    @log_entity
     def _pass_through_children(self, node, **args):
         if isinstance(node, clang.cindex.Type):
             return None
         for child in node.get_children():
             self.startElement( child ) 
-
-    """Undexposed declaration. Go and see children. """
-    UNEXPOSED_DECL = _pass_through_children
-    
+        return True
+        
+    @log_entity
+    def _do_nothing(self, node, **args):
+        return True
 
 
     ###########################################
@@ -448,12 +450,18 @@ typedef void* pointer_t;''', flags=_flags)
             _definition = cursor.type.get_declaration() 
         return None #self.parse_cursor(_definition)   
 
+    TEMPLATE_REF = _do_nothing
+
     ################################
     """
     DECLARATIONS handlers
-     VAR_DECL are Variable declarations. Initialisation value are collected 
+     UNEXPOSED_DECL are unexposed by clang. Go through the node's children.
+     VAR_DECL are Variable declarations. Initialisation value(s) are collected 
               within _get_var_decl_init_value
     """
+
+    """Undexposed declaration. Go and see children. """
+    UNEXPOSED_DECL = _pass_through_children
     
     @log_entity
     def VAR_DECL(self, cursor):
@@ -548,8 +556,12 @@ typedef void* pointer_t;''', flags=_flags)
                     else:
                         # ignore non rvalue literals
                         pass
-                else:
-                    raise TypeError('Unkown test case - please fix.')
+                else:                    
+                    #log.debug('Calling %s'%(child.kind.name))
+                    #init_value.append( self.parse_cursor(child) )
+                    #code.interact(local=locals())
+                    raise TypeError('Unkown test case - please fix. %s'%(
+                                    _ctype.kind))
         else:
             child = children[0]
             # We should filter out literal children based on the 
@@ -560,46 +572,43 @@ typedef void* pointer_t;''', flags=_flags)
             #if (_ctype.kind not 
             #    in self.get_literal_kind_affinity(child.kind)):
             #    continue
-            ## POD init values handling.
-            # As of clang 3.3, int, double literals are exposed.
-            # float, long double, char , char* are not exposed directly in level1.
-            # but really it depends... 
-            if self.is_array_type(_ctype):
-                if child.kind == CursorKind.INIT_LIST_EXPR:
-                    # init value will use INIT_LIST_EXPR
-                    init_value = self.parse_cursor(child)
-                else:
-                    # UT: test_char_p, with "char x[10];"
-                    init_value = []
-                return init_value
-            elif child.kind.is_unexposed():
-                # recurse until we find a literal kind
-                init_value = self._get_var_decl_init_value(_ctype, child.get_children())
-                #child_kind = list(child.get_children())[0].kind
-                #log.debug('Calling %s'%(child.kind.name))
-                #init_value.append( self.parse_cursor(child) )
-            elif self.is_literal_cursor(child):
-                log.debug('Calling %s'%(child.kind.name))
-                init_value = self.parse_cursor(child)
-            else:
-                log.debug('Calling %s'%(child.kind.name))
-                init_value = self.parse_cursor(child)
+            # 
+            init_value = self._get_var_decl_init_value_single(_ctype, child)
             #code.interact(local=locals())
         # Can't be an array_type
-        assert not self.is_array_type(_ctype) 
-        if (isinstance(init_value, list) and len(init_value) == 1):
+        if (not self.is_array_type(_ctype) and
+            (isinstance(init_value, list) and len(init_value) == 1)):
             init_value = init_value[0]
         return init_value
         
-    @log_entity
-    def TEMPLATE_REF(self, cursor):
-        # FIXME
-        log.warning('unsupported tempalte reference')
-        return None
+    def _get_var_decl_init_value_single(self, _ctype, child):
+        ## POD init values handling.
+        # As of clang 3.3, int, double literals are exposed.
+        # float, long double, char , char* are not exposed directly in level1.
+        # but really it depends... 
+        if self.is_array_type(_ctype):
+            if child.kind == CursorKind.INIT_LIST_EXPR:
+                # init value will use INIT_LIST_EXPR
+                init_value = self.parse_cursor(child)
+            else:
+                # UT: test_char_p, with "char x[10];"
+                init_value = []
+            return init_value
+        elif child.kind.is_unexposed():
+            # recurse until we find a literal kind
+            init_value = self._get_var_decl_init_value(_ctype, child.get_children())
+            #child_kind = list(child.get_children())[0].kind
+            #log.debug('Calling %s'%(child.kind.name))
+            #init_value.append( self.parse_cursor(child) )
+        elif self.is_literal_cursor(child):
+            log.debug('Calling %s'%(child.kind.name))
+            init_value = self.parse_cursor(child)
+        else:
+            log.debug('Calling %s'%(child.kind.name))
+            init_value = self.parse_cursor(child)
+        return init_value
 
-    @log_entity
-    def TYPEDEF(self, cursor):
-        return None
+
     '''
         Typedef_decl has 1 child, a typeref.
         the Typeref is himself.
@@ -727,7 +736,13 @@ typedef void* pointer_t;''', flags=_flags)
     _fixup_OffsetType = _fixup_PointerType
 
     ############################
+    """ 
+    Types nodes in the AST tree.
     
+     TYPEDEF -> do nothing.
+    """
+    TYPEDEF = _do_nothing
+
     @log_entity
     def CONSTANTARRAY(self, _cursor_type):
         if not isinstance(_cursor_type, clang.cindex.Type):
