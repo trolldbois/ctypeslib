@@ -135,21 +135,23 @@ class Clang_Parser(object):
         self.init_fundamental_types()
     
     def init_parsing_options(self):
+        """Set the Translation Unit to skip functions bodies per default."""
         self.tu_options = TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     
     def activate_macros_parsing(self):
+        """Activates the detailled code parsing options in the Translation 
+        Unit."""
         self.tu_options |= TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
 
     def activate_comment_parsing(self):
+        """Activates the comment parsing options in the Translation Unit."""
         self.tu_options |= TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION 
         
     def init_fundamental_types(self):
-        # all fundamental typekind should refer to the FundamentalType method.
-        for _fund_type in self.ctypes_typename.keys():
-            if _fund_type != TypeKind.POINTER:
-                setattr(self,_fund_type.name,self.FundamentalType) 
-
-        
+        """Registers all fundamental typekind handlers"""
+        for _id in range(1,24):
+            setattr(self, TypeKind.from_id(_id).name, 
+                          self._handle_fundamental_types)
 
     '''. reads 1 file
     . if there is a compilation error, print a warning
@@ -466,6 +468,29 @@ typedef void* pointer_t;''', flags=_flags)
             _definition = cursor.type.get_declaration() 
         return None #self.parse_cursor(_definition)   
 
+    def _handle_fundamental_types(self, typ):
+        """
+        Handles POD types nodes.
+        see init_fundamental_types for the registration.
+        """
+        ctypesname = self.get_ctypes_name(typ.kind)
+        if typ.kind == TypeKind.VOID:
+            size = align = 1
+        else:
+            size = typ.get_size()
+            align = typ.get_align()
+        return typedesc.FundamentalType( ctypesname, size, align )
+
+    FundamentalType = _handle_fundamental_types
+
+    def _init_Fundamental_types_handlers(self):
+        # TypeKind 1-23
+        # VOID, CHAR, INT, LONG, FLOAT...
+        for _id in range(1,24):
+            _type_kind = TypeKind.from_id(_id)
+            log.debug('setattr Fundamental %s'%(_type_kind.name))
+            setattr(self, _type_kind.name, _handle_fundamental_types)
+
     ################################
     """
     DECLARATIONS handlers
@@ -632,44 +657,20 @@ typedef void* pointer_t;''', flags=_flags)
         #    log.warning('TYPE %s has no declaration. Builtin type?'%(name))
         #    code.interact(local=locals())        
         p_type = None
-        if self.is_fundamental_type(_type):
-            p_type = self.FundamentalType(_type)
-        elif self.is_pointer_type(_type):
+        if self.is_pointer_type(_type):
             p_type = self.POINTER(_type)
         else:
             p_type = self.parse_cursor_type(_type)
         if p_type is None:
             log.error('p_type is none in TYPEDEF_DECL: %s'%(_type))
             raise TypeError('p_type is none in TYPEDEF_DECL: %s'%(_type))
-        # final
+        # register the typedef
         obj = self.register(name, typedesc.Typedef(name, p_type))
         self.set_location(obj, cursor)
         self.set_comment(obj, cursor)
         return obj
-        
-    def _fixup_Typedef(self, t):
-        #print 'fixing typdef %s name:%s with self.all[%s] = %s'%(id(t), t.name, t.typ, id(self.all[ t.typ])) 
-        #print self.all.keys()        
-        if type(t.typ) == str: #typedesc.FundamentalType:
-            raise 'Why the f'
-            log.debug("_fixup_Typedef: t:'%s' t.typ:'%s' t.name:'%s'"%(t, t.typ, t.name))
-            t.typ = self.all[t.name]
-        pass
+               
 
-       
-    def FundamentalType(self, typ):
-        #print cursor.displayname
-        #t = cursor.type.get_canonical().kind
-        ctypesname = self.get_ctypes_name(typ.kind)
-        if typ.kind == TypeKind.VOID:
-            size = align = 1
-        else:
-            size = typ.get_size()
-            align = typ.get_align()
-        return typedesc.FundamentalType( ctypesname, size, align )
-
-
-    def _fixup_FundamentalType(self, t): pass
 
     @log_entity
     def POINTER(self, _cursor_type):
@@ -683,7 +684,7 @@ typedef void* pointer_t;''', flags=_flags)
         align = _cursor_type.get_align() 
         log.debug("POINTER: size:%d align:%d typ:%s"%(size, align, _type.kind))
         if self.is_fundamental_type(_type):
-            p_type = self.FundamentalType(_type)
+            p_type = self.parse_cursor_type(_type)
         elif self.is_pointer_type(_type) or self.is_array_type(_type):
             p_type = self.parse_cursor_type(_type)
         elif _type.kind == TypeKind.FUNCTIONPROTO:
@@ -754,7 +755,7 @@ typedef void* pointer_t;''', flags=_flags)
             # FIXME VARIABLEARRAY DEPENDENTSIZEDARRAY
         _array_type = _type.get_array_element_type()#.get_canonical()
         if self.is_fundamental_type(_array_type):
-            _subtype = self.FundamentalType(_array_type)
+            _subtype = self.parse_cursor_type(_array_type)
         elif self.is_pointer_type(_array_type): 
             #code.interact(local=locals())
             # pointers to POD have no declaration ??
@@ -824,7 +825,7 @@ typedef void* pointer_t;''', flags=_flags)
         # id, returns, attributes
         returns = _cursor_type.get_result()
         if self.is_fundamental_type(returns):
-            returns = self.FundamentalType(returns)
+            returns = self.parse_cursor_type(returns)
         attributes = []
         #for attr in iter(cursor.argument_types()):
         #    if self.is_fundamental_type(attr):
@@ -884,7 +885,7 @@ typedef void* pointer_t;''', flags=_flags)
         _type = cursor.type
         _name = cursor.spelling
         if self.is_fundamental_type(_type):
-            _argtype = self.FundamentalType(_type)
+            _argtype = self.parse_cursor_type(_type)
         elif self.is_pointer_type(_type) or self.is_array_type(_type):
             _argtype = self.parse_cursor_type(_type)
         elif self.is_unexposed_type(_type):
@@ -1275,7 +1276,7 @@ typedef void* pointer_t;''', flags=_flags)
         _canonical_type = cursor.type.get_canonical()
         _decl = cursor.type.get_declaration()
         if self.is_fundamental_type(_canonical_type):
-            _type = self.FundamentalType(_canonical_type)
+            _type = self.parse_cursor_type(_canonical_type)
         elif self.is_pointer_type(_canonical_type):
             _type = self.POINTER(_canonical_type)
         elif self.is_array_type(_canonical_type):
