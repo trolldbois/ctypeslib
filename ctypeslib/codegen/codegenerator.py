@@ -77,6 +77,14 @@ def get_real_type(tp):
         return get_real_type(tp.typ)
     return tp
 
+def _clean_name(func):
+    def fn_clean(*args, **kwargs):
+        name = func(*args, **kwargs)
+        if name.startswith("__"):
+            return "_P" + name
+        return name
+    return fn_clean
+
 ################################################################
 
 class Initializer(object):
@@ -228,6 +236,8 @@ class Generator(object):
         self.names = set() # names that have been generated
         self.initialize = Initializer()
 
+
+    @_clean_name
     def type_name(self, t, generate=True):
         # Return a string containing an expression that can be used to
         # refer to the type. Assumes the 'from ctypes import *'
@@ -336,10 +346,11 @@ class Generator(object):
             "int64_t": "c_int64",
             }
         self._typedefs += 1
+        name = self.type_name(tp) # tp.name
         if type(tp.typ) == typedesc.FundamentalType \
            and tp.name in sized_types:
             print >> self.stream, "%s = %s" % \
-                  (tp.name, sized_types[tp.name])
+                  (name, sized_types[tp.name])
             self.names.add(tp.name)
             return
         if tp.typ not in self.done:
@@ -355,7 +366,7 @@ class Generator(object):
         # generate actual typedef code.
         if tp.name != self.type_name(tp.typ):
             print >> stream, "%s = %s" % \
-                  (tp.name, self.type_name(tp.typ))
+                  (name, self.type_name(tp.typ))
         self.names.add(tp.name)
 
     _arraytypes = 0
@@ -370,8 +381,8 @@ class Generator(object):
         self._functiontypes += 1
         self.generate(tp.returns)
         self.generate_all(tp.arguments)
-        print >> self.stream, "%s = %s # Functiontype " % (
-                  self.type_name(tp), [self.type_name(a) for a in tp.arguments])
+        #print >> self.stream, "%s = %s # Functiontype " % (
+        #          self.type_name(tp), [self.type_name(a) for a in tp.arguments])
 
     def Argument(self, tp):
         self.generate(tp.typ)
@@ -491,6 +502,9 @@ class Generator(object):
     def Structure(self, struct):
         self._structures += 1
         depends = []
+        if struct.members is None:
+            log.error('Error while parsing members for: %s'%(struct.name))
+            return
         # look in bases class for dependencies
         # FIXME
 
@@ -539,9 +553,6 @@ class Generator(object):
     def StructureBody(self, body, inline=False):
         fields = []
         methods = []
-        if body.struct.members is None:
-            log.error('Error while parsing members for: %s'%(body.struct.name))
-            return
         for m in body.struct.members:
             if type(m) is typedesc.Field:
                 fields.append(m)

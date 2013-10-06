@@ -28,23 +28,6 @@ class DuplicateDefinitionException(KeyError):
 
 ################################################################
 
-def MAKE_NAME(name):
-    ''' Transforms an USR into a valid python name.
-    '''
-    # FIXME see cindex.SpellingCache
-    for k, v in [('<','_'), ('>','_'), ('::','__'), (',',''), (' ',''),
-                 ("$", "DOLLAR"), (".", "DOT"), ("@", "_"), (":", "_")]:
-        if k in name: # template
-            name = name.replace(k,v)
-    #FIXME: test case ? I want this func to be neutral on C valid names.
-    if name.startswith("__"):
-        return "_X" + name
-    elif len(name) == 0:
-        raise ValueError
-    elif name[0] in "01234567879":
-        return "_" + name
-    return name
-
 class ClangHandler(object):
     """
     Abstract class for handlers.
@@ -75,6 +58,22 @@ class ClangHandler(object):
             obj.comment = cursor.brief_comment
         return
         
+    def make_python_name(self, name):
+        """Transforms an USR into a valid python name."""
+        # FIXME see cindex.SpellingCache
+        for k, v in [('<','_'), ('>','_'), ('::','__'), (',',''), (' ',''),
+                     ("$", "DOLLAR"), (".", "DOT"), ("@", "_"), (":", "_")]:
+            if k in name: # template
+                name = name.replace(k,v)
+            #FIXME: test case ? I want this func to be neutral on C valid names.
+            if name.startswith("__"):
+                return "_X" + name
+        if len(name) == 0:
+            raise ValueError
+        elif name[0] in "01234567879":
+            return "_" + name
+        return name
+
     def get_unique_name(self, cursor):
         name = ''
         if hasattr(cursor, 'displayname'):
@@ -85,7 +84,7 @@ class ClangHandler(object):
             _id = cursor.get_usr()
             if _id == '': # anonymous is spelling == ''
                 return None
-            name = MAKE_NAME( _id )
+            name = self.make_python_name( _id )
         if cursor.kind == CursorKind.STRUCT_DECL:
             name = 'struct_%s'%(name)
         elif cursor.kind == CursorKind.UNION_DECL:
