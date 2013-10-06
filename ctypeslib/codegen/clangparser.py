@@ -645,8 +645,9 @@ typedef void* pointer_t;''', flags=_flags)
         
     def _fixup_Typedef(self, t):
         #print 'fixing typdef %s name:%s with self.all[%s] = %s'%(id(t), t.name, t.typ, id(self.all[ t.typ])) 
-        #print self.all.keys()
+        #print self.all.keys()        
         if type(t.typ) == str: #typedesc.FundamentalType:
+            raise 'Why the f'
             log.debug("_fixup_Typedef: t:'%s' t.typ:'%s' t.name:'%s'"%(t, t.typ, t.name))
             t.typ = self.all[t.name]
         pass
@@ -1351,7 +1352,7 @@ typedef void* pointer_t;''', flags=_flags)
         try:
             self.register(name, obj)
         except DuplicateDefinitionException, e:
-            log.info('Redefinition of %s -> %s'%(name, value))
+            log.info('Redefinition of %s %s->%s'%(name, self.all[name].args, value))
             # HACK FIXME
             self.all[name] = obj
             pass
