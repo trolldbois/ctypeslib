@@ -273,9 +273,8 @@ class CursorHandler(ClangHandler):
             _type = self.parse_cursor_type(_ctype)
         elif self.is_pointer_type(_ctype):
             # extern Function pointer 
-            if _ctype.get_pointee().kind == TypeKind.UNEXPOSED:
-                log.debug('Ignoring unexposed pointer type.')
-                return True
+            if self.is_unexposed_type(_ctype.get_pointee()): 
+                _type = self.parse_cursor_type( _ctype.get_canonical().get_pointee() )
             elif _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO:
                 # Function pointers
                 # cursor.type.get_pointee().kind == TypeKind.UNEXPOSED BUT

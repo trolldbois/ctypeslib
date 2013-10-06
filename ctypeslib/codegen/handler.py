@@ -159,8 +159,8 @@ class ClangHandler(object):
             self.parser.startElement( child ) 
         return True
         
-    @log_entity
     def _do_nothing(self, node, **args):
+        log.debug('_do_nothing for %s'%(node.kind.name))
         return True
 
 
