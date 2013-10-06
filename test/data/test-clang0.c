@@ -1,4 +1,4 @@
-/* very simple tests */
+/** very simple tests */
 typedef struct
 {
   long __val[2];
