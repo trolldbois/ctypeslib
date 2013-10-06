@@ -295,11 +295,6 @@ typedef void* pointer_t;''', flags=_flags)
                 # FIXME make this optional to be able to see internals
                 # FIXME macro/alias are here 
                 remove.append(_item.name)
-            # try fixup if needed
-            fixup_cb_name = "_fixup_" + type(_item).__name__
-            if hasattr(self, fixup_cb_name):
-                mth = getattr(self, fixup_cb_name)
-                mth(_item)
 
         for _x in remove:
             del self.all[_x]

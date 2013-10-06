@@ -150,7 +150,7 @@ class ClangHandler(object):
     @log_entity
     def _pass_through_children(self, node, **args):
         for child in node.get_children():
-            self.startElement( child ) 
+            self.parser.startElement( child ) 
         return True
         
     @log_entity
@@ -160,12 +160,10 @@ class ClangHandler(object):
 
     ###########################################
     # TODO FIXME:  only useful because we do not have 100% cursorKind coverage
-    #def __getattr__(self, name, **args):
-    #   if "_fixup" in name:
-    #        raise NotImplementedError('name')
-    #    if name not in self._unhandled:
-    #        log.warning('%s is not handled'%(name))
-    #        self._unhandled.append(name)
-    #    return self._do_nothing
+    def __getattr__(self, name, **args):
+        if name not in self._unhandled:
+            log.warning('%s is not handled'%(name))
+            self._unhandled.append(name)
+        return self._do_nothing
 
 
