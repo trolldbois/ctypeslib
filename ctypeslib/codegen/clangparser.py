@@ -539,7 +539,7 @@ typedef void* pointer_t;''', flags=_flags)
                 mth = getattr(self, _ctype.get_pointee().kind.name)
                 _type = mth(_ctype.get_pointee())
             else: # Fundamental types, structs....
-                _type = self.POINTER(_ctype )
+                _type = self.parse_cursor_type(_ctype )
         else:
             # What else ?
             raise NotImplementedError('What other type of variable? %s'%(_ctype.kind))
@@ -658,7 +658,7 @@ typedef void* pointer_t;''', flags=_flags)
         #    code.interact(local=locals())        
         p_type = None
         if self.is_pointer_type(_type):
-            p_type = self.POINTER(_type)
+            p_type = self.parse_cursor_type(_type)
         else:
             p_type = self.parse_cursor_type(_type)
         if p_type is None:
@@ -760,7 +760,7 @@ typedef void* pointer_t;''', flags=_flags)
             #code.interact(local=locals())
             # pointers to POD have no declaration ??
             # FIXME test_struct_with_pointer x_n_t g[1]
-            _subtype = self.POINTER(_array_type)
+            _subtype = self.parse_cursor_type(_array_type)
         else:
             _subtype_decl = _array_type.get_declaration()
             _subtype = self.parse_cursor(_subtype_decl)
@@ -1278,7 +1278,7 @@ typedef void* pointer_t;''', flags=_flags)
         if self.is_fundamental_type(_canonical_type):
             _type = self.parse_cursor_type(_canonical_type)
         elif self.is_pointer_type(_canonical_type):
-            _type = self.POINTER(_canonical_type)
+            _type = self.parse_cursor_type(_canonical_type)
         elif self.is_array_type(_canonical_type):
             #code.interact(local=locals())
             _type = self.parse_cursor_type(_canonical_type)
