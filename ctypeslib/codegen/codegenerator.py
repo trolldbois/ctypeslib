@@ -19,6 +19,7 @@ ASSUME_STRINGS = True
 
 import StringIO # need unicode support, no cStringIO
 
+
 # XXX Should this be in ctypes itself?
 ctypes_names = {
     "bool": "c_bool",
@@ -310,13 +311,13 @@ class Generator(object):
         #
         # If the compilation succeeds, it may still fail at runtime
         # when the macro is called.
-        #code = "def %s%s: return %s # macro" % (macro.name, macro.args, macro.body)
+        #mcode = "def %s%s: return %s # macro" % (macro.name, macro.args, macro.body)
         try:
-            compile(code, "<string>", "exec")
+            compile(mcode, "<string>", "exec")
         except SyntaxError:
-            print >> self.stream, "#", code
+            print >> self.stream, "#", mcode
         else:
-            print >> self.stream, code, '# Macro'
+            print >> self.stream, mcode, '# Macro'
             self.names.add(macro.name)
         
     _typedefs = 0
@@ -521,6 +522,9 @@ class Generator(object):
     def StructureBody(self, body):
         fields = []
         methods = []
+        if body.struct.members is None:
+            log.debug('body.struct.members is None: %s'%(body.struct.name))
+        #    code.interact(local=locals())
         for m in body.struct.members:
             if type(m) is typedesc.Field:
                 fields.append(m)
@@ -576,7 +580,6 @@ class Generator(object):
             index = 0
             for f in fields:
                 fieldname = unnamed_fields.get(f, f.name)
-                import code
                 #code.interact(local=locals())
                 #print f.__dict__
                 if f.is_bitfield is False:
