@@ -165,7 +165,7 @@ class ClangHandler(object):
 
 
     ###########################################
-    # TODO FIXME:  only useful because we do not have 100% cursorKind coverage
+    # TODO FIXME: 100% cursor/type Kind coverage
     def __getattr__(self, name, **args):
         if name not in self._unhandled:
             log.warning('%s is not handled'%(name))

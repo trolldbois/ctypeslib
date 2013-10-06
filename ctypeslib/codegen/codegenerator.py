@@ -490,21 +490,34 @@ class Generator(object):
     _structures = 0
     def Structure(self, struct):
         self._structures += 1
-        self.generate(struct.get_head())
-        self.generate(struct.get_body())
+        depends = []
+        # look in bases class for dependencies
+        # FIXME
+
+        # checks members dependencies in bases
+        for b in struct.bases:
+            depends.extend([m.type for m in b.members 
+                if m.type not in self.done and 
+                          not isinstance(m.type, typedesc.FundamentalType)])
+        # checks members dependencies
+        depends.extend([m.type for m in struct.members 
+                            if m.type not in self.done and 
+                            not isinstance(m.type, typedesc.FundamentalType)])
+        if len(depends) > 0:
+            self.generate(struct.get_head())
+            self.generate(struct.get_body())
+        else:
+            self.generate(struct.get_head(), True)
+            self.generate(struct.get_body(), True)
         return
 
     Union = Structure
 
-    def StructureHead(self, head):
+    def StructureHead(self, head, inline=False):
         for struct in head.struct.bases:
             self.generate(struct.get_head())
+            # add dependencies
             self.more.add(struct)
-        # verbose output with location.
-        if self.generate_locations and head.struct.location:
-            print >> self.stream, "# %s:%d" % head.struct.location
-        if self.generate_comments:
-            self.print_comment(head.struct)
         basenames = [self.type_name(b) for b in head.struct.bases]
         if basenames:
             ### method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
@@ -515,11 +528,15 @@ class Generator(object):
                 print >> self.stream, "class %s(Structure):" % head.struct.name
             elif type(head.struct) == typedesc.Union:
                 print >> self.stream, "class %s(Union):" % head.struct.name
-        print >> self.stream, "    pass\n"
+        if not inline:
+            print >> self.stream, "    pass\n"
+        # special empty struct
+        if inline and not head.struct.members:
+            print >> self.stream, "    pass\n"
         self.names.add(head.struct.name)
 
 
-    def StructureBody(self, body):
+    def StructureBody(self, body, inline=False):
         fields = []
         methods = []
         if body.struct.members is None:
@@ -537,7 +554,11 @@ class Generator(object):
                 self.generate_all(m.iterArgTypes())
             elif type(m) is typedesc.Ignored:
                 pass
-
+        # handled inline Vs dependent
+        if not inline:
+            prefix = "%s."%(body.struct.name)
+        else:
+            prefix = "    "
         if methods:
             # XXX we have parsed the COM interface methods but should
             # we emit any code for them?
@@ -545,17 +566,15 @@ class Generator(object):
         # LXJ: we pack all the time, because clang gives a precise field offset 
         # per target architecture. No need to defer to ctypes logic for that.
         if fields:
-            print >> self.stream, "%s._pack_ = True # source:%s" % (
-                        body.struct.name, body.struct.packed)
+            print >> self.stream, "%s_pack_ = True # source:%s" % (
+                        prefix, body.struct.packed)
 
         if body.struct.bases:
-            #print body, type(body.struct).__name__, body.struct.name, len(body.struct.bases)
-            #print body.struct.bases
             if len(body.struct.bases) == 1: # its a Struct or a simple Class
-              self.generate(body.struct.bases[0].get_body())
+              self.generate(body.struct.bases[0].get_body(), inline)
             else: # we have a multi-parent inheritance
               for b in body.struct.bases:
-                self.generate(b.get_body())              
+                self.generate(b.get_body(), inline)              
         # field definition normally span several lines.
         # Before we generate them, we need to 'import' everything they need.
         # So, call type_name for each field once,
@@ -570,10 +589,10 @@ class Generator(object):
             if not f.name and isinstance(f.type, (typedesc.Structure, typedesc.Union)):
                 unnamed_fields[f] = "_%d" % len(unnamed_fields)
         if unnamed_fields:
-            print >> self.stream, "%s._anonymous_ = %r" % \
-                  (body.struct.name, unnamed_fields.values())
+            print >> self.stream, "%s_anonymous_ = %r" % \
+                  (prefix, unnamed_fields.values())
         if len(fields) > 0:
-            print >> self.stream, "%s._fields_ = [" % body.struct.name
+            print >> self.stream, "%s_fields_ = [" %(prefix)
 
             if self.generate_locations and body.struct.location:
                 print >> self.stream, "    # %s %s" % body.struct.location
@@ -591,7 +610,10 @@ class Generator(object):
                     print >> self.stream, "    ('%s', %s, %s)," % \
                         (fieldname, self.parser.get_ctypes_name(TypeKind.LONG), 
                         f.bits ) # self.type_name(f.type), f.bits)
-            print >> self.stream, "]"
+            if inline:
+                print >> self.stream, prefix,
+            print >> self.stream, "]\n"
+        
         # disable size checks because they are not portable across
         # platforms:
 ##        # generate assert statements for size and alignment
@@ -730,23 +752,26 @@ class Generator(object):
 
     ########
 
-    def generate(self, item):
+    def generate(self, item, *args):
+        """ """
         if item in self.done:
             return
+        # verbose output with location.
+        if self.generate_locations and item.location:
+            print >> self.stream, "# %s:%d" % item.location
+        if self.generate_comments:
+            self.print_comment(item)
+        log.debug("generate %s, %s"%(item, item.__dict__))
+        '''
         #log.debug("generate %s, %s"%(item, item.__dict__))
         name=''
         if hasattr(item, 'name'):
             name = item.name
         elif isinstance( item, (str,)):
             log.error( '** got an string item %s'%( item ) )
-            import code
             code.interact(local=locals())
             raise TypeError('Item should not be a string %s'%(item))
         log.debug('generate: %s( %s )'%( type(item).__name__, name))
-        #if isinstance(item, typedesc.StructureHead):
-        #    name = getattr(item.struct, "name", None)
-        #else:
-        #    name = getattr(item, "name", None)
         if name in self.known_symbols:
             log.debug('item is in known_symbols %s'% name )
             mod = self.known_symbols[name]
@@ -756,12 +781,14 @@ class Generator(object):
                 self.done.add(item.get_head())
                 self.done.add(item.get_body())
             return
-        mth = getattr(self, type(item).__name__)
+        '''
         # to avoid infinite recursion, we have to mark it as done
         # before actually generating the code.
         self.done.add(item)
         # go to specific treatment
-        mth(item)
+        mth = getattr(self, type(item).__name__)
+        #code.interact(local=locals())
+        mth(item, *args)
 
     def print_comment(self, item):
         if item.comment is None:

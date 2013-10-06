@@ -361,6 +361,6 @@ class ConstantsTest(ClangTest):
     
 import logging, sys
 if __name__ == "__main__":
-    #logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
+    logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
     #logging.getLogger( "SomeTest.testSomething" ).setLevel( logging.DEBUG )
     unittest.main()
