@@ -252,13 +252,6 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.func_ptr._restype_, ctypes.c_int)
         self.assertEqual(self.namespace.func_ptr._argtypes_[0].__name__, 'LP_c_char')
 
-    def test_extern_function_pointer2(self):
-        self.convert('''
-        extern int (*func_ptr)(const char *arg);
-        ''', ['-x','c++'])
-        self.assertEqual(self.namespace.func_ptr._restype_, ctypes.c_int)
-        self.assertEqual(self.namespace.func_ptr._argtypes_[0].__name__, 'LP_c_char')
-
     def test_extern_function_pointer_multiarg(self):
         self.convert('''
         extern int (*func_ptr)(const char *arg, int c);
