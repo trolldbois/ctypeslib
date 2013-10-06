@@ -16,6 +16,11 @@ log = logging.getLogger('clangparser')
 ## DEBUG
 import code 
 
+class CursorKindException(TypeError):
+    """When a child node of a VAR_DECL is parsed as an initialization value, 
+    when its not actually part of that initiwlization value."""
+    pass
+
 class InvalidDefinitionError(TypeError):
     """When a structure is invalid in the source code,  sizeof, alignof returns
     negatives value. We detect it and do our best."""
@@ -373,6 +378,9 @@ typedef void* pointer_t;''', flags=_flags)
     def _do_nothing(self, node, **args):
         return True
 
+    INCLUSION_DIRECTIVE = _do_nothing
+    MACRO_INSTANTIATION = _do_nothing
+    
 
     ###########################################
     # ATTRIBUTES
@@ -488,7 +496,6 @@ typedef void* pointer_t;''', flags=_flags)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )
         elif self.is_array_type(_ctype) or _ctype.kind == TypeKind.RECORD:
             _type = self.parse_cursor_type(_ctype)
-            #code.interact(local=locals())
         elif self.is_pointer_type(_ctype):
             # extern Function pointer 
             if _ctype.get_pointee().kind == TypeKind.UNEXPOSED:
@@ -528,7 +535,8 @@ typedef void* pointer_t;''', flags=_flags)
         return True # dont parse literals again
 
     def _get_var_decl_init_value(self, _ctype, children_iter):
-        """gather initialisation values by parsing children nodes of a VAR_DECL.
+        """
+        Gathers initialisation values by parsing children nodes of a VAR_DECL.
         """
         init_value = None
         children = list(children_iter)
@@ -544,44 +552,37 @@ typedef void* pointer_t;''', flags=_flags)
             log.debug('Multiple children in a var_decl')
             init_value = []
             for child in children:
-                if child.kind == CursorKind.PARM_DECL:
-                    # UT: test_extern_function_pointer_multiarg
-                    init_value.append( self.parse_cursor(child) )                
-                elif self.is_array_type(_ctype):
-                    # UT: test_array char c3[10] = {'a','b','c'};
-                    # NOT char c2[] = {'a','b','c'};
-                    if child.kind == CursorKind.INIT_LIST_EXPR:
-                        init_value = self.parse_cursor(child)
-                        return init_value 
-                    else:
-                        # ignore non rvalue literals
-                        pass
+                # early stop cases.
+                _tmp = None
+                try:
+                    _tmp = self._get_var_decl_init_value_single(_ctype, child)
+                except CursorKindException,e:
+                    log.debug('children init value skip on %s'%(child.kind))
+                    continue
+                if self.is_array_type(_ctype):
+                    # the only working child is an INIT_LIST_EXPR
+                    init_value = _tmp
                 else:                    
-                    #log.debug('Calling %s'%(child.kind.name))
-                    #init_value.append( self.parse_cursor(child) )
-                    #code.interact(local=locals())
-                    raise TypeError('Unkown test case - please fix. %s'%(
-                                    _ctype.kind))
+                    init_value.append( _tmp )
         else:
             child = children[0]
-            # We should filter out literal children based on the 
-            # variable type
-            # FIXME, list UT name.
-            ok_types = self.get_literal_kind_affinity(child.kind)
-            log.debug('_ctype: %s Child.kind: %s'%(_ctype.kind, child.kind))
-            #if (_ctype.kind not 
-            #    in self.get_literal_kind_affinity(child.kind)):
-            #    continue
-            # 
-            init_value = self._get_var_decl_init_value_single(_ctype, child)
-            #code.interact(local=locals())
-        # Can't be an array_type
-        if (not self.is_array_type(_ctype) and
-            (isinstance(init_value, list) and len(init_value) == 1)):
-            init_value = init_value[0]
+            # get the init value if possible
+            try:
+                init_value = self._get_var_decl_init_value_single(_ctype, child)
+            except CursorKindException,e:
+                log.debug('single init value skip on %s'%(child.kind))
+                init_value = None
         return init_value
-        
+    
     def _get_var_decl_init_value_single(self, _ctype, child):
+        """
+        Handling of a single child for initialization value.
+        Accepted types are expressions and declarations
+        """
+        log.debug('_ctype: %s Child.kind: %s'%(_ctype.kind, child.kind))
+        # shorcuts.
+        if not child.kind.is_expression() and not child.kind.is_declaration():
+            raise CursorKindException(child.kind)
         ## POD init values handling.
         # As of clang 3.3, int, double literals are exposed.
         # float, long double, char , char* are not exposed directly in level1.
@@ -591,20 +592,14 @@ typedef void* pointer_t;''', flags=_flags)
                 # init value will use INIT_LIST_EXPR
                 init_value = self.parse_cursor(child)
             else:
+                # probably the literal that indicates the size of the array
                 # UT: test_char_p, with "char x[10];"
                 init_value = []
             return init_value
         elif child.kind.is_unexposed():
             # recurse until we find a literal kind
             init_value = self._get_var_decl_init_value(_ctype, child.get_children())
-            #child_kind = list(child.get_children())[0].kind
-            #log.debug('Calling %s'%(child.kind.name))
-            #init_value.append( self.parse_cursor(child) )
-        elif self.is_literal_cursor(child):
-            log.debug('Calling %s'%(child.kind.name))
-            init_value = self.parse_cursor(child)
-        else:
-            log.debug('Calling %s'%(child.kind.name))
+        else: # literal or others
             init_value = self.parse_cursor(child)
         return init_value
 
