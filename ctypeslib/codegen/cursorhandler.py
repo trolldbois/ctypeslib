@@ -246,7 +246,7 @@ class CursorHandler(ClangHandler):
                
     @log_entity
     def VAR_DECL(self, cursor):
-        """ The cursor is on a Variable declaration."""
+        """Handles Variable declaration."""
         # get the name
         name = self.get_unique_name(cursor)
         # double declaration ?
@@ -477,7 +477,7 @@ class CursorHandler(ClangHandler):
 
     @log_entity
     def _operator_handling(self, cursor):
-        """return a string with the literal that are part of the operation."""
+        """Returns a string with the literal that are part of the operation."""
         values = self._literal_handling(cursor)
         retval = ''.join([str(val) for val in values])
         return retval
@@ -668,10 +668,9 @@ class CursorHandler(ClangHandler):
 
     @log_entity
     def FIELD_DECL(self, cursor):
-        """Handles Field declarations.
-        a fundamentalType field needs to get a _type
-        a Pointer need to get treated by self.POINTER ( no children )
-        a Record needs to be treated by self.record... etc..
+        """
+        Handles Field declarations.
+        Some specific treatment for a bitfield.
         """
         # name, type
         name = self.get_unique_name(cursor)
