@@ -1,10 +1,6 @@
 """Handler for Cursor nodes from the clang AST tree."""
 
-import clang
 from clang.cindex import CursorKind, TypeKind, TokenKind
-
-
-import typedesc
 
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.util import log_entity
@@ -552,7 +548,7 @@ class CursorHandler(ClangHandler):
         # Go and recurse through children to get this record member's _id
         # Members fields will not be "parsed" here, but later.
         for childnum, child in enumerate(cursor.get_children()):
-            if child.kind == clang.cindex.CursorKind.FIELD_DECL:
+            if child.kind == CursorKind.FIELD_DECL:
                 # CIndexUSR.cpp:800+ // Bit fields can be anonymous.
                 _cid = self.get_unique_name(child)
                 ## FIXME 2: no get_usr() for members of builtin struct
@@ -562,7 +558,7 @@ class CursorHandler(ClangHandler):
                 members.append( self.FIELD_DECL(child) )
                 continue
             # LLVM-CLANG, patched 
-            if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
+            if child.kind == CursorKind.PACKED_ATTR:
                 obj.packed = True
         if self.is_registered(name): 
             # STRUCT_DECL as a child of TYPEDEF_DECL for example

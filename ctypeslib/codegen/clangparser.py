@@ -1,26 +1,21 @@
 """clangparser - use clang to get preprocess a source code."""
 
-import clang
 from clang.cindex import Index, TranslationUnit
 from clang.cindex import CursorKind, TypeKind, TokenKind
 
-import logging
-
-import typedesc
-import re
-
-from ctypeslib.codegen import util
-from ctypeslib.codegen.util import log_entity
+from ctypeslib.codegen import typedesc
 from ctypeslib.codegen import cursorhandler
 from ctypeslib.codegen import typehandler
+from ctypeslib.codegen import util
+from ctypeslib.codegen.util import log_entity
 from ctypeslib.codegen.handler import InvalidDefinitionError
 from ctypeslib.codegen.handler import DuplicateDefinitionException
 
+import logging
 log = logging.getLogger('clangparser')
 
 ## DEBUG
 import code 
-
 
 class Clang_Parser(object):
     """

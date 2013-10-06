@@ -1,6 +1,5 @@
 """Handler for Type nodes from the clang AST tree."""
 
-import clang
 from clang.cindex import TypeKind
 
 from ctypeslib.codegen import typedesc

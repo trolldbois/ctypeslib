@@ -1,10 +1,6 @@
 """Abstract Handler with helper methods."""
 
-import clang
 from clang.cindex import CursorKind, TypeKind
-
-
-import typedesc
 
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.util import log_entity
@@ -153,8 +149,6 @@ class ClangHandler(object):
 
     @log_entity
     def _pass_through_children(self, node, **args):
-        #if isinstance(node, clang.cindex.Type):
-        #    return None
         for child in node.get_children():
             self.startElement( child ) 
         return True
