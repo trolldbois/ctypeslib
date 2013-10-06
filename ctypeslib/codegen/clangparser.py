@@ -1026,8 +1026,9 @@ typedef void* pointer_t;''', flags=_flags)
                  offset, length)
 
 
-    Class = STRUCT_DECL
-    _fixup_Class = _fixup_Structure
+    # FIXME
+    CLASS_DECL = STRUCT_DECL
+    _fixup_Class = _fixup_record
 
     @log_entity
     def FIELD_DECL(self, cursor):
@@ -1073,12 +1074,9 @@ typedef void* pointer_t;''', flags=_flags)
         _type = None
         _canonical_type = cursor.type.get_canonical()
         _decl = cursor.type.get_declaration()
-        if self.is_fundamental_type(_canonical_type):
-            _type = self.parse_cursor_type(_canonical_type)
-        elif self.is_pointer_type(_canonical_type):
-            _type = self.parse_cursor_type(_canonical_type)
-        elif self.is_array_type(_canonical_type):
-            #code.interact(local=locals())
+        if ( self.is_array_type(_canonical_type) or
+             self.is_fundamental_type(_canonical_type) or
+             self.is_pointer_type(_canonical_type)):
             _type = self.parse_cursor_type(_canonical_type)
         else:
             children = list(cursor.get_children())
@@ -1091,14 +1089,11 @@ typedef void* pointer_t;''', flags=_flags)
                 log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
                 _type = self.get_registered(_decl_name)
                 # then we shortcut
-                #code.interact(local=locals())
-                
             else:
                 # is it always the case ?
                 log.debug("FIELD_DECL: name:'%s'"%(name))
                 log.debug("FIELD_DECL: %s: nb children:%s"%(cursor.type.kind, 
                                 len(children)))
-                #code.interact(local=locals())
                 # recurse into the right function
                 _type = self.parse_cursor_type(_canonical_type)
                 if _type is None:
@@ -1106,20 +1101,6 @@ typedef void* pointer_t;''', flags=_flags)
                                 name,_canonical_type.kind.name))
                     return None
         return typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield())
-
-    def _fixup_Field(self, f):
-        #print 'fixup field', f.type
-        #if f.type is not None:
-        #    mth = getattr(self, '_fixup_%s'%(type(f.type).__name__))
-        #    mth(f.type)
-        pass
-
-
-
-
-
-
-
 
 
 
