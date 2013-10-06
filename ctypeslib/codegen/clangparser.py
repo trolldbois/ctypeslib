@@ -442,6 +442,10 @@ typedef void* pointer_t;''', flags=_flags)
     def DECL_REF_EXPR(self, cursor):
         return cursor.displayname
 
+    @log_entity
+    def GNU_NULL_EXPR(self, cursor):
+        return None
+
     ################################
     # TYPE REFERENCES handlers
     
@@ -1345,6 +1349,7 @@ typedef void* pointer_t;''', flags=_flags)
                 comment = t.spelling
         # special case. internal __null
         # FIXME, there are probable a lot of others.
+        # why not Cursor.kind GNU_NULL_EXPR child instead of a token ?
         if name == 'NULL' or value == '__null':
             value = None
         log.debug('MACRO: #define %s %s'%(tokens[0], value))
@@ -1353,7 +1358,7 @@ typedef void* pointer_t;''', flags=_flags)
             self.register(name, obj)
         except DuplicateDefinitionException, e:
             log.info('Redefinition of %s %s->%s'%(name, self.all[name].args, value))
-            # HACK FIXME
+            # HACK 
             self.all[name] = obj
             pass
         self.set_location(obj, cursor)
@@ -1364,12 +1369,6 @@ typedef void* pointer_t;''', flags=_flags)
     
     
     ################
-
-    def _fixup_Alias(self, m):
-        pass
-
-    def _fixup_Macro(self, m):
-        pass
 
     def get_macros(self, text):
         if text is None:
