@@ -193,7 +193,8 @@ class TypeHandler(ClangHandler):
     @log_entity
     def UNEXPOSED(self, _cursor_type):
         """
-        Handles unexposed types. Returns the type listed in a typeref child.
+        Handles unexposed types. 
+        Returns the canonical type instead.
         """
         _decl = _cursor_type.get_declaration() 
         name = self.get_unique_name(_decl)#_cursor)

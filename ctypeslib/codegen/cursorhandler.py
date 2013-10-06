@@ -191,11 +191,12 @@ class CursorHandler(ClangHandler):
     @log_entity
     def PARM_DECL(self, cursor):
         """Handles parameter declarations."""
-        _type = cursor.type
+        # try and get the type. If unexposed, The canonical type will work.
+        _type = cursor.type 
         _name = cursor.spelling
         if ( self.is_array_type(_type) or
              self.is_fundamental_type(_type) or
-             self.is_pointer_type(_type) or 
+             self.is_pointer_type(_type) or
              self.is_unexposed_type(_type) ):
             _argtype = self.parse_cursor_type(_type)
         else: # FIXME which UT/case ?
@@ -265,6 +266,7 @@ class CursorHandler(ClangHandler):
         elif self.is_unexposed_type(_ctype): # string are not exposed
             # FIXME recurse on child
             log.error('PATCH NEEDED: %s type is not exposed by clang'%(name))
+            raise RuntimeError('')
             ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )
         elif self.is_array_type(_ctype) or _ctype.kind == TypeKind.RECORD:
