@@ -36,9 +36,6 @@ class CursorHandler(ClangHandler):
         mth = getattr(self, cursor.kind.name)
         return mth(cursor)
 
-    def parse_cursor_type(self, _cursor_type):
-        return self.parser.parse_cursor_type(_cursor_type)
-
     ##########################################################################
     ##### CursorKind handlers#######
     ##########################################################################
@@ -520,7 +517,6 @@ class CursorHandler(ClangHandler):
         if align < 0 :
             log.error('invalid structure %s %s align:%d size:%d'%(
                         name, cursor.location, align, size))
-            #return None
             raise InvalidDefinitionError('invalid structure %s %s align:%d size:%d'%(
                                             name, cursor.location, align, size))
         log.debug('_record_decl: name: %s size:%d'%(name, size))
@@ -555,8 +551,11 @@ class CursorHandler(ClangHandler):
                 if _cid == '' and child.is_bitfield():
                     _cid = cursor.get_usr() + "@Ab#" + str(childnum)
                 # END FIXME
+                #try: # FIXME error on child type 
                 members.append( self.FIELD_DECL(child) )
-                continue
+                #except InvalidDefinitionError,e:
+                #    code.interact(local=locals())
+                #continue
             # LLVM-CLANG, patched 
             if child.kind == CursorKind.PACKED_ATTR:
                 obj.packed = True

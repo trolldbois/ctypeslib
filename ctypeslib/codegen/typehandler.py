@@ -20,9 +20,6 @@ class TypeHandler(ClangHandler):
         ClangHandler.__init__(self, parser)
         self.init_fundamental_types()
 
-    def parse_cursor(self, cursor):
-        return self.parser.parse_cursor(cursor)
-
     def parse_cursor_type(self, _cursor_type):
         mth = getattr(self, _cursor_type.kind.name)
         return mth(_cursor_type)
@@ -106,7 +103,6 @@ class TypeHandler(ClangHandler):
                 p_type = self.get_registered(decl_name)
             else: # forward declaration, without looping
                 log.debug('POINTER: %s type was not previously declared'%(decl_name))
-                #code.interact(local=locals())
                 p_type = self.parse_cursor(decl)
         #elif _type.kind == TypeKind.FUNCTIONPROTO:
         #    log.error('TypeKind.FUNCTIONPROTO not implemented')

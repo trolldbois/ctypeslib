@@ -144,6 +144,12 @@ class ClangHandler(object):
     def get_ctypes_size(self, typekind):
         return self.parser.get_ctypes_size(typekind)
 
+    def parse_cursor(self, cursor):
+        return self.parser.parse_cursor(cursor)
+
+    def parse_cursor_type(self, _cursor_type):
+        return self.parser.parse_cursor_type(_cursor_type)
+
     ################################
     # do-nothing element handlers
 

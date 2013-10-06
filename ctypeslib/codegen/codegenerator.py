@@ -523,8 +523,8 @@ class Generator(object):
         fields = []
         methods = []
         if body.struct.members is None:
-            log.debug('body.struct.members is None: %s'%(body.struct.name))
-        #    code.interact(local=locals())
+            log.error('Error while parsing members for: %s'%(body.struct.name))
+            return
         for m in body.struct.members:
             if type(m) is typedesc.Field:
                 fields.append(m)
