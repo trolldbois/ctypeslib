@@ -378,9 +378,13 @@ typedef void* pointer_t;''', flags=_flags)
     def _do_nothing(self, node, **args):
         return True
 
-    INCLUSION_DIRECTIVE = _do_nothing
-    MACRO_INSTANTIATION = _do_nothing
-    
+
+    ###########################################
+    # TODO FIXME:  only useful because we do not have 100% cursorKind coverage
+    def __getattr__(self, name, **args):
+        if "_fixup" in name:
+            raise NotImplementedError('name')
+        return self._do_nothing
 
     ###########################################
     # ATTRIBUTES
@@ -457,8 +461,6 @@ typedef void* pointer_t;''', flags=_flags)
             #raise IOError('I doubt this case is possible')
             _definition = cursor.type.get_declaration() 
         return None #self.parse_cursor(_definition)   
-
-    TEMPLATE_REF = _do_nothing
 
     ################################
     """
@@ -604,19 +606,16 @@ typedef void* pointer_t;''', flags=_flags)
         return init_value
 
 
-    '''
-        Typedef_decl has 1 child, a typeref.
-        the Typeref is himself.
+    """
+    Typedef_decl has 1 child, a typeref.
+    the Typeref is himself.
         
-        typedef_decl.get_definition().type.get_canonical().kind
-        results the type.
-    
-    '''
-    #def Typedef(self, attrs):
+    typedef_decl.get_definition().type.get_canonical().kind
+    results the type
+    """
     @log_entity
     def TYPEDEF_DECL(self, cursor):
-        ''' At some point the target type is declared.
-        '''
+        """Handles typedef statements. """
         name = self.get_unique_name(cursor)
         if self.is_registered(name):
             return self.get_registered(name)
@@ -624,23 +623,20 @@ typedef void* pointer_t;''', flags=_flags)
         log.debug("TYPEDEF_DECL: name:%s"%(name))
         log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind))
         _decl_cursor = _type.get_declaration()
+        #FIXME: check if this can be useful to filter internal declaration
         #if _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
         #    log.warning('TYPE %s has no declaration. Builtin type?'%(name))
-        #    return True
+        #    code.interact(local=locals())        
         p_type = None
-        # FIXME feels weird not to call self.fundamental
         if self.is_fundamental_type(_type):
             p_type = self.FundamentalType(_type)
         elif self.is_pointer_type(_type):
             p_type = self.POINTER(_type)
-        #elif _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
-        #    log.debug("_decl_cursor == CursorKind.NO_DECL_FOUND:")
-        #    code.interact(local=locals())        
         else:
             p_type = self.parse_cursor_type(_type)
         if p_type is None:
-            log.error('p_type is none in TYpedef_decl')
-            #code.interact(local=locals())
+            log.error('p_type is none in TYPEDEF_DECL: %s'%(_type))
+            raise TypeError('p_type is none in TYPEDEF_DECL: %s'%(_type))
         # final
         obj = self.register(name, typedesc.Typedef(name, p_type))
         self.set_location(obj, cursor)
@@ -1076,12 +1072,6 @@ typedef void* pointer_t;''', flags=_flags)
     def UNION_DECL(self, cursor):
         '''The cursor is on the declaration of a union.'''
         return self._record_decl(typedesc.Union, cursor)
-
-    @log_entity
-    def CLASS_DECL(self, cursor):
-        '''The cursor is on the declaration of a calss.'''
-        ## FIXME
-        return self._record_decl(typedesc.Structure, cursor)
 
     def _record_decl(self, _type, cursor):
         ''' a structure and an union have the same handling.'''
