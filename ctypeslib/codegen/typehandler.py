@@ -167,7 +167,7 @@ class TypeHandler(ClangHandler):
         attributes = []
         obj = typedesc.FunctionType(returns, attributes)
         for i, _attr_type in enumerate(_cursor_type.argument_types()):
-            arg = typedesc.Argument("a%d"%(i), self.parse_cursor(_attr_type))
+            arg = typedesc.Argument("a%d"%(i), self.parse_cursor_type(_attr_type))
             obj.add_argument( arg )
         #log.debug('FUNCTIONPROTO: can I get args ?')
         #code.interact(local=locals())    
