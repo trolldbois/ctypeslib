@@ -1,17 +1,15 @@
-"""clangparser - use clang to get preprocess a source code."""
+"""Abstract Handler with helper methods."""
 
 import clang
-from clang.cindex import Index, TranslationUnit
-from clang.cindex import CursorKind, TypeKind, TokenKind
+from clang.cindex import CursorKind, TypeKind
 
-import logging
 
 import typedesc
-import re
 
-from ctypeslib.codegen import util
+from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.util import log_entity
 
+import logging
 log = logging.getLogger('handler')
 
 ## DEBUG
@@ -155,8 +153,8 @@ class ClangHandler(object):
 
     @log_entity
     def _pass_through_children(self, node, **args):
-        if isinstance(node, clang.cindex.Type):
-            return None
+        #if isinstance(node, clang.cindex.Type):
+        #    return None
         for child in node.get_children():
             self.startElement( child ) 
         return True

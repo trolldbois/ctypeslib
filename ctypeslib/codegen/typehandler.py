@@ -1,18 +1,13 @@
-"""clangparser - use clang to get preprocess a source code."""
+"""Handler for Type nodes from the clang AST tree."""
 
 import clang
-from clang.cindex import Index, TranslationUnit
-from clang.cindex import CursorKind, TypeKind, TokenKind
+from clang.cindex import TypeKind
 
-import logging
-
-import typedesc
-import re
-
-from ctypeslib.codegen import util
+from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.util import log_entity
 from ctypeslib.codegen.handler import ClangHandler
 
+import logging
 log = logging.getLogger('typehandler')
 
 ## DEBUG
@@ -90,8 +85,6 @@ class TypeHandler(ClangHandler):
         """
         Handles POINTER types.
         """
-        if not isinstance(_cursor_type, clang.cindex.Type):
-            raise TypeError('Please call POINTER with a cursor.type')
         # we shortcut to canonical typedefs and to pointee canonical defs
         _type = _cursor_type.get_pointee().get_canonical()
         _p_type_name = self.get_unique_name(_type)
@@ -131,8 +124,6 @@ class TypeHandler(ClangHandler):
         Handles all array types. 
         Resolves it's element type and makes a Array typedesc.
         """
-        if not isinstance(_cursor_type, clang.cindex.Type):
-            raise TypeError('Please call CONSTANTARRAY with a cursor.type')
         # The element type has been previously declared
         # we need to get the canonical typedef, in some cases
         _type = _cursor_type.get_canonical()
@@ -170,8 +161,6 @@ class TypeHandler(ClangHandler):
     @log_entity
     def FUNCTIONPROTO(self, _cursor_type):
         """Handles function prototype."""
-        if not isinstance(_cursor_type, clang.cindex.Type):
-            raise TypError('Please call FUNCTIONPROTO with a _cursor_type')
         # id, returns, attributes
         returns = _cursor_type.get_result()
         if self.is_fundamental_type(returns):
@@ -195,8 +184,6 @@ class TypeHandler(ClangHandler):
         known.
         Type is accessible by cursor.type.get_declaration() 
         '''
-        if not isinstance(_cursor_type, clang.cindex.Type):
-            raise TypeError('Please call RECORD with a cursor.type')
         _decl = _cursor_type.get_declaration() # is a record
         #code.interact(local=locals())
         #_decl_cursor = list(_decl.get_children())[0] # record -> decl

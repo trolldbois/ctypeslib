@@ -1,21 +1,19 @@
-"""clangparser - use clang to get preprocess a source code."""
+"""Handler for Cursor nodes from the clang AST tree."""
 
 import clang
-from clang.cindex import Index, TranslationUnit
 from clang.cindex import CursorKind, TypeKind, TokenKind
 
-import logging
 
 import typedesc
-import re
 
-from ctypeslib.codegen import util
+from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.util import log_entity
 from ctypeslib.codegen.handler import ClangHandler
 from ctypeslib.codegen.handler import InvalidDefinitionError
 from ctypeslib.codegen.handler import CursorKindException
 from ctypeslib.codegen.handler import DuplicateDefinitionException
 
+import logging
 log = logging.getLogger('cursorhandler')
 
 ## DEBUG
