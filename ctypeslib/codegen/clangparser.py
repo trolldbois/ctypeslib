@@ -461,6 +461,13 @@ typedef void* pointer_t;''', flags=_flags)
         return None
 
     ################################
+    # STATEMENTS handlers
+
+    # Do not traverse into function bodies and other compound statements
+    # now fixed by TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
+    COMPOUND_STMT = _do_nothing
+
+    ################################
     # TYPE REFERENCES handlers
     
     @log_entity
@@ -1102,6 +1109,53 @@ typedef void* pointer_t;''', flags=_flags)
                     return None
         return typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield())
 
+    #############################
+    # PREPROCESSING
+
+    @log_entity
+    def MACRO_DEFINITION(self, cursor):
+        """
+        Parse MACRO_DEFINITION, only present if the TranslationUnit is 
+        used with TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD.
+        """
+        # TODO: optionalize macro parsing. It takes a LOT of time.
+        name = self.get_unique_name(cursor)
+        #if name == 'A':
+        #    code.interact(local=locals())
+        # Tokens !!! .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION, 
+        # COMMENT ? } etc. see TokenKinds.def
+        comment = None
+        tokens = self._literal_handling(cursor)
+        # Macro name is tokens[0]
+        # get Macro value(s)
+        value = True
+        if isinstance(tokens, list):
+            if len(tokens) == 2 :
+                value = tokens[1]
+            else:
+                value = tokens[1:]
+        # macro comment maybe in tokens. Not in cursor.raw_comment
+        for t in cursor.get_tokens():
+            if t.kind == TokenKind.COMMENT:
+                comment = t.spelling
+        # special case. internal __null
+        # FIXME, there are probable a lot of others.
+        # why not Cursor.kind GNU_NULL_EXPR child instead of a token ?
+        if name == 'NULL' or value == '__null':
+            value = None
+        log.debug('MACRO: #define %s %s'%(tokens[0], value))
+        obj = typedesc.Macro(name, None, value)
+        try:
+            self.register(name, obj)
+        except DuplicateDefinitionException, e:
+            log.info('Redefinition of %s %s->%s'%(name, self.all[name].args, value))
+            # HACK 
+            self.all[name] = obj
+            pass
+        self.set_location(obj, cursor)
+        # set the comment in the obj 
+        obj.comment = comment
+        return True
 
 
 
@@ -1264,56 +1318,6 @@ typedef void* pointer_t;''', flags=_flags)
         return obj
 
 
-    ################
-    
-    # Do not traverse into function bodies and other compound statements
-    # now fixed by TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
-    @log_entity
-    def COMPOUND_STMT(self, cursor):
-        return True
-
-    @log_entity
-    def MACRO_DEFINITION(self, cursor):
-        """Parse MACRO_DEFINITION, only present if the TranslationUnit is 
-        used with TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD"""
-        # TODO: optionalize macro parsing. It takes a LOT of time.
-        name = self.get_unique_name(cursor)
-        #if name == 'A':
-        #    code.interact(local=locals())
-        # Tokens !!! .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION, 
-        # COMMENT ? } etc. see TokenKinds.def
-        comment = None
-        tokens = self._literal_handling(cursor)
-        # Macro name is tokens[0]
-        # get Macro value(s)
-        value = True
-        if isinstance(tokens, list):
-            if len(tokens) == 2 :
-                value = tokens[1]
-            else:
-                value = tokens[1:]
-        # macro comment maybe in tokens. Not in cursor.raw_comment
-        for t in cursor.get_tokens():
-            if t.kind == TokenKind.COMMENT:
-                comment = t.spelling
-        # special case. internal __null
-        # FIXME, there are probable a lot of others.
-        # why not Cursor.kind GNU_NULL_EXPR child instead of a token ?
-        if name == 'NULL' or value == '__null':
-            value = None
-        log.debug('MACRO: #define %s %s'%(tokens[0], value))
-        obj = typedesc.Macro(name, None, value)
-        try:
-            self.register(name, obj)
-        except DuplicateDefinitionException, e:
-            log.info('Redefinition of %s %s->%s'%(name, self.all[name].args, value))
-            # HACK 
-            self.all[name] = obj
-            pass
-        self.set_location(obj, cursor)
-        # set the comment in the obj 
-        obj.comment = comment
-        return True
     
     
     
