@@ -386,7 +386,14 @@ typedef void* pointer_t;''', flags=_flags)
     def __getattr__(self, name, **args):
         if "_fixup" in name:
             raise NotImplementedError('name')
+        if name not in self._unhandled:
+            log.warning('%s is not handled'%(name))
+            self._unhandled.append(name)
         return self._do_nothing
+
+    ##########################################################################
+    ##### CursorKind handlers#######
+    ##########################################################################
 
     ###########################################
     # ATTRIBUTES
@@ -492,15 +499,15 @@ typedef void* pointer_t;''', flags=_flags)
             setattr(self, _type_kind.name, _handle_fundamental_types)
 
     ################################
-    """
-    DECLARATIONS handlers
-     UNEXPOSED_DECL are unexposed by clang. Go through the node's children.
-     VAR_DECL are Variable declarations. Initialisation value(s) are collected 
-              within _get_var_decl_init_value
-    """
+    # DECLARATIONS handlers
+    #
+    # UNEXPOSED_DECL are unexposed by clang. Go through the node's children.
+    # VAR_DECL are Variable declarations. Initialisation value(s) are collected 
+    #          within _get_var_decl_init_value
+    #
 
-    """Undexposed declaration. Go and see children. """
     UNEXPOSED_DECL = _pass_through_children
+    """Undexposed declaration. Go and see children. """
     
     @log_entity
     def VAR_DECL(self, cursor):
@@ -665,10 +672,68 @@ typedef void* pointer_t;''', flags=_flags)
         self.set_comment(obj, cursor)
         return obj
                
+    @log_entity
+    def FUNCTION_DECL(self, cursor):
+        """Handles function declaration"""
+        name = self.get_unique_name(cursor)
+        if self.is_registered(name):
+            return self.get_registered(name)
+        returns = self.parse_cursor_type(cursor.type.get_result())
+        attributes = []
+        extern = False
+        obj = typedesc.Function(name, returns, attributes, extern)
+        for arg in cursor.get_arguments():
+            obj.add_argument(self.parse_cursor(arg))
+        #code.interact(local=locals())
+        self.register(name,obj)
+        self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
+        return obj
 
+
+
+
+
+
+
+
+
+
+
+    ##########################################################################
+    ##### TypeKind handlers#######
+    ##########################################################################
+
+    # TODO 
+    """ 
+    INVALID
+    UNEXPOSED
+    NULLPTR
+    OVERLOAD
+    DEPENDENT
+    OBJCID
+    OBJCCLASS
+    OBJCSEL
+    COMPLEX
+    BLOCKPOINTER
+    LVALUEREFERENCE
+    RVALUEREFERENCE
+    OBJCINTERFACE
+    OBJCOBJECTPOINTER
+    FUNCTIONNOPROTO
+    FUNCTIONPROTO
+    VECTOR
+    MEMBERPOINTER
+    """
+    
+    TYPEDEF = _do_nothing
+    ENUM = _do_nothing
 
     @log_entity
     def POINTER(self, _cursor_type):
+        """
+        Handles POINTER types.
+        """
         if not isinstance(_cursor_type, clang.cindex.Type):
             raise TypeError('Please call POINTER with a cursor.type')
         # we shortcut to canonical typedefs and to pointee canonical defs
@@ -698,45 +763,18 @@ typedef void* pointer_t;''', flags=_flags)
         #elif _type.kind == TypeKind.FUNCTIONPROTO:
         #    log.error('TypeKind.FUNCTIONPROTO not implemented')
         #    return None
-        '''else:
-            # 
-            mth = getattr(self, _type.kind.name)
-            code.interact(local=locals())
-            p_type = mth(_type)
-            #raise TypeError('Unknown scenario in PointerType - %s'%(_type))
-        '''
-        log.debug("POINTER: p_type:'%s'"%(_p_type_name))
+        log.debug("POINTER: pointee type_name:'%s'"%(_p_type_name))
         # return the pointer
-        #print 'check p_type'
-        #code.interact(local=locals())                
         obj = typedesc.PointerType( p_type, size, align)
         obj.location = p_type.location
         return obj
 
-
-    def _fixup_PointerType(self, p):
-        #print '*** Fixing up PointerType', p.typ
-        #code.interact(local=locals())
-        ##if type(p.typ.typ) != typedesc.FundamentalType:
-        ##    p.typ.typ = self.all[p.typ.typ]
-        if type(p.typ) == str:
-            p.typ = self.all[p.typ]
-
-    ReferenceType = POINTER # ??
-    _fixup_ReferenceType = _fixup_PointerType
-    OffsetType = POINTER
-    _fixup_OffsetType = _fixup_PointerType
-
-    ############################
-    """ 
-    Types nodes in the AST tree.
-    
-     TYPEDEF -> do nothing.
-    """
-    TYPEDEF = _do_nothing
-
     @log_entity
-    def CONSTANTARRAY(self, _cursor_type):
+    def _array_handler(self, _cursor_type):
+        """
+        Handles all array types. 
+        Resolves it's element type and makes a Array typedesc.
+        """
         if not isinstance(_cursor_type, clang.cindex.Type):
             raise TypeError('Please call CONSTANTARRAY with a cursor.type')
         # The element type has been previously declared
@@ -768,51 +806,21 @@ typedef void* pointer_t;''', flags=_flags)
         obj.location = _subtype.location
         return obj
 
-    def _fixup_ArrayType(self, a):
-        # FIXME
-        #if type(a.typ) != typedesc.FundamentalType:
-        #    a.typ = self.all[a.typ]
-        pass
+    CONSTANTARRAY = _array_handler
+    INCOMPLETEARRAY = _array_handler
+    VARIABLEARRAY = _array_handler
+    DEPENDENTSIZEDARRAY = _array_handler
 
-    INCOMPLETEARRAY = CONSTANTARRAY
 
-    def CvQualifiedType(self, attrs):
-        # id, type, [const|volatile]
-        typ = attrs["type"]
-        const = attrs.get("const", None)
-        volatile = attrs.get("volatile", None)
-        obj = typedesc.CvQualifiedType(typ, const, volatile)
-        self.set_location(obj, cursor)
-        self.set_comment(obj, cursor)
-        return obj
-
-    def _fixup_CvQualifiedType(self, c):
-        c.typ = self.all[c.typ]
-
+    ## const, restrict and volatile
+    ## typedesc.CvQualifiedType(typ, const, volatile)
+    # Type has multiple functions for const, volatile, restrict
+    # not listed has node in the AST.
+    # not very useful in python anyway.
+    
     # callables
     
     #def Function(self, attrs):
-    @log_entity
-    def FUNCTION_DECL(self, cursor):
-        # name, returns, extern, attributes
-        name = self.get_unique_name(cursor)
-        if self.is_registered(name):
-            return self.get_registered(name)
-        returns = self.parse_cursor_type(cursor.type.get_result())
-        attributes = None
-        extern = None
-        # FIXME:
-        # cursor.get_arguments() or see def PARM_DECL()
-        obj = typedesc.Function(name, returns, attributes, extern)
-        self.register(name,obj)
-        self.set_location(obj, cursor)
-        self.set_comment(obj, cursor)
-        return obj
-
-    def _fixup_Function(self, func):
-        #func.returns = self.get_registered(self.get_unique_name(func.returns.name))
-        #func.fixup_argtypes(self)
-        pass
 
     def FUNCTIONPROTO(self, _cursor_type):
         if not isinstance(_cursor_type, clang.cindex.Type):
@@ -1174,7 +1182,6 @@ typedef void* pointer_t;''', flags=_flags)
         #fields = self.fields[s.name]
         for m in s.members: # s.members are strings - NOT
             '''import code
-            code.interact(local=locals())
             if m not in self.fields.keys():
                 log.warning('Fixup_struct: Member unexpected : %s'%(m))
                 raise TypeError('Fixup_struct: Member unexpected : %s'%(m))
@@ -1435,7 +1442,7 @@ typedef void* pointer_t;''', flags=_flags)
             if hasattr(self, fixup_cb_name):
                 mth = getattr(self, fixup_cb_name)
                 mth(_item)
-            
+
         for _x in remove:
             del self.all[_x]
 
