@@ -29,7 +29,7 @@ class TypeHandler(ClangHandler):
 
     def init_fundamental_types(self):
         """Registers all fundamental typekind handlers"""
-        for _id in range(1,24):
+        for _id in range(2,24):
             setattr(self, TypeKind.from_id(_id).name, 
                           self._handle_fundamental_types)
 
@@ -49,7 +49,6 @@ class TypeHandler(ClangHandler):
 
     """ 
     INVALID
-    UNEXPOSED
     NULLPTR
     OVERLOAD
     DEPENDENT
@@ -174,11 +173,12 @@ class TypeHandler(ClangHandler):
     
     @log_entity
     def RECORD(self, _cursor_type):
-        ''' A record is a NOT a declaration. A record is the occurrence of of
+        """
+        A record is a NOT a declaration. A record is the occurrence of of
         previously defined record type. So no action is needed. Type is already 
         known.
         Type is accessible by cursor.type.get_declaration() 
-        '''
+        """
         _decl = _cursor_type.get_declaration() # is a record
         #code.interact(local=locals())
         #_decl_cursor = list(_decl.get_children())[0] # record -> decl
@@ -190,6 +190,18 @@ class TypeHandler(ClangHandler):
             obj = self.parse_cursor(_decl)
         return obj
 
+    @log_entity
+    def UNEXPOSED(self, _cursor_type):
+        """
+        Handles unexposed types. Returns the type listed in a typeref child.
+        """
+        _decl = _cursor_type.get_declaration() 
+        name = self.get_unique_name(_decl)#_cursor)
+        if self.is_registered(name):
+            obj = self.get_registered(name)
+        else:
+            obj = self.parse_cursor(_decl)
+        return obj
 
     
     

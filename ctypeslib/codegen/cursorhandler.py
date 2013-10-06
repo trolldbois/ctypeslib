@@ -177,8 +177,11 @@ class CursorHandler(ClangHandler):
         attributes = []
         extern = False
         obj = typedesc.Function(name, returns, attributes, extern)
-        for arg in cursor.get_arguments():
-            obj.add_argument(self.parse_cursor(arg))
+        for arg in cursor.get_arguments():            
+            arg_obj = self.parse_cursor(arg)
+            if arg_obj is None:
+                code.interact(local=locals())
+            obj.add_argument(arg_obj)
         #code.interact(local=locals())
         self.register(name,obj)
         self.set_location(obj, cursor)
@@ -192,10 +195,9 @@ class CursorHandler(ClangHandler):
         _name = cursor.spelling
         if ( self.is_array_type(_type) or
              self.is_fundamental_type(_type) or
-             self.is_pointer_type(_type)):
+             self.is_pointer_type(_type) or 
+             self.is_unexposed_type(_type) ):
             _argtype = self.parse_cursor_type(_type)
-        elif self.is_unexposed_type(_type):
-            return None # FIXME to for children maybe ?
         else: # FIXME which UT/case ?
             _argtype_decl = _type.get_declaration()
             _argtype_name = self.get_unique_name(_argtype_decl)
@@ -261,6 +263,7 @@ class CursorHandler(ClangHandler):
             ### if literal_kind != CursorKind.DECL_REF_EXPR:
             ###    init_value = '%s(%s)'%(ctypesname, init_value)
         elif self.is_unexposed_type(_ctype): # string are not exposed
+            # FIXME recurse on child
             log.error('PATCH NEEDED: %s type is not exposed by clang'%(name))
             ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
             _type = typedesc.FundamentalType( ctypesname, 0, 0 )

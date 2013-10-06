@@ -17,7 +17,8 @@ class _HasArgs(T):
         self.arguments = []
 
     def add_argument(self, arg):
-        assert isinstance(arg, Argument)
+        if not isinstance(arg, Argument):
+            raise TypeError('Argument expected, %s instead'%(type(arg)))
         self.arguments.append(arg)
 
     def iterArgTypes(self):
