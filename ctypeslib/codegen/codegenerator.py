@@ -80,8 +80,6 @@ def get_real_type(tp):
 def _clean_name(func):
     def fn_clean(*args, **kwargs):
         name = func(*args, **kwargs)
-        if name.startswith("__"):
-            return "_P" + name
         return name
     return fn_clean
 
@@ -236,8 +234,12 @@ class Generator(object):
         self.names = set() # names that have been generated
         self.initialize = Initializer()
 
-
-    @_clean_name
+    def enable_pythonic_types(self):
+        self.enable_pythonic_types = lambda : True
+        import pkgutil
+        headers = pkgutil.get_data('ctypeslib','data/pythonic_type_name.tpl')
+        print >> self.imports, headers
+    
     def type_name(self, t, generate=True):
         # Return a string containing an expression that can be used to
         # refer to the type. Assumes the 'from ctypes import *'
@@ -610,11 +612,13 @@ class Generator(object):
             index = 0
             for f in fields:
                 fieldname = unnamed_fields.get(f, f.name)
-                #code.interact(local=locals())
-                #print f.__dict__
+                type_name = self.type_name(f.type)
+                if type_name.startswith("__"):
+                    self.enable_pythonic_types()
+                    type_name = "_p_type('%s')"%type_name
                 if f.is_bitfield is False:
                     print >> self.stream, "    ('%s', %s)," % \
-                     (fieldname, self.type_name(f.type))
+                     (fieldname, type_name)
                 else:
                     # FIXME: Python bitfield is int32 only.
                     from clang.cindex import TypeKind                
