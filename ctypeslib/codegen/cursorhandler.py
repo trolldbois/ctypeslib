@@ -780,9 +780,9 @@ class CursorHandler(ClangHandler):
         try:
             self.register(name, obj)
         except DuplicateDefinitionException, e:
-            log.info('Redefinition of %s %s->%s'%(name, self.all[name].args, value))
+            log.info('Redefinition of %s %s->%s'%(name, self.parser.all[name].args, value))
             # HACK 
-            self.all[name] = obj
+            self.parser.all[name] = obj
             pass
         self.set_location(obj, cursor)
         # set the comment in the obj 
