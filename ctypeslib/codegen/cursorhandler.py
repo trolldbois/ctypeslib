@@ -338,6 +338,8 @@ class CursorHandler(ClangHandler):
                     init_value = _tmp
                 else:                    
                     init_value.append( _tmp )
+            if isinstance(init_value, list) and len(init_value) == 0:
+                init_value = None
         else:
             child = children[0]
             # get the init value if possible
@@ -356,6 +358,8 @@ class CursorHandler(ClangHandler):
         log.debug('_ctype: %s Child.kind: %s'%(_ctype.kind, child.kind))
         # shorcuts.
         if not child.kind.is_expression() and not child.kind.is_declaration():
+            raise CursorKindException(child.kind)
+        if child.kind == CursorKind.CALL_EXPR:
             raise CursorKindException(child.kind)
         ## POD init values handling.
         # As of clang 3.3, int, double literals are exposed.
