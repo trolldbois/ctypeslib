@@ -634,37 +634,32 @@ typedef void* pointer_t;''', flags=_flags)
             init_value = self.parse_cursor(child)
         return init_value
 
-
-    """
-    Typedef_decl has 1 child, a typeref.
-    the Typeref is himself.
-        
-    typedef_decl.get_definition().type.get_canonical().kind
-    results the type
-    """
     @log_entity
     def TYPEDEF_DECL(self, cursor):
-        """Handles typedef statements. """
+        """
+        Handles typedef statements. 
+        Gets Type from cache if we known it. Add it to cache otherwise.
+        """
         name = self.get_unique_name(cursor)
+        # if the typedef is known, get it from cache
         if self.is_registered(name):
             return self.get_registered(name)
+        # use the canonical type directly.
         _type = cursor.type.get_canonical()
         log.debug("TYPEDEF_DECL: name:%s"%(name))
         log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind))
-        _decl_cursor = _type.get_declaration()
         #FIXME: check if this can be useful to filter internal declaration
+        #_decl_cursor = _type.get_declaration()
         #if _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
         #    log.warning('TYPE %s has no declaration. Builtin type?'%(name))
         #    code.interact(local=locals())        
-        p_type = None
-        if self.is_pointer_type(_type):
-            p_type = self.parse_cursor_type(_type)
-        else:
-            p_type = self.parse_cursor_type(_type)
-        if p_type is None:
-            log.error('p_type is none in TYPEDEF_DECL: %s'%(_type))
-            raise TypeError('p_type is none in TYPEDEF_DECL: %s'%(_type))
-        # register the typedef
+        
+        # For all types (array, fundament, pointer, others), get the type
+        p_type = self.parse_cursor_type(_type)
+        if not isinstance(p_type, typedesc.T):
+            log.error('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type))
+            raise TypeError('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type))
+        # register the type
         obj = self.register(name, typedesc.Typedef(name, p_type))
         self.set_location(obj, cursor)
         self.set_comment(obj, cursor)
@@ -1234,10 +1229,11 @@ typedef void* pointer_t;''', flags=_flags)
 
     @log_entity
     def FIELD_DECL(self, cursor):
-        ''' a fundamentalType field needs to get a _type
+        """Handles Field declarations.
+        a fundamentalType field needs to get a _type
         a Pointer need to get treated by self.POINTER ( no children )
         a Record needs to be treated by self.record... etc..
-        '''
+        """
         # name, type
         name = self.get_unique_name(cursor)
         record_name = self.get_unique_name(cursor.semantic_parent)
