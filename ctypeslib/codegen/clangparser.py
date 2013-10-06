@@ -510,6 +510,104 @@ typedef void* pointer_t;''', flags=_flags)
     """Undexposed declaration. Go and see children. """
     
     @log_entity
+    def ENUM_CONSTANT_DECL(self, cursor):
+        """Gets the enumeration values"""
+        name = cursor.displayname
+        value = cursor.enum_value
+        pname = self.get_unique_name(cursor.semantic_parent)
+        # FIXME
+        parent = self.all[pname]
+        obj = typedesc.EnumValue(name, value, parent)
+        parent.add_value(obj)
+        return obj
+
+    @log_entity
+    def ENUM_DECL(self, cursor):
+        """Gets the enumeration type"""
+        name = self.get_unique_name(cursor)
+        if self.is_registered(name):
+            return self.get_registered(name)
+        align = cursor.type.get_align() 
+        size = cursor.type.get_size() 
+        obj = self.register(name, typedesc.Enumeration(name, size, align))
+        self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
+        return obj
+
+    @log_entity
+    def FUNCTION_DECL(self, cursor):
+        """Handles function declaration"""
+        name = self.get_unique_name(cursor)
+        if self.is_registered(name):
+            return self.get_registered(name)
+        returns = self.parse_cursor_type(cursor.type.get_result())
+        attributes = []
+        extern = False
+        obj = typedesc.Function(name, returns, attributes, extern)
+        for arg in cursor.get_arguments():
+            obj.add_argument(self.parse_cursor(arg))
+        #code.interact(local=locals())
+        self.register(name,obj)
+        self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
+        return obj
+
+    @log_entity
+    def PARM_DECL(self, cursor):
+        _type = cursor.type
+        _name = cursor.spelling
+        if self.is_fundamental_type(_type):
+            _argtype = self.parse_cursor_type(_type)
+        elif self.is_pointer_type(_type) or self.is_array_type(_type):
+            _argtype = self.parse_cursor_type(_type)
+        elif self.is_unexposed_type(_type):
+            return None
+        else:
+            _argtype_decl = _type.get_declaration()
+            _argtype_name = self.get_unique_name(_argtype_decl)
+            if not self.is_registered(_argtype_name):
+                log.error('this param type is not declared')
+                #code.interact(local=locals())
+                _argtype = self.parse_cursor_type(_type)
+            else:
+                _argtype = self.get_registered(_argtype_name)
+        obj = typedesc.Argument(_name, _argtype)
+        self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
+        return obj
+
+    @log_entity
+    def TYPEDEF_DECL(self, cursor):
+        """
+        Handles typedef statements. 
+        Gets Type from cache if we known it. Add it to cache otherwise.
+        """
+        name = self.get_unique_name(cursor)
+        # if the typedef is known, get it from cache
+        if self.is_registered(name):
+            return self.get_registered(name)
+        # use the canonical type directly.
+        _type = cursor.type.get_canonical()
+        log.debug("TYPEDEF_DECL: name:%s"%(name))
+        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind))
+        #FIXME: check if this can be useful to filter internal declaration
+        #_decl_cursor = _type.get_declaration()
+        #if _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
+        #    log.warning('TYPE %s has no declaration. Builtin type?'%(name))
+        #    code.interact(local=locals())        
+        
+        # For all types (array, fundament, pointer, others), get the type
+        p_type = self.parse_cursor_type(_type)
+        if not isinstance(p_type, typedesc.T):
+            log.error('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type))
+            raise TypeError('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type))
+        # register the type
+        obj = self.register(name, typedesc.Typedef(name, p_type))
+        self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
+        return obj
+               
+    @log_entity
     def VAR_DECL(self, cursor):
         """ The cursor is on a Variable declaration."""
         # get the name
@@ -641,271 +739,6 @@ typedef void* pointer_t;''', flags=_flags)
             init_value = self.parse_cursor(child)
         return init_value
 
-    @log_entity
-    def TYPEDEF_DECL(self, cursor):
-        """
-        Handles typedef statements. 
-        Gets Type from cache if we known it. Add it to cache otherwise.
-        """
-        name = self.get_unique_name(cursor)
-        # if the typedef is known, get it from cache
-        if self.is_registered(name):
-            return self.get_registered(name)
-        # use the canonical type directly.
-        _type = cursor.type.get_canonical()
-        log.debug("TYPEDEF_DECL: name:%s"%(name))
-        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind))
-        #FIXME: check if this can be useful to filter internal declaration
-        #_decl_cursor = _type.get_declaration()
-        #if _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
-        #    log.warning('TYPE %s has no declaration. Builtin type?'%(name))
-        #    code.interact(local=locals())        
-        
-        # For all types (array, fundament, pointer, others), get the type
-        p_type = self.parse_cursor_type(_type)
-        if not isinstance(p_type, typedesc.T):
-            log.error('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type))
-            raise TypeError('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type))
-        # register the type
-        obj = self.register(name, typedesc.Typedef(name, p_type))
-        self.set_location(obj, cursor)
-        self.set_comment(obj, cursor)
-        return obj
-               
-    @log_entity
-    def FUNCTION_DECL(self, cursor):
-        """Handles function declaration"""
-        name = self.get_unique_name(cursor)
-        if self.is_registered(name):
-            return self.get_registered(name)
-        returns = self.parse_cursor_type(cursor.type.get_result())
-        attributes = []
-        extern = False
-        obj = typedesc.Function(name, returns, attributes, extern)
-        for arg in cursor.get_arguments():
-            obj.add_argument(self.parse_cursor(arg))
-        #code.interact(local=locals())
-        self.register(name,obj)
-        self.set_location(obj, cursor)
-        self.set_comment(obj, cursor)
-        return obj
-
-
-
-
-
-
-
-
-
-
-
-    ##########################################################################
-    ##### TypeKind handlers#######
-    ##########################################################################
-
-    # TODO 
-    """ 
-    INVALID
-    UNEXPOSED
-    NULLPTR
-    OVERLOAD
-    DEPENDENT
-    OBJCID
-    OBJCCLASS
-    OBJCSEL
-    COMPLEX
-    BLOCKPOINTER
-    LVALUEREFERENCE
-    RVALUEREFERENCE
-    OBJCINTERFACE
-    OBJCOBJECTPOINTER
-    FUNCTIONNOPROTO
-    FUNCTIONPROTO
-    VECTOR
-    MEMBERPOINTER
-    """
-    
-    TYPEDEF = _do_nothing
-    ENUM = _do_nothing
-
-    @log_entity
-    def POINTER(self, _cursor_type):
-        """
-        Handles POINTER types.
-        """
-        if not isinstance(_cursor_type, clang.cindex.Type):
-            raise TypeError('Please call POINTER with a cursor.type')
-        # we shortcut to canonical typedefs and to pointee canonical defs
-        _type = _cursor_type.get_pointee().get_canonical()
-        _p_type_name = self.get_unique_name(_type)
-        # get pointer size
-        size = _cursor_type.get_size() # not size of pointee
-        align = _cursor_type.get_align() 
-        log.debug("POINTER: size:%d align:%d typ:%s"%(size, align, _type.kind))
-        if self.is_fundamental_type(_type):
-            p_type = self.parse_cursor_type(_type)
-        elif self.is_pointer_type(_type) or self.is_array_type(_type):
-            p_type = self.parse_cursor_type(_type)
-        elif _type.kind == TypeKind.FUNCTIONPROTO:
-            p_type = self.parse_cursor_type(_type)
-        else: #elif _type.kind == TypeKind.RECORD:
-            # check registration
-            decl = _type.get_declaration()
-            decl_name = self.get_unique_name(decl)
-            # Type is already defined OR will be defined later.
-            if self.is_registered(decl_name):
-                p_type = self.get_registered(decl_name)
-            else: # forward declaration, without looping
-                log.debug('POINTER: %s type was not previously declared'%(decl_name))
-                #code.interact(local=locals())
-                p_type = self.parse_cursor(decl)
-        #elif _type.kind == TypeKind.FUNCTIONPROTO:
-        #    log.error('TypeKind.FUNCTIONPROTO not implemented')
-        #    return None
-        log.debug("POINTER: pointee type_name:'%s'"%(_p_type_name))
-        # return the pointer
-        obj = typedesc.PointerType( p_type, size, align)
-        obj.location = p_type.location
-        return obj
-
-    @log_entity
-    def _array_handler(self, _cursor_type):
-        """
-        Handles all array types. 
-        Resolves it's element type and makes a Array typedesc.
-        """
-        if not isinstance(_cursor_type, clang.cindex.Type):
-            raise TypeError('Please call CONSTANTARRAY with a cursor.type')
-        # The element type has been previously declared
-        # we need to get the canonical typedef, in some cases
-        _type = _cursor_type.get_canonical()
-        size = _type.get_array_size()
-        # FIXME: useful or not ?
-        if size == -1 and _type.kind == TypeKind.INCOMPLETEARRAY:
-            size = 0
-            # Fixes error in negative sized array.
-            # FIXME VARIABLEARRAY DEPENDENTSIZEDARRAY
-        _array_type = _type.get_array_element_type()#.get_canonical()
-        if self.is_fundamental_type(_array_type):
-            _subtype = self.parse_cursor_type(_array_type)
-        elif self.is_pointer_type(_array_type): 
-            #code.interact(local=locals())
-            # pointers to POD have no declaration ??
-            # FIXME test_struct_with_pointer x_n_t g[1]
-            _subtype = self.parse_cursor_type(_array_type)
-        else:
-            _subtype_decl = _array_type.get_declaration()
-            _subtype = self.parse_cursor(_subtype_decl)
-            #if _subtype_decl.kind == CursorKind.NO_DECL_FOUND:
-            #    pass
-            #_subtype_name = self.get_unique_name(_subtype_decl)
-            #_subtype = self.get_registered(_subtype_name)
-        #code.interact(local=locals())
-        obj = typedesc.ArrayType(_subtype, size)
-        obj.location = _subtype.location
-        return obj
-
-    CONSTANTARRAY = _array_handler
-    INCOMPLETEARRAY = _array_handler
-    VARIABLEARRAY = _array_handler
-    DEPENDENTSIZEDARRAY = _array_handler
-
-
-    ## const, restrict and volatile
-    ## typedesc.CvQualifiedType(typ, const, volatile)
-    # Type has multiple functions for const, volatile, restrict
-    # not listed has node in the AST.
-    # not very useful in python anyway.
-    
-    # callables
-    
-    #def Function(self, attrs):
-
-    def FUNCTIONPROTO(self, _cursor_type):
-        if not isinstance(_cursor_type, clang.cindex.Type):
-            raise TypError('Please call FUNCTIONPROTO with a _cursor_type')
-        # id, returns, attributes
-        returns = _cursor_type.get_result()
-        if self.is_fundamental_type(returns):
-            returns = self.parse_cursor_type(returns)
-        attributes = []
-        #for attr in iter(cursor.argument_types()):
-        #    if self.is_fundamental_type(attr):
-        #        attributes.append(self.FundamentalType(attr))
-        #    else:
-        #        # I can get names if provided with the cursor and not the type
-        #        mth = getattr(self, attr.kind.name)
-        #        _type  = mth(attr)
-        #        attributes.append(_type)
-        #log.debug('FUNCTIONPROTO: can I get args ?')
-        #code.interact(local=locals())    
-        obj = typedesc.FunctionType(returns, attributes)
-        self.set_location(obj, None)
-        return obj
-    
-    def _fixup_FunctionType(self, func):
-        #func.returns = self.all[func.returns]
-        #func.fixup_argtypes(self.all)
-        pass
-
-    @log_entity
-    def OperatorFunction(self, attrs):
-        # name, returns, extern, attributes
-        name = attrs["name"]
-        returns = attrs["returns"]
-        obj = typedesc.OperatorFunction(name, returns)
-        self.set_location(obj, cursor)
-        self.set_comment(obj, cursor)
-        return obj
-
-    def _fixup_OperatorFunction(self, func):
-        func.returns = self.all[func.returns]
-
-    def _Ignored(self, attrs):
-        log.debug("_Ignored: name:'%s' "%(cursor.spelling))
-        name = attrs.get("name", None)
-        if not name:
-            name = attrs["mangled"]
-        return typedesc.Ignored(name)
-
-    def _fixup_Ignored(self, const): pass
-
-    Converter = Constructor = Destructor = OperatorMethod = _Ignored
-
-    def Method(self, attrs):
-        # name, virtual, pure_virtual, returns
-        name = attrs["name"]
-        returns = attrs["returns"]
-        return typedesc.Method(name, returns)
-
-    def _fixup_Method(self, m):
-        m.returns = self.all[m.returns]
-        m.fixup_argtypes(self.all)
-
-    @log_entity
-    def PARM_DECL(self, cursor):
-        _type = cursor.type
-        _name = cursor.spelling
-        if self.is_fundamental_type(_type):
-            _argtype = self.parse_cursor_type(_type)
-        elif self.is_pointer_type(_type) or self.is_array_type(_type):
-            _argtype = self.parse_cursor_type(_type)
-        elif self.is_unexposed_type(_type):
-            return None
-        else:
-            _argtype_decl = _type.get_declaration()
-            _argtype_name = self.get_unique_name(_argtype_decl)
-            if not self.is_registered(_argtype_name):
-                log.error('this param type is not declared')
-                #code.interact(local=locals())
-                _argtype = self.parse_cursor_type(_type)
-            else:
-                _argtype = self.get_registered(_argtype_name)
-        obj = typedesc.Argument(_name, _argtype)
-        self.set_location(obj, cursor)
-        self.set_comment(obj, cursor)
-        return obj
 
     @log_entity
     def _literal_handling(self, cursor):
@@ -1019,36 +852,151 @@ typedef void* pointer_t;''', flags=_flags)
                     for child in list(cursor.get_children())]
         return values
 
-    # enumerations
+
+
+
+
+
+
+
+
+
+
+    ##########################################################################
+    ##### TypeKind handlers#######
+    ##########################################################################
+
+    # TODO 
+    """ 
+    INVALID
+    UNEXPOSED
+    NULLPTR
+    OVERLOAD
+    DEPENDENT
+    OBJCID
+    OBJCCLASS
+    OBJCSEL
+    COMPLEX
+    BLOCKPOINTER
+    LVALUEREFERENCE
+    RVALUEREFERENCE
+    OBJCINTERFACE
+    OBJCOBJECTPOINTER
+    FUNCTIONNOPROTO
+    FUNCTIONPROTO
+    VECTOR
+    MEMBERPOINTER
+    """
+
+    ## const, restrict and volatile
+    ## typedesc.CvQualifiedType(typ, const, volatile)
+    # Type has multiple functions for const, volatile, restrict
+    # not listed has node in the AST.
+    # not very useful in python anyway.
+    
+    TYPEDEF = _do_nothing
+    ENUM = _do_nothing
 
     @log_entity
-    def ENUM_DECL(self, cursor):
-        ''' Get the enumeration type'''
-        name = self.get_unique_name(cursor)
-        if self.is_registered(name):
-            return self.get_registered(name)
-        #    #raise ValueError('could try get_usr()')
-        align = cursor.type.get_align() 
-        size = cursor.type.get_size() 
-        obj = self.register(name, typedesc.Enumeration(name, size, align))
-        self.set_location(obj, cursor)
-        self.set_comment(obj, cursor)
+    def POINTER(self, _cursor_type):
+        """
+        Handles POINTER types.
+        """
+        if not isinstance(_cursor_type, clang.cindex.Type):
+            raise TypeError('Please call POINTER with a cursor.type')
+        # we shortcut to canonical typedefs and to pointee canonical defs
+        _type = _cursor_type.get_pointee().get_canonical()
+        _p_type_name = self.get_unique_name(_type)
+        # get pointer size
+        size = _cursor_type.get_size() # not size of pointee
+        align = _cursor_type.get_align() 
+        log.debug("POINTER: size:%d align:%d typ:%s"%(size, align, _type.kind))
+        if self.is_fundamental_type(_type):
+            p_type = self.parse_cursor_type(_type)
+        elif self.is_pointer_type(_type) or self.is_array_type(_type):
+            p_type = self.parse_cursor_type(_type)
+        elif _type.kind == TypeKind.FUNCTIONPROTO:
+            p_type = self.parse_cursor_type(_type)
+        else: #elif _type.kind == TypeKind.RECORD:
+            # check registration
+            decl = _type.get_declaration()
+            decl_name = self.get_unique_name(decl)
+            # Type is already defined OR will be defined later.
+            if self.is_registered(decl_name):
+                p_type = self.get_registered(decl_name)
+            else: # forward declaration, without looping
+                log.debug('POINTER: %s type was not previously declared'%(decl_name))
+                #code.interact(local=locals())
+                p_type = self.parse_cursor(decl)
+        #elif _type.kind == TypeKind.FUNCTIONPROTO:
+        #    log.error('TypeKind.FUNCTIONPROTO not implemented')
+        #    return None
+        log.debug("POINTER: pointee type_name:'%s'"%(_p_type_name))
+        # return the pointer
+        obj = typedesc.PointerType( p_type, size, align)
+        obj.location = p_type.location
         return obj
 
-    def _fixup_Enumeration(self, e): pass
+    @log_entity
+    def _array_handler(self, _cursor_type):
+        """
+        Handles all array types. 
+        Resolves it's element type and makes a Array typedesc.
+        """
+        if not isinstance(_cursor_type, clang.cindex.Type):
+            raise TypeError('Please call CONSTANTARRAY with a cursor.type')
+        # The element type has been previously declared
+        # we need to get the canonical typedef, in some cases
+        _type = _cursor_type.get_canonical()
+        size = _type.get_array_size()
+        # FIXME: useful or not ?
+        if size == -1 and _type.kind == TypeKind.INCOMPLETEARRAY:
+            size = 0
+            # Fixes error in negative sized array.
+            # FIXME VARIABLEARRAY DEPENDENTSIZEDARRAY
+        _array_type = _type.get_array_element_type()#.get_canonical()
+        if self.is_fundamental_type(_array_type):
+            _subtype = self.parse_cursor_type(_array_type)
+        elif self.is_pointer_type(_array_type): 
+            #code.interact(local=locals())
+            # pointers to POD have no declaration ??
+            # FIXME test_struct_with_pointer x_n_t g[1]
+            _subtype = self.parse_cursor_type(_array_type)
+        else:
+            _subtype_decl = _array_type.get_declaration()
+            _subtype = self.parse_cursor(_subtype_decl)
+            #if _subtype_decl.kind == CursorKind.NO_DECL_FOUND:
+            #    pass
+            #_subtype_name = self.get_unique_name(_subtype_decl)
+            #_subtype = self.get_registered(_subtype_name)
+        #code.interact(local=locals())
+        obj = typedesc.ArrayType(_subtype, size)
+        obj.location = _subtype.location
+        return obj
+
+    CONSTANTARRAY = _array_handler
+    INCOMPLETEARRAY = _array_handler
+    VARIABLEARRAY = _array_handler
+    DEPENDENTSIZEDARRAY = _array_handler
 
     @log_entity
-    def ENUM_CONSTANT_DECL(self, cursor):
-        ''' Get the enumeration values'''
-        name = cursor.displayname
-        value = cursor.enum_value
-        pname = self.get_unique_name(cursor.semantic_parent)
-        parent = self.all[pname]
-        v = typedesc.EnumValue(name, value, parent)
-        parent.add_value(v)
-        return v
-
-    def _fixup_EnumValue(self, e): pass
+    def FUNCTIONPROTO(self, _cursor_type):
+        """Handles function prototype."""
+        if not isinstance(_cursor_type, clang.cindex.Type):
+            raise TypError('Please call FUNCTIONPROTO with a _cursor_type')
+        # id, returns, attributes
+        returns = _cursor_type.get_result()
+        if self.is_fundamental_type(returns):
+            returns = self.parse_cursor_type(returns)
+        attributes = []
+        obj = typedesc.FunctionType(returns, attributes)
+        for i, _attr_type in enumerate(_cursor_type.argument_types()):
+            arg = typedesc.Argument("a%d"%(i), self.parse_cursor(_attr_type))
+            obj.add_argument( arg )
+        #log.debug('FUNCTIONPROTO: can I get args ?')
+        #code.interact(local=locals())    
+        self.set_location(obj, None)
+        return obj
 
     # structures, unions, classes
     
