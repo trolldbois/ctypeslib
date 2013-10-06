@@ -35,7 +35,6 @@ class TypeHandler(ClangHandler):
 
     ##########################################################################
     ##### TypeKind handlers#######
-    # TODO 
 
     def init_fundamental_types(self):
         """Registers all fundamental typekind handlers"""

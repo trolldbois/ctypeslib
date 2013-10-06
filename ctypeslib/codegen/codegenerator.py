@@ -730,7 +730,7 @@ class Generator(object):
     def generate(self, item):
         if item in self.done:
             return
-        log.debug("generate %s, %s"%(item, item.__dict__))
+        #log.debug("generate %s, %s"%(item, item.__dict__))
         name=''
         if hasattr(item, 'name'):
             name = item.name

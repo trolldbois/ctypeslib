@@ -573,6 +573,8 @@ class CursorHandler(ClangHandler):
                 log.debug('_record_decl: %s was previously registered'%(name))
             obj = self.get_registered(name)
             obj.members = members
+            # final fixup
+            self._fixup_record(obj)
         return obj
 
     def _fixup_record(self, s):
@@ -655,11 +657,11 @@ class CursorHandler(ClangHandler):
             return typedesc.Field(name,
                      typedesc.ArrayType(
                        typedesc.FundamentalType(
-                         self.ctypes_typename[TypeKind.CHAR_U], length, 1 ),
+                         self.get_ctypes_name(TypeKind.CHAR_U), length, 1 ),
                        bytes),
                      offset, length)
         return typedesc.Field(name,
-                 typedesc.FundamentalType( self.ctypes_typename[TypeKind.CHAR_U], 1, 1 ),
+                 typedesc.FundamentalType( self.get_ctypes_name(TypeKind.CHAR_U), 1, 1 ),
                  offset, length)
 
 
