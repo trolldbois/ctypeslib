@@ -704,8 +704,8 @@ class Generator(object):
                         return "unknown"
                 argsAndTypes = zip([typeString(t) for t in func.iterArgTypes()], argnames)
                 print >> self.stream, """%(funcname)s.__doc__ = \\
-\"\"\"%(ret)s %(funcname)s(%(args)s)
-%(file)s:%(line)s\"\"\"""" % \
+    \"\"\"%(ret)s %(funcname)s(%(args)s)
+    %(file)s:%(line)s\"\"\"""" % \
                     {'funcname': func.name, 
                     'args': ", ".join(["%s %s" % i for i in argsAndTypes]),
                     'file': func.location[0],
@@ -730,7 +730,7 @@ class Generator(object):
     def generate(self, item):
         if item in self.done:
             return
-        #log.debug("generate %s, %s"%(item, item.__dict__))
+        log.debug("generate %s, %s"%(item, item.__dict__))
         name=''
         if hasattr(item, 'name'):
             name = item.name

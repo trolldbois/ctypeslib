@@ -5,6 +5,10 @@
 from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
 
+import logging
+
+log = logging.getLogger('utils')
+
 def get_tu(source, lang='c', all_warnings=False, flags=[]):
     """Obtain a translation unit from source and language.
 
@@ -85,7 +89,31 @@ def get_cursors(source, spelling):
 
     return cursors
 
-    
+def decorator(dec):
+    def new_decorator(f):
+        g = dec(f)
+        g.__name__ = f.__name__
+        g.__doc__ = f.__doc__
+        g.__dict__.update(f.__dict__)
+        return g
+    new_decorator.__name__ = dec.__name__
+    new_decorator.__doc__ = dec.__doc__
+    new_decorator.__dict__.update(dec.__dict__)
+    return new_decorator
+
+@decorator
+def log_entity(func):
+    def fn(*args, **kwargs):
+        name = args[0].get_unique_name(args[1])
+        if name == '':
+            parent = args[1].semantic_parent
+            if parent:
+                name = 'child of %s'%parent.displayname
+        log.debug("%s: displayname:'%s'"%(func.__name__, name))
+        #print 'calling {}'.format(func.__name__)
+        return func(*args, **kwargs)
+    return fn
+
     
 
 __all__ = [
