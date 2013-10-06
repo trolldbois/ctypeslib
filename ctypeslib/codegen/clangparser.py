@@ -445,11 +445,16 @@ typedef void* pointer_t;''', flags=_flags)
             return ret[0]
         return ret
 
-    # References
-
     @log_entity
     def DECL_REF_EXPR(self, cursor):
         return cursor.displayname
+
+    @log_entity
+    def INIT_LIST_EXPR(self, cursor):
+        """Returns a list of literal values."""
+        values = [self.parse_cursor(child)
+                    for child in list(cursor.get_children())]
+        return values
 
     @log_entity
     def GNU_NULL_EXPR(self, cursor):
@@ -515,15 +520,14 @@ typedef void* pointer_t;''', flags=_flags)
         name = cursor.displayname
         value = cursor.enum_value
         pname = self.get_unique_name(cursor.semantic_parent)
-        # FIXME
-        parent = self.all[pname]
+        parent = self.get_registered(pname)        
         obj = typedesc.EnumValue(name, value, parent)
         parent.add_value(obj)
         return obj
 
     @log_entity
     def ENUM_DECL(self, cursor):
-        """Gets the enumeration type"""
+        """Gets the enumeration declaration."""
         name = self.get_unique_name(cursor)
         if self.is_registered(name):
             return self.get_registered(name)
@@ -537,6 +541,7 @@ typedef void* pointer_t;''', flags=_flags)
     @log_entity
     def FUNCTION_DECL(self, cursor):
         """Handles function declaration"""
+        # FIXME to UT
         name = self.get_unique_name(cursor)
         if self.is_registered(name):
             return self.get_registered(name)
@@ -554,15 +559,16 @@ typedef void* pointer_t;''', flags=_flags)
 
     @log_entity
     def PARM_DECL(self, cursor):
+        """Handles parameter declarations."""
         _type = cursor.type
         _name = cursor.spelling
-        if self.is_fundamental_type(_type):
-            _argtype = self.parse_cursor_type(_type)
-        elif self.is_pointer_type(_type) or self.is_array_type(_type):
+        if ( self.is_array_type(_type) or
+             self.is_fundamental_type(_type) or
+             self.is_pointer_type(_type)):
             _argtype = self.parse_cursor_type(_type)
         elif self.is_unexposed_type(_type):
-            return None
-        else:
+            return None # FIXME to for children maybe ?
+        else: # FIXME which UT/case ?
             _argtype_decl = _type.get_declaration()
             _argtype_name = self.get_unique_name(_argtype_decl)
             if not self.is_registered(_argtype_name):
@@ -743,6 +749,8 @@ typedef void* pointer_t;''', flags=_flags)
     @log_entity
     def _literal_handling(self, cursor):
         """Parse all literal associated with this cursor.
+
+        Literal handling is usually useful only for initialization values.
         
         We can't use a shortcut by getting tokens
             ## init_value = ' '.join([t.spelling for t in children[0].get_tokens() 
@@ -846,11 +854,265 @@ typedef void* pointer_t;''', flags=_flags)
     BINARY_OPERATOR = _operator_handling
 
     @log_entity
-    def INIT_LIST_EXPR(self, cursor):
-        """Returns a list of literal values."""
-        values = [self.parse_cursor(child)
-                    for child in list(cursor.get_children())]
-        return values
+    def STRUCT_DECL(self, cursor):
+        """
+        Handles Structure declaration.
+        Its a wrapper to _record_decl.
+        """
+        return self._record_decl(cursor, typedesc.Structure)
+
+    @log_entity
+    def UNION_DECL(self, cursor):
+        """
+        Handles Union declaration.
+        Its a wrapper to _record_decl.
+        """
+        return self._record_decl(cursor, typedesc.Union)
+
+    def _record_decl(self, cursor, _output_type):
+        """
+        Handles record type declaration.
+        Structure, Union...
+        """
+        name = self.get_unique_name(cursor)
+        # TODO unittest: try redefinition.
+        # check for definition already parsed 
+        if (self.is_registered(name) and
+            self.get_registered(name).members is not None):
+            log.debug('_record_decl: %s is already registered with members'%(name))
+            return self.get_registered(name)
+        # FIXME: lets ignore bases for now.
+        #bases = attrs.get("bases", "").split() # that for cpp ?
+        bases = [] # FIXME: support CXX
+        size = cursor.type.get_size()
+        align = cursor.type.get_align() 
+        if align < 0 :
+            log.error('invalid structure %s %s align:%d size:%d'%(
+                        name, cursor.location, align, size))
+            #return None
+            raise InvalidDefinitionError('invalid structure %s %s align:%d size:%d'%(
+                                            name, cursor.location, align, size))
+        log.debug('_record_decl: name: %s size:%d'%(name, size))
+        # Declaration vs Definition point
+        # when a struct decl happen before the definition, we have no members
+        # in the first declaration instance.
+        if not self.is_registered(name) and not cursor.is_definition():
+            # juste save the spot, don't look at members == None
+            log.debug('XXX cursor %s is not on a definition'%(name))
+            obj = _output_type(name, align, None, bases, size, packed=False)
+            return self.register(name, obj)
+        log.debug('XXX cursor %s is a definition'%(name))
+        # save the type in the registry. Useful for not looping in case of 
+        # members with forward references
+        obj = None
+        declared_instance = False
+        if not self.is_registered(name): 
+            obj = _output_type(name, align, None, bases, size, packed=False)
+            self.register(name, obj)
+            self.set_location(obj, cursor)
+            self.set_comment(obj, cursor)
+            declared_instance = True
+        # capture members declaration
+        members = []
+        # Go and recurse through children to get this record member's _id
+        # Members fields will not be "parsed" here, but later.
+        for childnum, child in enumerate(cursor.get_children()):
+            if child.kind == clang.cindex.CursorKind.FIELD_DECL:
+                # CIndexUSR.cpp:800+ // Bit fields can be anonymous.
+                _cid = self.get_unique_name(child)
+                ## FIXME 2: no get_usr() for members of builtin struct
+                if _cid == '' and child.is_bitfield():
+                    _cid = cursor.get_usr() + "@Ab#" + str(childnum)
+                # END FIXME
+                members.append( self.FIELD_DECL(child) )
+                continue
+            # LLVM-CLANG, patched 
+            if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
+                obj.packed = True
+        if self.is_registered(name): 
+            # STRUCT_DECL as a child of TYPEDEF_DECL for example
+            # FIXME: make a test case for that.
+            if not declared_instance:
+                log.debug('_record_decl: %s was previously registered'%(name))
+            obj = self.get_registered(name)
+            obj.members = members
+        return obj
+
+    def _fixup_record(self, s):
+        """Fixup padding on a record"""
+        log.debug('Struct/Union_FIX: %s '%(s.name))
+        if s.members is None:
+            log.debug('Struct/Union_FIX: no members')
+            s.members = []
+            return
+        ## No need to lookup members in a global var.
+        ## Just fix the padding        
+        members = []
+        offset = 0
+        padding_nb = 0
+        member = None
+        # create padding fields
+        #DEBUG FIXME: why are s.members already typedesc objet ?
+        #fields = self.fields[s.name]
+        for m in s.members: # s.members are strings - NOT
+            '''import code
+            if m not in self.fields.keys():
+                log.warning('Fixup_struct: Member unexpected : %s'%(m))
+                raise TypeError('Fixup_struct: Member unexpected : %s'%(m))
+            elif fields[m] is None:
+                log.warning('record %s: ignoring field %s'%(s.name,m))
+                continue
+            elif type(fields[m]) != typedesc.Field:
+                # should not happend ?
+                log.warning('Fixup_struct: Member not a typedesc : %s'%(m))
+                raise TypeError('Fixup_struct: Member not a typedesc : %s'%(m))
+            member = fields[m]
+            '''
+            member = m
+            log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d'%(
+                    member.name, member.offset, member.offset + member.bits, offset))
+            if member.offset > offset:
+                #create padding
+                length = member.offset - offset
+                log.debug('Fixup_struct: create padding for %d bits %d bytes'%(length, length/8))
+                p_name = 'PADDING_%d'%padding_nb
+                padding = self._make_padding(p_name, offset, length)
+                members.append(padding)
+                padding_nb+=1
+            if member.type is None:
+                log.error('FIXUP_STRUCT: %s.type is None'%(member.name))
+            members.append(member)
+            offset = member.offset + member.bits
+        # tail padding if necessary and last field is NOT a bitfield
+        # FIXME: this isn't right. Why does Union.size returns 1.
+        # Probably because of sizeof returning standard size instead of real size
+        if member and member.is_bitfield:
+            pass
+        elif s.size*8 != offset:                
+            length = s.size*8 - offset
+            log.debug('Fixup_struct: s:%d create tail padding for %d bits %d bytes'%(s.size, length, length/8))
+            p_name = 'PADDING_%d'%padding_nb
+            padding = self._make_padding(p_name, offset, length)
+            members.append(padding)
+        if len(members) > 0:
+            offset = members[-1].offset + members[-1].bits
+        # go
+        s.members = members
+        log.debug("FIXUP_STRUCT: size:%d offset:%d"%(s.size*8, offset))
+        # FIXME:
+        if member and not member.is_bitfield:
+            assert offset == s.size*8 #, assert that the last field stop at the size limit
+        return
+
+    _fixup_Structure = _fixup_record
+    _fixup_Union = _fixup_record
+
+    def _make_padding(self, name, offset, length):
+        """Make padding Fields for a specifed size."""
+        log.debug("_make_padding: for %d bits"%(length))
+        if (length % 8) != 0:
+            # FIXME
+            log.warning('_make_padding: FIXME we need sub-bytes padding definition')
+        if length > 8:
+            bytes = length/8
+            return typedesc.Field(name,
+                     typedesc.ArrayType(
+                       typedesc.FundamentalType(
+                         self.ctypes_typename[TypeKind.CHAR_U], length, 1 ),
+                       bytes),
+                     offset, length)
+        return typedesc.Field(name,
+                 typedesc.FundamentalType( self.ctypes_typename[TypeKind.CHAR_U], 1, 1 ),
+                 offset, length)
+
+
+    Class = STRUCT_DECL
+    _fixup_Class = _fixup_Structure
+
+    @log_entity
+    def FIELD_DECL(self, cursor):
+        """Handles Field declarations.
+        a fundamentalType field needs to get a _type
+        a Pointer need to get treated by self.POINTER ( no children )
+        a Record needs to be treated by self.record... etc..
+        """
+        # name, type
+        name = self.get_unique_name(cursor)
+        record_name = self.get_unique_name(cursor.semantic_parent)
+        #_id = cursor.get_usr()
+        offset = cursor.semantic_parent.type.get_offset(name)
+        if offset < 0:
+            log.error('BAD RECORD, Bad offset: %d for %s'%(offset, name))
+            # FIXME if c++ class ?
+        # bitfield
+        bits = None
+        if cursor.is_bitfield():
+            bits = cursor.get_bitfield_width()
+            if name == '': # TODO FIXME libclang, get_usr() should return != ''
+                log.warning("Cursor has no displayname - anonymous bitfield")
+                childnum = None
+                for i, x in enumerate(cursor.semantic_parent.get_children()):
+                  if x == cursor:
+                    childnum = i
+                    break
+                else:
+                  raise Exception('Did not find child in semantic parent')
+                _id = cursor.semantic_parent.get_usr() + "@Ab#" + str(childnum)
+                name = "anonymous_bitfield"
+        else:
+            bits = cursor.type.get_size() * 8
+            if bits < 0:
+                log.warning('Bad source code, bitsize == %d <0 on %s'%(bits, name))
+                bits = 0
+        # after dealing with anon bitfields
+        if name == '': 
+            raise ValueError("Field has no displayname")
+        # try to get a representation of the type
+        ##_canonical_type = cursor.type.get_canonical()
+        # t-t-t-t-
+        _type = None
+        _canonical_type = cursor.type.get_canonical()
+        _decl = cursor.type.get_declaration()
+        if self.is_fundamental_type(_canonical_type):
+            _type = self.parse_cursor_type(_canonical_type)
+        elif self.is_pointer_type(_canonical_type):
+            _type = self.parse_cursor_type(_canonical_type)
+        elif self.is_array_type(_canonical_type):
+            #code.interact(local=locals())
+            _type = self.parse_cursor_type(_canonical_type)
+        else:
+            children = list(cursor.get_children())
+            if len(children) > 0 and _decl.kind == CursorKind.NO_DECL_FOUND:
+                # constantarray of typedef of pointer , and other cases ?
+                _decl_name = self.get_unique_name(list(cursor.get_children())[0])
+            else:
+                _decl_name = self.get_unique_name(cursor.type.get_declaration()) # .spelling ??
+            if self.is_registered(_decl_name):
+                log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
+                _type = self.get_registered(_decl_name)
+                # then we shortcut
+                #code.interact(local=locals())
+                
+            else:
+                # is it always the case ?
+                log.debug("FIELD_DECL: name:'%s'"%(name))
+                log.debug("FIELD_DECL: %s: nb children:%s"%(cursor.type.kind, 
+                                len(children)))
+                #code.interact(local=locals())
+                # recurse into the right function
+                _type = self.parse_cursor_type(_canonical_type)
+                if _type is None:
+                    log.warning("Field %s is an %s type - ignoring field type"%(
+                                name,_canonical_type.kind.name))
+                    return None
+        return typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield())
+
+    def _fixup_Field(self, f):
+        #print 'fixup field', f.type
+        #if f.type is not None:
+        #    mth = getattr(self, '_fixup_%s'%(type(f.type).__name__))
+        #    mth(f.type)
+        pass
 
 
 
@@ -1020,252 +1282,6 @@ typedef void* pointer_t;''', flags=_flags)
             obj = self.parse_cursor(_decl)
         return obj
 
-    @log_entity
-    def STRUCT_DECL(self, cursor):
-        '''The cursor is on the declaration of a structure.'''
-        return self._record_decl(typedesc.Structure, cursor)
-
-    @log_entity
-    def UNION_DECL(self, cursor):
-        '''The cursor is on the declaration of a union.'''
-        return self._record_decl(typedesc.Union, cursor)
-
-    def _record_decl(self, _type, cursor):
-        ''' a structure and an union have the same handling.'''
-        name = self.get_unique_name(cursor)
-        # TODO unittest: try redefinition.
-        # check for definition already parsed 
-        if (self.is_registered(name) and
-            self.get_registered(name).members is not None):
-            log.debug('_record_decl: %s is already registered with members'%(name))
-            return self.get_registered(name)
-        # FIXME: lets ignore bases for now.
-        #bases = attrs.get("bases", "").split() # that for cpp ?
-        bases = [] # FIXME: support CXX
-        size = cursor.type.get_size()
-        align = cursor.type.get_align() 
-        if align < 0 :
-            log.error('invalid structure %s %s align:%d size:%d'%(
-                        name, cursor.location, align, size))
-            #return None
-            raise InvalidDefinitionError('invalid structure %s %s align:%d size:%d'%(
-                                            name, cursor.location, align, size))
-        log.debug('_record_decl: name: %s size:%d'%(name, size))
-        # Declaration vs Definition point
-        # when a struct decl happen before the definition, we have no members
-        # in the first declaration instance.
-        if not self.is_registered(name) and not cursor.is_definition():
-            # juste save the spot, don't look at members == None
-            log.debug('XXX cursor %s is not on a definition'%(name))
-            obj = _type(name, align, None, bases, size, packed=False)
-            return self.register(name, obj)
-        log.debug('XXX cursor %s is a definition'%(name))
-        # save the type in the registry. Useful for not looping in case of 
-        # members with forward references
-        obj = None
-        declared_instance = False
-        if not self.is_registered(name): 
-            obj = _type(name, align, None, bases, size, packed=False)
-            self.register(name, obj)
-            self.set_location(obj, cursor)
-            self.set_comment(obj, cursor)
-            declared_instance = True
-        # capture members declaration
-        members = []
-        # Go and recurse through children to get this record member's _id
-        # Members fields will not be "parsed" here, but later.
-        for childnum, child in enumerate(cursor.get_children()):
-            if child.kind == clang.cindex.CursorKind.FIELD_DECL:
-                # CIndexUSR.cpp:800+ // Bit fields can be anonymous.
-                _cid = self.get_unique_name(child)
-                ## FIXME 2: no get_usr() for members of builtin struct
-                if _cid == '' and child.is_bitfield():
-                    _cid = cursor.get_usr() + "@Ab#" + str(childnum)
-                # END FIXME
-                members.append( self.FIELD_DECL(child) )
-                continue
-            # LLVM-CLANG, patched 
-            if child.kind == clang.cindex.CursorKind.PACKED_ATTR:
-                obj.packed = True
-        if self.is_registered(name): 
-            # STRUCT_DECL as a child of TYPEDEF_DECL for example
-            # FIXME: make a test case for that.
-            if not declared_instance:
-                log.debug('_record_decl: %s was previously registered'%(name))
-            obj = self.get_registered(name)
-            obj.members = members
-        return obj
-
-    def _make_padding(self, name, offset, length):
-        log.debug("_make_padding: for %d bits"%(length))
-        if (length % 8) != 0:
-            # FIXME
-            log.warning('_make_padding: FIXME we need sub-bytes padding definition')
-        if length > 8:
-            bytes = length/8
-            return typedesc.Field(name,
-                     typedesc.ArrayType(
-                       typedesc.FundamentalType(
-                         self.ctypes_typename[TypeKind.CHAR_U], length, 1 ),
-                       bytes),
-                     offset, length)
-        return typedesc.Field(name,
-                 typedesc.FundamentalType( self.ctypes_typename[TypeKind.CHAR_U], 1, 1 ),
-                 offset, length)
-
-    def _fixup_Structure(self, s):
-        log.debug('Struct/Union_FIX: %s '%(s.name))
-        if s.members is None:
-            log.debug('Struct/Union_FIX: no members')
-            s.members = []
-            return
-        ## No need to lookup members in a global var.
-        ## Just fix the padding        
-        members = []
-        offset = 0
-        padding_nb = 0
-        member = None
-        # create padding fields
-        #DEBUG FIXME: why are s.members already typedesc objet ?
-        #fields = self.fields[s.name]
-        for m in s.members: # s.members are strings - NOT
-            '''import code
-            if m not in self.fields.keys():
-                log.warning('Fixup_struct: Member unexpected : %s'%(m))
-                raise TypeError('Fixup_struct: Member unexpected : %s'%(m))
-            elif fields[m] is None:
-                log.warning('record %s: ignoring field %s'%(s.name,m))
-                continue
-            elif type(fields[m]) != typedesc.Field:
-                # should not happend ?
-                log.warning('Fixup_struct: Member not a typedesc : %s'%(m))
-                raise TypeError('Fixup_struct: Member not a typedesc : %s'%(m))
-            member = fields[m]
-            '''
-            member = m
-            log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d'%(
-                    member.name, member.offset, member.offset + member.bits, offset))
-            if member.offset > offset:
-                #create padding
-                length = member.offset - offset
-                log.debug('Fixup_struct: create padding for %d bits %d bytes'%(length, length/8))
-                p_name = 'PADDING_%d'%padding_nb
-                padding = self._make_padding(p_name, offset, length)
-                members.append(padding)
-                padding_nb+=1
-            if member.type is None:
-                log.error('FIXUP_STRUCT: %s.type is None'%(member.name))
-            members.append(member)
-            offset = member.offset + member.bits
-        # tail padding if necessary and last field is NOT a bitfield
-        # FIXME: this isn't right. Why does Union.size returns 1.
-        # Probably because of sizeof returning standard size instead of real size
-        if member and member.is_bitfield:
-            pass
-        elif s.size*8 != offset:                
-            length = s.size*8 - offset
-            log.debug('Fixup_struct: s:%d create tail padding for %d bits %d bytes'%(s.size, length, length/8))
-            p_name = 'PADDING_%d'%padding_nb
-            padding = self._make_padding(p_name, offset, length)
-            members.append(padding)
-        if len(members) > 0:
-            offset = members[-1].offset + members[-1].bits
-        # go
-        s.members = members
-        log.debug("FIXUP_STRUCT: size:%d offset:%d"%(s.size*8, offset))
-        # FIXME:
-        if member and not member.is_bitfield:
-            assert offset == s.size*8 #, assert that the last field stop at the size limit
-        pass
-    _fixup_Union = _fixup_Structure
-
-    Class = STRUCT_DECL
-    _fixup_Class = _fixup_Structure
-
-    @log_entity
-    def FIELD_DECL(self, cursor):
-        """Handles Field declarations.
-        a fundamentalType field needs to get a _type
-        a Pointer need to get treated by self.POINTER ( no children )
-        a Record needs to be treated by self.record... etc..
-        """
-        # name, type
-        name = self.get_unique_name(cursor)
-        record_name = self.get_unique_name(cursor.semantic_parent)
-        #_id = cursor.get_usr()
-        offset = cursor.semantic_parent.type.get_offset(name)
-        if offset < 0:
-            log.error('BAD RECORD, Bad offset: %d for %s'%(offset, name))
-            # FIXME if c++ class ?
-        # bitfield
-        bits = None
-        if cursor.is_bitfield():
-            bits = cursor.get_bitfield_width()
-            if name == '': # TODO FIXME libclang, get_usr() should return != ''
-                log.warning("Cursor has no displayname - anonymous bitfield")
-                childnum = None
-                for i, x in enumerate(cursor.semantic_parent.get_children()):
-                  if x == cursor:
-                    childnum = i
-                    break
-                else:
-                  raise Exception('Did not find child in semantic parent')
-                _id = cursor.semantic_parent.get_usr() + "@Ab#" + str(childnum)
-                name = "anonymous_bitfield"
-        else:
-            bits = cursor.type.get_size() * 8
-            if bits < 0:
-                log.warning('Bad source code, bitsize == %d <0 on %s'%(bits, name))
-                bits = 0
-        # after dealing with anon bitfields
-        if name == '': 
-            raise ValueError("Field has no displayname")
-        # try to get a representation of the type
-        ##_canonical_type = cursor.type.get_canonical()
-        # t-t-t-t-
-        _type = None
-        _canonical_type = cursor.type.get_canonical()
-        _decl = cursor.type.get_declaration()
-        if self.is_fundamental_type(_canonical_type):
-            _type = self.parse_cursor_type(_canonical_type)
-        elif self.is_pointer_type(_canonical_type):
-            _type = self.parse_cursor_type(_canonical_type)
-        elif self.is_array_type(_canonical_type):
-            #code.interact(local=locals())
-            _type = self.parse_cursor_type(_canonical_type)
-        else:
-            children = list(cursor.get_children())
-            if len(children) > 0 and _decl.kind == CursorKind.NO_DECL_FOUND:
-                # constantarray of typedef of pointer , and other cases ?
-                _decl_name = self.get_unique_name(list(cursor.get_children())[0])
-            else:
-                _decl_name = self.get_unique_name(cursor.type.get_declaration()) # .spelling ??
-            if self.is_registered(_decl_name):
-                log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
-                _type = self.get_registered(_decl_name)
-                # then we shortcut
-                #code.interact(local=locals())
-                
-            else:
-                # is it always the case ?
-                log.debug("FIELD_DECL: name:'%s'"%(name))
-                log.debug("FIELD_DECL: %s: nb children:%s"%(cursor.type.kind, 
-                                len(children)))
-                #code.interact(local=locals())
-                # recurse into the right function
-                _type = self.parse_cursor_type(_canonical_type)
-                if _type is None:
-                    log.warning("Field %s is an %s type - ignoring field type"%(
-                                name,_canonical_type.kind.name))
-                    return None
-        return typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield())
-
-    def _fixup_Field(self, f):
-        #print 'fixup field', f.type
-        #if f.type is not None:
-        #    mth = getattr(self, '_fixup_%s'%(type(f.type).__name__))
-        #    mth(f.type)
-        pass
 
     ################
     
