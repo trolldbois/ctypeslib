@@ -294,9 +294,9 @@ class ConstantsTest(ClangTest):
 
     # no macro support yet
     #@unittest.expectedFailure
-    def test_macro(self):
         self.full_parsing_options = True 
         self.convert("""
+    def test_macro(self):
         #define A  0.9642
         #define B  1.0
         #define C  0.8249
@@ -304,6 +304,20 @@ class ConstantsTest(ClangTest):
         self.failUnlessAlmostEqual(self.namespace.A, 0.9642)
         self.failUnlessAlmostEqual(self.namespace.B, 1.0)
         self.failUnlessAlmostEqual(self.namespace.C, 0.8249)
+
+    def test_anonymous_struct(self):
+        flags = ['-target','i386-linux']
+        self.convert(
+        '''
+        struct X {
+            struct {
+                long cancel_jmp_buf[8];
+                int mask_was_saved;
+            } cancel_jmp_buf[8];
+            void * pad[4];
+        };
+        ''', flags)
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_X), 304)
 
     #@unittest.skip('')
     # no macro support yet

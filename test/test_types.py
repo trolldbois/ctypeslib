@@ -47,15 +47,17 @@ class Types(ClangTest):
         flags = ['-target','i386-linux']
         self.convert(
         '''
-typedef int A;
-typedef A B;
-typedef B C;
-typedef int* PA;
-typedef PA PB;
-typedef PB* PC;
-typedef PC PD;
+        typedef int A;
+        typedef A B;
+        typedef B C;
+        typedef int* PA;
+        typedef PA PB;
+        typedef PB* PC;
+        typedef PC PD;
         ''', flags)
         #self.assertEquals('A','B')
+        
+       
         
 if __name__ == "__main__":
     unittest.main()

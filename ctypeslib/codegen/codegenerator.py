@@ -519,10 +519,21 @@ class Generator(object):
         depends.extend([m.type for m in struct.members 
                             if m.type not in self.done and 
                             not isinstance(m.type, typedesc.FundamentalType)])
+        # FIXME need to ignore array typem and pointer types.
+        removes = set()
+        depends = set(depends)
+        for d in depends:
+            if isinstance(d, typedesc.ArrayType):
+                if (d.typ in self.done or
+                    isinstance(d.typ, typedesc.FundamentalType)):
+                    removes.add(d)
+        depends -= removes
         if len(depends) > 0:
-            self.generate(struct.get_head())
-            self.generate(struct.get_body())
+            log.debug('Generate DEPENDS %s'%(depends ))
+            self.generate(struct.get_head(), False)
+            self.generate(struct.get_body(), False)
         else:
+            log.debug('No depends')
             self.generate(struct.get_head(), True)
             self.generate(struct.get_body(), True)
         return
@@ -544,6 +555,7 @@ class Generator(object):
                 print >> self.stream, "class %s(Structure):" % head.struct.name
             elif type(head.struct) == typedesc.Union:
                 print >> self.stream, "class %s(Union):" % head.struct.name
+        #code.interact(local=locals())
         if not inline:
             print >> self.stream, "    pass\n"
         # special empty struct
@@ -776,7 +788,7 @@ class Generator(object):
             print >> self.stream, "# %s:%d" % item.location
         if self.generate_comments:
             self.print_comment(item)
-        log.debug("generate %s, %s"%(item, item.__dict__))
+        log.debug("generate %s, %s"%(item, item.name))
         '''
         #log.debug("generate %s, %s"%(item, item.__dict__))
         name=''
