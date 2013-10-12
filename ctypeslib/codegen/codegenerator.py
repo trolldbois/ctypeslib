@@ -16,19 +16,6 @@ import code
 
 import StringIO # need unicode support, no cStringIO
 
-################
-
-def storage(t):
-    # return the size and alignment of a type
-    if isinstance(t, typedesc.Typedef):
-        return storage(t.typ)
-    elif isinstance(t, typedesc.CvQualifiedType):
-      return storage(t.typ)
-    elif isinstance(t, typedesc.ArrayType):
-        s, a = storage(t.typ)
-        return s * (int(t.max) - int(t.min) + 1), a
-    return int(t.size), int(t.align)
-
 
 
 def get_real_type(tp):
@@ -41,12 +28,6 @@ def get_real_type(tp):
     elif isinstance(tp, typedesc.CvQualifiedType):
         return get_real_type(tp.typ)
     return tp
-
-def _clean_name(func):
-    def fn_clean(*args, **kwargs):
-        name = func(*args, **kwargs)
-        return name
-    return fn_clean
 
 ################################################################
 
