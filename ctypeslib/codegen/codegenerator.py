@@ -64,7 +64,57 @@ class Generator(object):
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/pythonic_type_name.tpl')
         print >> self.imports, headers
+        return
     
+    def enable_fundamental_type_wrappers(self):
+        """
+        If a type is a int128, a long_double_t or a void, some placeholders need
+        to be in the generated code to be valid.
+        """
+        self.enable_fundamental_type_wrappers = lambda : True
+        import pkgutil
+        headers = pkgutil.get_data('ctypeslib','data/fundamental_type_name.tpl')
+        from clang.cindex import TypeKind
+        size = str(self.parser.get_ctypes_size(TypeKind.LONGDOUBLE)/8)
+        headers = headers.replace('__LONG_DOUBLE_SIZE__', size)
+        print >> self.imports, headers
+        return 
+            
+    def enable_pointer_type(self):
+        """
+        If a type is a pointer, a platform-independent POINTER_T type needs
+        to be in the generated code.
+        """
+        self.enable_pointer_type = lambda : True
+        import pkgutil
+        headers = pkgutil.get_data('ctypeslib','data/pointer_type.tpl')
+        from clang.cindex import TypeKind
+        # assuming a LONG also has the same sizeof than a pointer. 
+        word_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
+        word_type = self.parser.get_ctypes_name(TypeKind.ULONG)
+        word_char = getattr(ctypes,word_type)._type_
+        # replacing template values
+        headers = headers.replace('__POINTER_SIZE__', str(word_size))
+        headers = headers.replace('__REPLACEMENT_TYPE__' , word_type)
+        headers = headers.replace('__REPLACEMENT_TYPE_CHAR__', word_char)
+        print >> self.imports, headers
+        return 
+
+    def generate_headers(self, parser):
+        # fix parser in self for later use
+        self.parser = parser 
+        import pkgutil
+        headers = pkgutil.get_data('ctypeslib','data/headers.tpl')
+        from clang.cindex import TypeKind
+        # assuming a LONG also has the same sizeof than a pointer. 
+        word_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
+        # replacing template values
+        headers = headers.replace('__FLAGS__', str(self.parser.flags))
+        headers = headers.replace('__POINTER_SIZE__', str(word_size))
+        print >> self.imports, headers
+        return
+
+            
     def type_name(self, t, generate=True):
         """
         Returns a string containing an expression that can be used to
@@ -84,6 +134,7 @@ class Generator(object):
         elif isinstance(t, typedesc.ArrayType):
             return "%s * %s" % (self.type_name(t.typ, generate), t.size)
         elif isinstance(t, typedesc.PointerType):
+            self.enable_pointer_type()
             return "POINTER_T(%s)" %(self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.FunctionType):
             args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
@@ -590,6 +641,7 @@ class Generator(object):
         """
         log.debug('HERE in FundamentalType for %s %s'%(_type, _type.name))
         if _type.name in ["void","c_long_double_t","c_uint128","c_int128"]:
+            self.enable_fundamental_type_wrappers()
             return _type.name
         return "ctypes.%s"%(_type.name)
 
@@ -657,27 +709,6 @@ class Generator(object):
             items |= self.more
             items -= self.done
         return loops
-
-    def generate_headers(self, parser):
-        # fix parser in self for later use
-        self.parser = parser 
-        import clang
-        from clang.cindex import TypeKind
-        word_size = str(parser.get_ctypes_size(TypeKind.POINTER)/8)
-        # assuming a LONG also has the same sizeof than a pointer. 
-        word_type = parser.get_ctypes_name(TypeKind.ULONG)
-        word_char =  getattr(ctypes,word_type)._type_
-        long_double_size = str(parser.get_ctypes_size(TypeKind.LONGDOUBLE)/8)
-        import pkgutil
-        headers = pkgutil.get_data('ctypeslib','data/headers.tpl')
-        headers = headers.replace('__FLAGS__', str(parser.flags))
-        headers = headers.replace('__POINTER_SIZE__', word_size)
-        headers = headers.replace('__REPLACEMENT_TYPE__' , word_type)
-        headers = headers.replace('__REPLACEMENT_TYPE_CHAR__', word_char)
-        headers = headers.replace('__LONG_DOUBLE_SIZE__', long_double_size)
-
-        print >> self.imports, headers
-        return
 
     def generate_code(self, items):
         print >> self.imports, "\n".join(["CDLL('%s', RTLD_GLOBAL)" % preloaded_dll
