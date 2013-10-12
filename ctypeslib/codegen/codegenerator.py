@@ -42,7 +42,6 @@ class Generator(object):
         self.output = output
         self.stream = StringIO.StringIO()
         self.imports = StringIO.StringIO()
-##        self.stream = self.imports = self.output
         self.generate_locations = generate_locations
         self.generate_comments = generate_comments
         self.generate_docstrings = generate_docstrings
@@ -57,15 +56,21 @@ class Generator(object):
         self.names = set() # names that have been generated
 
     def enable_pythonic_types(self):
+        """
+        If a type name starts with '__', some wrapper needs to be used for
+        the generated code to be valid.
+        """
         self.enable_pythonic_types = lambda : True
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/pythonic_type_name.tpl')
         print >> self.imports, headers
     
     def type_name(self, t, generate=True):
-        # Return a string containing an expression that can be used to
-        # refer to the type. Assumes the 'from ctypes import *'
-        # namespace is available.
+        """
+        Returns a string containing an expression that can be used to
+        refer to the type. Assumes the 'from ctypes import *'
+        namespace is available.
+        """
         #import code
         #code.interact(local=locals())
         if isinstance(t, typedesc.Typedef):
