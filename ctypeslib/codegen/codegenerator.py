@@ -75,16 +75,8 @@ class Generator(object):
         #code.interact(local=locals())
         if isinstance(t, typedesc.Typedef):
             return t.name
-        if isinstance(t, typedesc.PointerType):
-            result = "POINTER_T(%s)" %(self.type_name(t.typ, generate))
-            # XXX Better to inspect t.typ!
-            if result.startswith("POINTER(WINFUNCTYPE"):
-                return result[len("POINTER("):-1]
-            if result.startswith("POINTER(CFUNCTYPE"):
-                return result[len("POINTER("):-1]
-            elif result == "POINTER(None)":
-                return "c_void_p"
-            return result
+        elif isinstance(t, typedesc.PointerType):
+            return "POINTER_T(%s)" %(self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.ArrayType):
             return "%s * %s" % (self.type_name(t.typ, generate), t.size)
         elif isinstance(t, typedesc.FunctionType):
@@ -107,7 +99,7 @@ class Generator(object):
         elif isinstance(t, typedesc.Enumeration):
             if t.name:
                 return t.name
-            return "c_int" # enums are integers
+            return "ctypes.c_int" # enums are integers
         elif isinstance(t, typedesc.Typedef):
             return t.name
         return t.name
