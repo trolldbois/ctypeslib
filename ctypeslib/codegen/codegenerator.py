@@ -14,42 +14,7 @@ log = logging.getLogger('codegen')
 
 import code
 
-# This should be configurable
-ASSUME_STRINGS = True
-
 import StringIO # need unicode support, no cStringIO
-
-
-# XXX Should this be in ctypes itself?
-ctypes_names = {
-    "bool": "c_bool",
-    "unsigned char": "c_ubyte",
-    "signed char": "c_byte",
-    "char": "c_char",
-
-    "wchar_t": "c_wchar",
-
-    "short unsigned int": "c_ushort",
-    "short int": "c_short",
-
-    "long unsigned int": "c_ulong",
-    "long int": "c_long",
-    "long signed int": "c_long",
-
-    "unsigned int": "c_uint",
-    "int": "c_int",
-
-    "long long unsigned int": "c_ulonglong",
-    "long long int": "c_longlong",
-
-    "double": "c_double",
-    "float": "c_float",
-
-    "long double": "c_longdouble",
-
-    # Hm...
-    "void": "None",
-}
 
 ################
 
@@ -249,19 +214,6 @@ class Generator(object):
         if isinstance(t, typedesc.Typedef):
             return t.name
         if isinstance(t, typedesc.PointerType):
-            #print '** type_name we have pointer ',t
-            # Following block is not useful if we use POINTER_T
-            #if ASSUME_STRINGS:
-            #    x = get_real_type(t.typ)
-            #    if isinstance(x, typedesc.FundamentalType):
-            #        if x.name == "c_char":
-            #            self.need_STRING()
-            #            return "STRING"
-            #        elif x.name == "c_wchar":
-            #            self.need_WSTRING()
-            #            return "WSTRING"
-            # Size of pointer is handled in headers now.
-            #result = "POINTER%d(%s)" %(t.size*8, self.type_name(t.typ, generate))
             result = "POINTER_T(%s)" %(self.type_name(t.typ, generate))
             # XXX Better to inspect t.typ!
             if result.startswith("POINTER(WINFUNCTYPE"):
@@ -496,7 +448,7 @@ class Generator(object):
         for item in tp.values:
             self.generate(item)
         if tp.name:
-            print >> self.stream, "%s = c_int # enum" % tp.name
+            print >> self.stream, "%s = ctypes.c_int # enum" % tp.name
             self.names.add(tp.name)
 
     def get_undeclared_type(self, item):
