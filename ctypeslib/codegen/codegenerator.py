@@ -31,129 +31,6 @@ def get_real_type(tp):
 
 ################################################################
 
-class Initializer(object):
-
-    def __call__(self, tp, init, is_pointer=False):
-        try:
-            mth = getattr(self, tp.__class__.__name__)
-        except AttributeError:
-            raise TypeError("Cannot initialize %s" % tp.__class__.__name__)
-        return mth(tp, init, is_pointer)
-
-    def FundamentalType(self, tp, init, is_pointer=False):
-        try:
-            #mth = getattr(self, ctypes_names[tp.name].replace("None", "void"))
-            mth = getattr(self, tp.name.replace("None", "void"))
-        except AttributeError:
-            raise TypeError("Cannot initialize %s" % tp.name)
-        return mth(tp, init, is_pointer)
-
-    def CvQualifiedType(self, tp, init, is_pointer=False):
-        return self(tp.typ, init, is_pointer)
-
-    def PointerType(self, tp, init, is_pointer=False):
-        return self(tp.typ, init, is_pointer=True)
-
-    ##### ctypes types initializers #####
-
-    def void(self, tp, init, is_pointer=False):
-        if not is_pointer:
-            raise RuntimeError # a void type does not exist
-        if init.find('"') >= 0:
-            # strip off type casts, if any
-            init = init[init.find('"'):]
-        value = eval(init)
-        return ctypes.c_void_p(value).value
-
-    def c_ubyte(self, tp, init, is_pointer=False):
-        value = eval(init)
-        return ctypes.c_ubyte(value).value
-
-    def c_char(self, tp, init, is_pointer=False):
-        if init.find('"') >= 0:
-            init = init[init.find('"'):]
-        value = eval(init)
-        if isinstance(value, (int, long)):
-            if is_pointer:
-                return ctypes.c_void_p(value).value
-            else:
-                return chr(value)
-        if not is_pointer:
-            assert isinstance(value, basestring)
-            assert len(value) == 1
-        return value
-
-    def c_wchar(self, tp, init, is_pointer=False):
-        if init.find('"') >= 0:
-            init = init[init.find('"'):]
-        value = eval(init)
-        if isinstance(value, (int, long)):
-            if is_pointer:
-                return ctypes.c_void_p(value).value
-            else:
-                return unichr(value)
-        if not is_pointer:
-            assert isinstance(value, basestring)
-            assert len(value) == 1
-        if isinstance(value, str):
-            # gccxml returns unicode initializers as 32-but values in
-            # byte strings, with a 3-nul bytes termination:
-            # "A\x00\x00\x00B\x00\x00\x00C\x00\x00\x00\x00\x00\x00" -> u"ABC"
-            ws = ctypes.sizeof(ctypes.c_wchar)
-            if ws == 4:
-                v = value[:-3]
-                value = "".join(map(unichr, struct.unpack("I" * (len(v)/4), v)))
-            elif ws == 2:
-                v = value[:-1]
-                value = "".join(map(unichr, struct.unpack("H" * (len(v)/2), v)))
-        return value
-
-##    def void(self, tp, init, is_pointer=False):
-##        if is_pointer:
-##            value = eval(value)
-##            return ctypes.c_void_p(value).value
-##        raise RuntimeError("void???")
-
-    def _init_integer(self, ctyp, suffixes, init):
-        value = init.rstrip(suffixes)
-        value = eval(value)
-        return ctyp(value).value
-
-    def _init_float(self, ctyp, suffixes, init):
-        value = init.rstrip(suffixes)
-        value = eval(value)
-        return ctyp(value).value
-
-    def c_short(self, tp, init, is_pointer=False):
-        return self._init_integer(ctypes.c_short, "i", init)
-                                                                                            
-    def c_ushort(self, tp, init, is_pointer=False):
-        return self._init_integer(ctypes.c_ushort, "ui", init)
-                                                                                            
-    def c_int(self, tp, init, is_pointer=False):
-        return self._init_integer(ctypes.c_int, "i", init)
-                                                                                            
-    def c_uint(self, tp, init, is_pointer=False):
-        return self._init_integer(ctypes.c_uint, "ui", init)
-                                                                                            
-    def c_long(self, tp, init, is_pointer=False):
-        return self._init_integer(ctypes.c_long, "l", init)
-                                                                                            
-    def c_ulong(self, tp, init, is_pointer=False):
-        return self._init_integer(ctypes.c_ulong, "ul", init)
-                                                                                            
-    def c_longlong(self, tp, init, is_pointer=False):
-        return self._init_integer(ctypes.c_longlong, "l", init)
-                                                                                            
-    def c_ulonglong(self, tp, init, is_pointer=False):
-        return self._init_integer(ctypes.c_ulonglong, "ul", init)
-                                                                                            
-    def c_double(self, tp, init, is_pointer=False):
-        return self._init_float(ctypes.c_double, "", init)
-
-    def c_float(self, tp, init, is_pointer=False):
-        return self._init_float(ctypes.c_float, "f", init)
-
 class Generator(object):
     def __init__(self, output,
                  generate_comments=False,
@@ -178,7 +55,6 @@ class Generator(object):
 
         self.done = set() # type descriptions that have been generated
         self.names = set() # names that have been generated
-        self.initialize = Initializer()
 
     def enable_pythonic_types(self):
         self.enable_pythonic_types = lambda : True
