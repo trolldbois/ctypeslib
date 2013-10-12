@@ -499,11 +499,24 @@ class Generator(object):
             print >> self.stream, "%s = c_int # enum" % tp.name
             self.names.add(tp.name)
 
-
+    def get_undeclared_type(self, item):
+        """Checks if a typed has already been declared in the python output
+        or is a builtin python type"""
+        if item in self.done:
+            return None
+        if isinstance(item, typedesc.FundamentalType):
+            return None
+        if isinstance(item, typedesc.PointerType):
+            return self.get_undeclared_type(item.typ)
+        if isinstance(item, typedesc.ArrayType):
+            return self.get_undeclared_type(item.typ)
+        # else its an undeclared structure.
+        return item
+    
     _structures = 0
     def Structure(self, struct):
         self._structures += 1
-        depends = []
+        depends = set()
         if struct.members is None:
             log.error('Error while parsing members for: %s'%(struct.name))
             return
@@ -512,28 +525,19 @@ class Generator(object):
 
         # checks members dependencies in bases
         for b in struct.bases:
-            depends.extend([m.type for m in b.members 
-                if m.type not in self.done and 
-                          not isinstance(m.type, typedesc.FundamentalType)])
+            depends.update([self.get_undeclared_type(m.type) for m in b.members])
         # checks members dependencies
-        depends.extend([m.type for m in struct.members 
-                            if m.type not in self.done and 
-                            not isinstance(m.type, typedesc.FundamentalType)])
-        # FIXME need to ignore array typem and pointer types.
-        removes = set()
-        depends = set(depends)
-        for d in depends:
-            if isinstance(d, typedesc.ArrayType):
-                if (d.typ in self.done or
-                    isinstance(d.typ, typedesc.FundamentalType)):
-                    removes.add(d)
-        depends -= removes
+        depends.update([self.get_undeclared_type(m.type) for m in struct.members])
+        depends.discard(None)
         if len(depends) > 0:
-            log.debug('Generate DEPENDS %s'%(depends ))
+            log.debug('Generate %s DEPENDS %s'%(struct.name, depends ))
             self.generate(struct.get_head(), False)
+            # generate dependencies
+            for dep in depends:
+                self.generate(dep)
             self.generate(struct.get_body(), False)
         else:
-            log.debug('No depends')
+            log.debug('No depends fo %s'%(struct.name))
             self.generate(struct.get_head(), True)
             self.generate(struct.get_body(), True)
         return
@@ -541,6 +545,7 @@ class Generator(object):
     Union = Structure
 
     def StructureHead(self, head, inline=False):
+        log.debug('Head start for %s'%(head.name))
         for struct in head.struct.bases:
             self.generate(struct.get_head())
             # add dependencies
@@ -562,24 +567,27 @@ class Generator(object):
         if inline and not head.struct.members:
             print >> self.stream, "    pass\n"
         self.names.add(head.struct.name)
+        log.debug('Head finished for %s'%(head.name))
 
 
     def StructureBody(self, body, inline=False):
+        log.debug('Body start for %s'%(body.name))
         fields = []
         methods = []
         for m in body.struct.members:
             if type(m) is typedesc.Field:
                 fields.append(m)
-                if type(m.type) is typedesc.Typedef:
-                    self.generate(get_real_type(m.type))
-                self.generate(m.type)
+                #if type(m.type) is typedesc.Typedef:
+                #    self.generate(get_real_type(m.type))
+                #self.generate(m.type)
             elif type(m) is typedesc.Method:
                 methods.append(m)
-                self.generate(m.returns)
-                self.generate_all(m.iterArgTypes())
+                #self.generate(m.returns)
+                #self.generate_all(m.iterArgTypes())
             elif type(m) is typedesc.Ignored:
                 pass
         # handled inline Vs dependent
+        log.debug("body inline:%s for structure %s"%(inline, body.struct.name))
         if not inline:
             prefix = "%s."%(body.struct.name)
         else:
@@ -625,9 +633,11 @@ class Generator(object):
             for f in fields:
                 fieldname = unnamed_fields.get(f, f.name)
                 type_name = self.type_name(f.type)
+                # handle "__" prefixed names by using a wrapper
                 if type_name.startswith("__"):
                     self.enable_pythonic_types()
                     type_name = "_p_type('%s')"%type_name
+                # a bitfield needs a triplet
                 if f.is_bitfield is False:
                     print >> self.stream, "    ('%s', %s)," % \
                      (fieldname, type_name)
@@ -651,6 +661,7 @@ class Generator(object):
 ##            align = body.struct.align // 8
 ##            print >> self.stream, "assert alignment(%s) == %s, alignment(%s)" % \
 ##                  (body.struct.name, align, body.struct.name)
+        log.debug('Body finished for %s'%(body.name))
 
 
 
@@ -780,7 +791,7 @@ class Generator(object):
     ########
 
     def generate(self, item, *args):
-        """ """
+        """ wraps execution of specific methods."""
         if item in self.done:
             return
         # verbose output with location.
@@ -788,7 +799,7 @@ class Generator(object):
             print >> self.stream, "# %s:%d" % item.location
         if self.generate_comments:
             self.print_comment(item)
-        log.debug("generate %s, %s"%(item, item.name))
+        log.debug("generate %s, %s"%(item.__class__.__name__, item.name))
         '''
         #log.debug("generate %s, %s"%(item, item.__dict__))
         name=''

@@ -124,11 +124,17 @@ class ArrayType(T):
 class StructureHead(T):
     def __init__(self, struct):
         self.struct = struct
+    @property
+    def name(self):
+        return self.struct.name
 
 class StructureBody(T):
     def __init__(self, struct):
         self.struct = struct
-
+    @property
+    def name(self):
+        return self.struct.name
+    
 class _Struct_Union_Base(T):
     def get_body(self):
         return self.struct_body
