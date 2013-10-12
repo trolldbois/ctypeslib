@@ -176,25 +176,25 @@ class Generator(object):
 
     _arraytypes = 0
     def ArrayType(self, tp):
-        self._arraytypes += 1
-        #print '***',tp.__class__.__name__, tp.typ.__dict__
         self.generate(get_real_type(tp.typ))
         self.generate(tp.typ)
+        self._arraytypes += 1
+        return
 
     _functiontypes = 0
     def FunctionType(self, tp):
-        self._functiontypes += 1
         self.generate(tp.returns)
         self.generate_all(tp.arguments)
         #print >> self.stream, "%s = %s # Functiontype " % (
         #          self.type_name(tp), [self.type_name(a) for a in tp.arguments])
+        self._functiontypes += 1
+        return
 
     def Argument(self, tp):
         self.generate(tp.typ)
         
     _pointertypes = 0
     def PointerType(self, tp):
-        self._pointertypes += 1
         #print 'generate', tp.typ
         if type(tp.typ) is typedesc.PointerType:
             self.generate(tp.typ)
@@ -205,6 +205,8 @@ class Generator(object):
             self.generate(tp.typ)
         else:
             self.generate(tp.typ)
+        self._pointertypes += 1
+        return 
 
     def CvQualifiedType(self, tp):
         self.generate(tp.typ)
@@ -281,10 +283,10 @@ class Generator(object):
               "%s = %d" % (tp.name, value)
         self.names.add(tp.name)
         self._enumvalues += 1
+        return
 
     _enumtypes = 0
     def Enumeration(self, tp):
-        self._enumtypes += 1
         if self.generate_comments:
             self.print_comment(tp)
         print >> self.stream
@@ -301,10 +303,14 @@ class Generator(object):
         if tp.name:
             print >> self.stream, "%s = ctypes.c_int # enum" % tp.name
             self.names.add(tp.name)
+        self._enumtypes += 1
+        return
 
     def get_undeclared_type(self, item):
-        """Checks if a typed has already been declared in the python output
-        or is a builtin python type"""
+        """
+        Checks if a typed has already been declared in the python output
+        or is a builtin python type.
+        """
         if item in self.done:
             return None
         if isinstance(item, typedesc.FundamentalType):
@@ -325,7 +331,7 @@ class Generator(object):
             return
         # look in bases class for dependencies
         # FIXME
-
+        
         # checks members dependencies in bases
         for b in struct.bases:
             depends.update([self.get_undeclared_type(m.type) for m in b.members])
@@ -452,20 +458,9 @@ class Generator(object):
                         f.bits ) # self.type_name(f.type), f.bits)
             if inline:
                 print >> self.stream, prefix,
-            print >> self.stream, "]\n"
-        
-        # disable size checks because they are not portable across
-        # platforms:
-##        # generate assert statements for size and alignment
-##        if body.struct.size and body.struct.name not in dont_assert_size:
-##            size = body.struct.size // 8
-##            print >> self.stream, "assert sizeof(%s) == %s, sizeof(%s)" % \
-##                  (body.struct.name, size, body.struct.name)
-##            align = body.struct.align // 8
-##            print >> self.stream, "assert alignment(%s) == %s, alignment(%s)" % \
-##                  (body.struct.name, align, body.struct.name)
+            print >> self.stream, "]\n"        
         log.debug('Body finished for %s'%(body.name))
-
+        return
 
 
 
@@ -481,9 +476,6 @@ class Generator(object):
                 pass
             else:
                 return dll._name
-##        if self.verbose:
-        # warnings.warn, maybe?
-##        print >> sys.stderr, "function %s not found in any dll" % name
         return None
 
     _c_libraries = None
@@ -493,7 +485,8 @@ class Generator(object):
         if self._c_libraries is None:
             self._c_libraries = {}
             print >> self.imports, "_libraries = {}"
-
+        return
+    
     _stdcall_libraries = None
     def need_WinLibraries(self):
         # Create a '_stdcall_libraries' doctionary in the generated code, if
@@ -501,7 +494,8 @@ class Generator(object):
         if self._stdcall_libraries is None:
             self._stdcall_libraries = {}
             print >> self.imports, "_stdcall_libraries = {}"
-
+        return
+    
     def get_sharedlib(self, dllname, cc):
         if cc == "stdcall":
             self.need_WinLibraries()
@@ -525,6 +519,7 @@ class Generator(object):
             return
         print >> self.imports, "STRING = c_char_p"
         self._STRING_defined = True
+        return
 
     _WSTRING_defined = False
     def need_WSTRING(self):
@@ -532,6 +527,7 @@ class Generator(object):
             return
         print >> self.imports, "WSTRING = c_wchar_p"
         self._WSTRING_defined = True
+        return
 
     _functiontypes = 0
     _notfound_functiontypes = 0
@@ -583,6 +579,7 @@ class Generator(object):
             self._functiontypes += 1
         else:
             self._notfound_functiontypes += 1
+        return
 
     def FundamentalType(self, _type):
         """
@@ -609,14 +606,6 @@ class Generator(object):
             self.print_comment(item)
         log.debug("generate %s, %s"%(item.__class__.__name__, item.name))
         '''
-        #log.debug("generate %s, %s"%(item, item.__dict__))
-        name=''
-        if hasattr(item, 'name'):
-            name = item.name
-        elif isinstance( item, (str,)):
-            log.error( '** got an string item %s'%( item ) )
-            code.interact(local=locals())
-            raise TypeError('Item should not be a string %s'%(item))
         log.debug('generate: %s( %s )'%( type(item).__name__, name))
         if name in self.known_symbols:
             log.debug('item is in known_symbols %s'% name )
@@ -635,16 +624,19 @@ class Generator(object):
         mth = getattr(self, type(item).__name__)
         #code.interact(local=locals())
         mth(item, *args)
-
+        return
+    
     def print_comment(self, item):
         if item.comment is None:
             return
         for l in textwrap.wrap(item.comment, 78):
             print >> self.stream, "# %s" % (l)
+        return
 
     def generate_all(self, items):
         for item in items:
             self.generate(item)
+        return
 
     def cmpitems(a, b):
         loc_a = getattr(a, "location", None)
@@ -685,7 +677,7 @@ class Generator(object):
         headers = headers.replace('__LONG_DOUBLE_SIZE__', long_double_size)
 
         print >> self.imports, headers
-        pass
+        return
 
     def generate_code(self, items):
         print >> self.imports, "\n".join(["CDLL('%s', RTLD_GLOBAL)" % preloaded_dll
@@ -726,6 +718,7 @@ class Generator(object):
         print >> stream, "#"
         print >> stream, "# Total symbols: %5d" % total
         print >> stream, "###########################"
+        return
 
 ################################################################
 
