@@ -30,4 +30,3 @@ else:
                 raise TypeError('This is not a ctypes pointer. It is not instanciable.')
         _class = type('LP_%d_%s'%(__POINTER_SIZE__, clsname), (_T,),{}) 
         return _class
-

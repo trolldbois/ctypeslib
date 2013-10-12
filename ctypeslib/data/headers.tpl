@@ -4,4 +4,3 @@
 # POINTER_SIZE is: __POINTER_SIZE__
 #
 import ctypes
-

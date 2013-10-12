@@ -5,4 +5,3 @@ if ctypes.sizeof(ctypes.c_longdouble) == __LONG_DOUBLE_SIZE__:
     c_long_double_t = ctypes.c_longdouble
 else:
     c_long_double_t = ctypes.c_ubyte*__LONG_DOUBLE_SIZE__
-
