@@ -71,39 +71,32 @@ class Generator(object):
         refer to the type. Assumes the 'from ctypes import *'
         namespace is available.
         """
-        #import code
-        #code.interact(local=locals())
-        if isinstance(t, typedesc.Argument):
-            return "%s" % self.type_name(t.typ, generate)
+        # no Test case for these
+        #elif isinstance(t, typedesc.Argument):
+        #elif isinstance(t, typedesc.CvQualifiedType):
+        #elif isinstance(t, typedesc.Variable):
+        #   return "%s" % self.type_name(t.typ, generate)
+        #elif isinstance(t, typedesc.Enumeration):
+        #   return t.name
+        
+        if isinstance(t, typedesc.FundamentalType):
+            return self.FundamentalType(t) 
         elif isinstance(t, typedesc.ArrayType):
             return "%s * %s" % (self.type_name(t.typ, generate), t.size)
-        elif isinstance(t, typedesc.CvQualifiedType):
-            # const and volatile are ignored
-            return "%s" % self.type_name(t.typ, generate)
-        elif isinstance(t, typedesc.Enumeration):
-            if t.name:
-                return t.name
-            return "ctypes.c_int" # enums are integers
+        elif isinstance(t, typedesc.PointerType):
+            return "POINTER_T(%s)" %(self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.FunctionType):
             args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
             if "__stdcall__" in t.attributes:
                 return "ctypes.WINFUNCTYPE(%s)" % ", ".join(args)
             else:
                 return "ctypes.CFUNCTYPE(%s)" % ", ".join(args)
-        elif isinstance(t, typedesc.FundamentalType):
-            return self.FundamentalType(t) #t.name #"ctypes.%s"%(t.name)
-        elif isinstance(t, typedesc.PointerType):
-            return "POINTER_T(%s)" %(self.type_name(t.typ, generate))
-        elif isinstance(t, typedesc.Structure):
-            return t.name
-        elif isinstance(t, typedesc.Typedef):
-            return t.name
-        elif isinstance(t, typedesc.Union):
-            return t.name
-        elif isinstance(t, typedesc.Variable):
-            return "%s" % self.type_name(t.typ, generate)
+        #elif isinstance(t, typedesc.Structure):
+        #elif isinstance(t, typedesc.Typedef):
+        #elif isinstance(t, typedesc.Union):
+        return t.name
         # All typedesc typedefs should be handled
-        raise TypeError('This typedesc should be handled %s'%(t))
+        #raise TypeError('This typedesc should be handled %s'%(t))
 
     ################################################################
 
