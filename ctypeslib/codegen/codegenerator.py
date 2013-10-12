@@ -100,13 +100,19 @@ class Generator(object):
 
     ################################################################
 
+    _aliases = 0
     def Alias(self, alias):
+        """Handles Aliases. No test cases yet"""
+        # FIXME
         if self.generate_comments:
             self.print_comment(alias)
         print >> self.stream, "%s = %s # alias" % (alias.name, alias.alias)
+        self._aliases += 1
         return            
-
+    
+    _macros = 0
     def Macro(self, macro):
+        """Handles macro. No test cases else that #defines."""
         if macro.location is None:
             log.info('Ignoring %s with no location'%(macro.name))
             return
@@ -115,6 +121,7 @@ class Generator(object):
         if self.generate_comments:
             self.print_comment(macro)
         print >> self.stream, "%s = %s # macro" % (macro.name, macro.body)
+        self.macros += 1
         return            
         # We don't know if we can generate valid, error free Python
         # code. All we can do is to try to compile the code.  If the
@@ -134,7 +141,6 @@ class Generator(object):
         
     _typedefs = 0
     def Typedef(self, tp):
-        #print 'Typedef', tp.name, tp.typ
         if self.generate_comments:
             self.print_comment(tp)
         sized_types = {
@@ -147,10 +153,9 @@ class Generator(object):
             "int32_t": "c_int32",
             "int64_t": "c_int64",
             }
-        self._typedefs += 1
         name = self.type_name(tp) # tp.name
-        if type(tp.typ) == typedesc.FundamentalType \
-           and tp.name in sized_types:
+        if (type(tp.typ) == typedesc.FundamentalType and 
+           tp.name in sized_types):
             print >> self.stream, "%s = ctypes.%s" % \
                   (name, sized_types[tp.name])
             self.names.add(tp.name)
@@ -161,15 +166,13 @@ class Generator(object):
                 self.more.add(tp.typ)
             else:
                 self.generate(tp.typ)
-        if 0 and self.type_name(tp.typ) in self.known_symbols:
-            stream = self.imports
-        else:
-            stream = self.stream
         # generate actual typedef code.
         if tp.name != self.type_name(tp.typ):
-            print >> stream, "%s = %s" % \
+            print >> self.stream, "%s = %s" % \
                   (name, self.type_name(tp.typ))
         self.names.add(tp.name)
+        self._typedefs += 1
+        return
 
     _arraytypes = 0
     def ArrayType(self, tp):
