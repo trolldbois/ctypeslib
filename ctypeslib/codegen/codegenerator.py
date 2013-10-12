@@ -2,32 +2,15 @@
 Type descriptions are collections of typedesc instances.
 '''
 
-import typedesc, sys, os
 import textwrap
-import struct
-import ctypes
+import StringIO # need unicode support, no cStringIO
+import sys
 
-import clangparser
+from ctypeslib.codegen import clangparser
+from ctypeslib.codegen import typedesc
 
 import logging
 log = logging.getLogger('codegen')
-
-import code
-
-import StringIO # need unicode support, no cStringIO
-
-
-
-def get_real_type(tp):
-    if type(tp) is typedesc.Typedef:
-        if type(tp.typ) is typedesc.Typedef:
-            import code
-            code.interact(local=locals())
-            raise TypeError('Nested loop in Typedef %s'%(tp.name))
-        return get_real_type(tp.typ)
-    elif isinstance(tp, typedesc.CvQualifiedType):
-        return get_real_type(tp.typ)
-    return tp
 
 ################################################################
 
@@ -88,6 +71,7 @@ class Generator(object):
         self.enable_pointer_type = lambda : True
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/pointer_type.tpl')
+        import ctypes
         from clang.cindex import TypeKind
         # assuming a LONG also has the same sizeof than a pointer. 
         word_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
@@ -225,9 +209,19 @@ class Generator(object):
         self._typedefs += 1
         return
 
+    def _get_real_type(self, tp):
+        # FIXME, kinda useless really.
+        if type(tp) is typedesc.Typedef:
+            if type(tp.typ) is typedesc.Typedef:
+                raise TypeError('Nested loop in Typedef %s'%(tp.name))
+            return self._get_real_type(tp.typ)
+        elif isinstance(tp, typedesc.CvQualifiedType):
+            return self._get_real_type(tp.typ)
+        return tp
+
     _arraytypes = 0
     def ArrayType(self, tp):
-        self.generate(get_real_type(tp.typ))
+        self.generate(self._get_real_type(tp.typ))
         self.generate(tp.typ)
         self._arraytypes += 1
         return
@@ -287,7 +281,6 @@ class Generator(object):
         # is not in the libraries that we search.  Anyway, if it has
         # no tp.init value we can't generate code for it anyway, so we
         # drop it.
-        #code.interact(local=locals())
         #if tp.init is None:
         #    self._notfound_variables += 1
         #    return
@@ -420,7 +413,6 @@ class Generator(object):
                 print >> self.stream, "class %s(ctypes.Structure):" % head.struct.name
             elif type(head.struct) == typedesc.Union:
                 print >> self.stream, "class %s(ctypes.Union):" % head.struct.name
-        #code.interact(local=locals())
         if not inline:
             print >> self.stream, "    pass\n"
         # special empty struct
@@ -674,7 +666,6 @@ class Generator(object):
         self.done.add(item)
         # go to specific treatment
         mth = getattr(self, type(item).__name__)
-        #code.interact(local=locals())
         mth(item, *args)
         return
     
@@ -718,7 +709,6 @@ class Generator(object):
         
         self.output.write(self.imports.getvalue())
         self.output.write("\n\n")
-        #code.interact(local=locals())
         self.output.write(self.stream.getvalue())
 
         text = "__all__ = [%s]" % ", ".join([repr(str(n)) for n in self.names])
@@ -785,8 +775,6 @@ def generate_code(srcfiles,
         parser.parse(srcfile)
         items += parser.get_result()
     log.debug('Input was parsed')
-
-    #code.interact(local=locals())
 
     # filter symbols to generate
     todo = []
