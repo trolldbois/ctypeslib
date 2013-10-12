@@ -5,18 +5,17 @@
 #
 
 import ctypes
-from ctypes import *
-c_int128 = c_ubyte*16
+c_int128 = ctypes.c_ubyte*16
 c_uint128 = c_int128
 void = None
-if sizeof(ctypes.c_longdouble) == __LONG_DOUBLE_SIZE__:
-    c_long_double_t = c_longdouble
+if ctypes.sizeof(ctypes.c_longdouble) == __LONG_DOUBLE_SIZE__:
+    c_long_double_t = ctypes.c_longdouble
 else:
-    c_long_double_t = c_ubyte*__LONG_DOUBLE_SIZE__
+    c_long_double_t = ctypes.c_ubyte*__LONG_DOUBLE_SIZE__
 
 # if local wordsize is same as target, keep ctypes pointer function.
-if sizeof(ctypes.c_void_p) == __POINTER_SIZE__:
-    POINTER_T = POINTER
+if ctypes.sizeof(ctypes.c_void_p) == __POINTER_SIZE__:
+    POINTER_T = ctypes.POINTER
 else:
     # required to access _ctypes
     import _ctypes
@@ -25,7 +24,7 @@ else:
     # ['__module__', 'from_param', '_type_', '__dict__', '__weakref__', '__doc__']
     def POINTER_T(pointee):
         # a pointer should have the same length as LONG
-        fake_ptr_base_type = __REPLACEMENT_TYPE__ 
+        fake_ptr_base_type = ctypes.__REPLACEMENT_TYPE__ 
         # specific case for c_void_p
         if pointee is None: # VOID pointer type. c_void_p.
             pointee = type(None) # ctypes.c_void_p # ctypes.c_ulong

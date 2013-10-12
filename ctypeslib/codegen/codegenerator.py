@@ -87,9 +87,9 @@ class Generator(object):
         elif isinstance(t, typedesc.FunctionType):
             args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
             if "__stdcall__" in t.attributes:
-                return "WINFUNCTYPE(%s)" % ", ".join(args)
+                return "ctypes.WINFUNCTYPE(%s)" % ", ".join(args)
             else:
-                return "CFUNCTYPE(%s)" % ", ".join(args)
+                return "ctypes.CFUNCTYPE(%s)" % ", ".join(args)
         elif isinstance(t, typedesc.FundamentalType):
             return self.FundamentalType(t) #t.name #"ctypes.%s"%(t.name)
         elif isinstance(t, typedesc.PointerType):
@@ -158,7 +158,7 @@ class Generator(object):
         name = self.type_name(tp) # tp.name
         if type(tp.typ) == typedesc.FundamentalType \
            and tp.name in sized_types:
-            print >> self.stream, "%s = %s" % \
+            print >> self.stream, "%s = ctypes.%s" % \
                   (name, sized_types[tp.name])
             self.names.add(tp.name)
             return
@@ -364,9 +364,9 @@ class Generator(object):
         else:
             ### methods = [m for m in head.struct.members if type(m) is typedesc.Method]
             if type(head.struct) == typedesc.Structure:
-                print >> self.stream, "class %s(Structure):" % head.struct.name
+                print >> self.stream, "class %s(ctypes.Structure):" % head.struct.name
             elif type(head.struct) == typedesc.Union:
-                print >> self.stream, "class %s(Union):" % head.struct.name
+                print >> self.stream, "class %s(ctypes.Union):" % head.struct.name
         #code.interact(local=locals())
         if not inline:
             print >> self.stream, "    pass\n"
@@ -451,7 +451,7 @@ class Generator(object):
                 else:
                     # FIXME: Python bitfield is int32 only.
                     from clang.cindex import TypeKind                
-                    print >> self.stream, "    ('%s', %s, %s)," % \
+                    print >> self.stream, "    ('%s', ctypes.%s, %s)," % \
                         (fieldname, self.parser.get_ctypes_name(TypeKind.LONG), 
                         f.bits ) # self.type_name(f.type), f.bits)
             if inline:
