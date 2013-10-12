@@ -255,6 +255,7 @@ class Generator(object):
 
     def CvQualifiedType(self, tp):
         self.generate(tp.typ)
+        return
 
     _variables = 0
     _notfound_variables = 0
@@ -504,8 +505,6 @@ class Generator(object):
             print >> self.stream, "]\n"        
         log.debug('Body finished for %s'%(body.name))
         return
-
-
 
 
     def find_dllname(self, func):
