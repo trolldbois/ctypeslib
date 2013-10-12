@@ -91,7 +91,7 @@ class Generator(object):
             else:
                 return "CFUNCTYPE(%s)" % ", ".join(args)
         elif isinstance(t, typedesc.FundamentalType):
-            return t.name #"ctypes.%s"%(t.name)
+            return self.FundamentalType(t) #t.name #"ctypes.%s"%(t.name)
         elif isinstance(t, typedesc.PointerType):
             return "POINTER_T(%s)" %(self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.Structure):
@@ -588,12 +588,17 @@ class Generator(object):
         else:
             self._notfound_functiontypes += 1
 
-    def FundamentalType(self, item):
-        pass # we should check if this is known somewhere
-##        name = ctypes_names[item.name]
-##        if name !=  "None":
-##            print >> self.stream, "from ctypes import %s" % name
-##        self.done.add(item)
+    def FundamentalType(self, _type):
+        """
+        1) activates generation of appropriate headers for
+        ## int128_t
+        ## c_long_double_t
+        2) return appropriate name for type
+        """
+        log.debug('HERE in FundamentalType for %s %s'%(_type, _type.name))
+        if _type.name in ["void","c_long_double_t","c_uint128","c_int128"]:
+            return _type.name
+        return "ctypes.%s"%(_type.name)
 
     ########
 
