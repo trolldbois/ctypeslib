@@ -106,6 +106,8 @@ class Clang_Parser(object):
             for x in self.tu.diagnostics:
                 if x.severity > 2:
                     log.warning("Source code has some error. Please fix.")
+                    log.warning(x.spelling)
+                    code.interact(local=locals())
                     break
         root = self.tu.cursor
         for node in root.get_children():
@@ -124,7 +126,7 @@ class Clang_Parser(object):
             # Signature of parse_cursor is:
             # if the fn returns True, do not recurse into children.
             # anything else will be ignored.
-            if stop_recurse is True:
+            if stop_recurse is not False:#True:
                 return        
             # if fn returns something, if this element has children, treat them.
             for child in node.get_children():
@@ -152,6 +154,11 @@ class Clang_Parser(object):
     def is_registered(self, name):
         """Checks if a named type description is registered"""
         return name in self.all
+
+    def remove_registered(self, name):
+        """Removes a named type"""
+        log.debug('Unregister %s'%(name))
+        del self.all[name]
 
     def make_ctypes_convertor(self, _flags):
         """
@@ -294,7 +301,7 @@ typedef void* pointer_t;''', flags=_flags)
             elif location is None:
                 # FIXME make this optional to be able to see internals
                 # FIXME macro/alias are here 
-                remove.append(_item.name)
+                remove.append(_id)
 
         for _x in remove:
             del self.all[_x]

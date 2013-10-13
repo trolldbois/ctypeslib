@@ -553,17 +553,23 @@ class CursorHandler(ClangHandler):
         # Members fields will not be "parsed" here, but later.
         for childnum, child in enumerate(cursor.get_children()):
             if child.kind == CursorKind.FIELD_DECL:
-                # CIndexUSR.cpp:800+ // Bit fields can be anonymous.
-                _cid = self.get_unique_name(child)
-                ## FIXME 2: no get_usr() for members of builtin struct
-                if _cid == '' and child.is_bitfield():
-                    _cid = cursor.get_usr() + "@Ab#" + str(childnum)
-                # END FIXME
-                #try: # FIXME error on child type 
                 members.append( self.FIELD_DECL(child) )
-                #except InvalidDefinitionError,e:
-                #    code.interact(local=locals())
-                #continue
+            elif (child.kind == CursorKind.UNION_DECL or
+                  child.kind == CursorKind.STRUCT_DECL):
+                ## anonymous records definitions.
+                ## append childnum to child name, and de-register record type
+                c_name = self.get_unique_name(child)
+                c_newname = "%s_%d"%(name, childnum)
+                log.debug('** RECORD_DECL FIELD %s'%(c_name))
+                _type = self.FIELD_DECL(child)
+                _type.name = "_%d"%(childnum)
+                _type.type.name = c_newname
+                c = self.register( c_newname, _type)
+                self.parser.remove_registered(c_name)
+                members.append( c )
+            else: ## could be others....
+                log.error('Unhandled field %s in record'%(child.kind))
+            
             # LLVM-CLANG, patched 
             if child.kind == CursorKind.PACKED_ATTR:
                 obj.packed = True
@@ -684,22 +690,24 @@ class CursorHandler(ClangHandler):
         if offset < 0:
             log.error('BAD RECORD, Bad offset: %d for %s'%(offset, name))
             # FIXME if c++ class ?
+        # anonymous fields
+        if cursor.displayname == '': # TODO FIXME libclang, get_usr() should return != ''
+            log.warning("Cursor has no displayname - anonymous field")
+            childnum = None
+            for i, x in enumerate(cursor.semantic_parent.get_children()):
+              if x == cursor:
+                childnum = i
+                break
+            else:
+              raise Exception('Did not find child in semantic parent')
+            _id = cursor.semantic_parent.get_usr() + "@Ab#" + str(childnum)
         # bitfield
         bits = None
         if cursor.is_bitfield():
             bits = cursor.get_bitfield_width()
-            if name == '': # TODO FIXME libclang, get_usr() should return != ''
-                log.warning("Cursor has no displayname - anonymous bitfield")
-                childnum = None
-                for i, x in enumerate(cursor.semantic_parent.get_children()):
-                  if x == cursor:
-                    childnum = i
-                    break
-                else:
-                  raise Exception('Did not find child in semantic parent')
-                _id = cursor.semantic_parent.get_usr() + "@Ab#" + str(childnum)
-                name = "anonymous_bitfield"
+            name = "anonymous_bitfield"
         else:
+            code.interact(local=locals())
             bits = cursor.type.get_size() * 8
             if bits < 0:
                 log.warning('Bad source code, bitsize == %d <0 on %s'%(bits, name))

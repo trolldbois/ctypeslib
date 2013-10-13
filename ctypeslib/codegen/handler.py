@@ -45,6 +45,10 @@ class ClangHandler(object):
     def is_registered(self, name):
         return self.parser.is_registered(name)
 
+    def remove_registered(self, name):
+        return self.parser.remove_registered(name)
+
+
     def set_location(self, obj, cursor):
         """ Location is also used for codegeneration ordering."""
         if ( hasattr(cursor, 'location') and cursor.location is not None 

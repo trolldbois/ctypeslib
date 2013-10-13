@@ -112,8 +112,58 @@ class RecordTest(ClangTest):
         self.assertEquals(self.namespace.struct_Node5.PADDING_0.offset, 6)
         self.assertEquals(self.namespace.struct_Node5.PADDING_0.size, 2)
 
+    def test_record_in_record(self):
+        self.convert('''
+typedef struct _complex {
+	struct {
+		int a;
+	};
+} complex, *pcomplex;
+        ''')
+        self.assertEqual(ctypes.sizeof(self.namespace.complex), 4)
+
+    def test_record_in_record_2(self):
+        self.convert('''
+typedef struct _complex {
+	struct {
+		int a;
+	};
+	struct {
+        long b;
+	};
+} complex, *pcomplex;
+        ''')
+        self.assertEqual(ctypes.sizeof(self.namespace.complex), 12)
+        self.assertEqual(ctypes.sizeof(self.namespace.complex), 16)
+
+    def test_record_in_record_3(self):
+        self.convert('''
+typedef struct _complex {
+    union {
+	    struct {
+		    int a;
+	    };
+	    struct {
+            long b;
+            union {
+                int c;
+                struct {
+                    long long d;
+                    char e;
+                };
+            };
+	    };
+	    struct {
+            long f;
+	    };
+	    int g;
+    };
+} complex, *pcomplex;
+        ''')
+        self.assertEqual(ctypes.sizeof(self.namespace.complex), 12)
+        self.assertEqual(ctypes.sizeof(self.namespace.complex), 16)
         
 import logging, sys
 if __name__ == "__main__":
-    #logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
+    logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
     unittest.main()
