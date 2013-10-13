@@ -551,6 +551,7 @@ class CursorHandler(ClangHandler):
         members = []
         # Go and recurse through children to get this record member's _id
         # Members fields will not be "parsed" here, but later.
+        prev_child_offset = prev_child_size = 0
         for childnum, child in enumerate(cursor.get_children()):
             if child.kind == CursorKind.FIELD_DECL:
                 members.append( self.FIELD_DECL(child) )
@@ -560,19 +561,24 @@ class CursorHandler(ClangHandler):
                 ## append childnum to child name, and de-register record type
                 c_name = self.get_unique_name(child)
                 c_newname = "%s_%d"%(name, childnum)
-                log.debug('** RECORD_DECL FIELD %s'%(c_name))
+                log.debug('_record_decl: field:%s'%(c_name))
                 _type = self.FIELD_DECL(child)
                 _type.name = "_%d"%(childnum)
                 _type.type.name = c_newname
                 c = self.register( c_newname, _type)
                 self.parser.remove_registered(c_name)
                 members.append( c )
-            else: ## could be others....
-                log.error('Unhandled field %s in record'%(child.kind))
-            
-            # LLVM-CLANG, patched 
-            if child.kind == CursorKind.PACKED_ATTR:
+                # there is probably no padding to have in between anonymous structure.
+                # padding would already be applied in the structure.
+            elif child.kind == CursorKind.PACKED_ATTR:
                 obj.packed = True
+                continue # dont mess with field calculations
+            else: ## could be others....
+                log.error('Unhandled field %s in record %s'%(child.kind, name))
+                continue
+            prev_child_size = members[-1].bits
+            prev_child_offset = members[-1].offset+prev_child_size
+            
         if self.is_registered(name): 
             # STRUCT_DECL as a child of TYPEDEF_DECL for example
             # FIXME: make a test case for that.
@@ -586,42 +592,26 @@ class CursorHandler(ClangHandler):
 
     def _fixup_record(self, s):
         """Fixup padding on a record"""
-        log.debug('Struct/Union_FIX: %s '%(s.name))
+        log.debug('FIXUP_STRUCT: %s '%(s.name))
         if s.members is None:
-            log.debug('Struct/Union_FIX: no members')
+            log.debug('FIXUP_STRUCT: no members')
             s.members = []
             return
         ## No need to lookup members in a global var.
         ## Just fix the padding        
         members = []
+        member = None
         offset = 0
         padding_nb = 0
-        member = None
         # create padding fields
-        #DEBUG FIXME: why are s.members already typedesc objet ?
-        #fields = self.fields[s.name]
-        for m in s.members: # s.members are strings - NOT
-            '''import code
-            if m not in self.fields.keys():
-                log.warning('Fixup_struct: Member unexpected : %s'%(m))
-                raise TypeError('Fixup_struct: Member unexpected : %s'%(m))
-            elif fields[m] is None:
-                log.warning('record %s: ignoring field %s'%(s.name,m))
-                continue
-            elif type(fields[m]) != typedesc.Field:
-                # should not happend ?
-                log.warning('Fixup_struct: Member not a typedesc : %s'%(m))
-                raise TypeError('Fixup_struct: Member not a typedesc : %s'%(m))
-            member = fields[m]
-            '''
-            member = m
-            log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d'%(
+        for member in s.members: 
+            log.debug('FIXUP_STRUCT: field:%s offset:%d->%d expecting offset:%d'%(
                     member.name, member.offset, member.offset + member.bits, offset))
             if member.offset > offset:
                 #create padding
                 length = member.offset - offset
-                log.debug('Fixup_struct: create padding for %d bits %d bytes'%(length, length/8))
                 p_name = 'PADDING_%d'%padding_nb
+                log.debug('FIXUP_STRUCT: create %s for %d bits %d bytes'%(p_name, length, length/8))
                 padding = self._make_padding(p_name, offset, length)
                 members.append(padding)
                 padding_nb+=1
@@ -634,12 +624,15 @@ class CursorHandler(ClangHandler):
         # Probably because of sizeof returning standard size instead of real size
         if member and member.is_bitfield:
             pass
-        elif s.size*8 != offset:                
+        elif s.size*8 > offset:                
             length = s.size*8 - offset
-            log.debug('Fixup_struct: s:%d create tail padding for %d bits %d bytes'%(s.size, length, length/8))
+            log.debug('FIXUP_STRUCT: s:%d create tail padding for %d bits %d bytes'%(s.size, length, length/8))
             p_name = 'PADDING_%d'%padding_nb
             padding = self._make_padding(p_name, offset, length)
             members.append(padding)
+        elif s.size*8 < offset:
+            log.debug('FIXUP_STRUCT: s:%d final_offset:%d '%(s.size*8, offset))
+            raise RuntimeError('bad calcs for offset')
         if len(members) > 0:
             offset = members[-1].offset + members[-1].bits
         # go
@@ -684,30 +677,27 @@ class CursorHandler(ClangHandler):
         """
         # name, type
         name = self.get_unique_name(cursor)
+        parent = cursor.semantic_parent
+        #record_name = parent.spelling
         record_name = self.get_unique_name(cursor.semantic_parent)
         #_id = cursor.get_usr()
-        offset = cursor.semantic_parent.type.get_offset(name)
-        if offset < 0:
-            log.error('BAD RECORD, Bad offset: %d for %s'%(offset, name))
-            # FIXME if c++ class ?
         # anonymous fields
         if cursor.displayname == '': # TODO FIXME libclang, get_usr() should return != ''
+            is_anonymous = True
             log.warning("Cursor has no displayname - anonymous field")
-            childnum = None
-            for i, x in enumerate(cursor.semantic_parent.get_children()):
-              if x == cursor:
-                childnum = i
-                break
-            else:
-              raise Exception('Did not find child in semantic parent')
-            _id = cursor.semantic_parent.get_usr() + "@Ab#" + str(childnum)
+        else:
+            offset = parent.type.get_offset(name)
+            if offset < 0:
+                log.error('BAD RECORD, Bad offset: %d for %s'%(offset, name))
+                # FIXME if c++ class ?
+            is_anonymous = False
         # bitfield
         bits = None
         if cursor.is_bitfield():
             bits = cursor.get_bitfield_width()
             name = "anonymous_bitfield"
         else:
-            code.interact(local=locals())
+            #code.interact(local=locals())
             bits = cursor.type.get_size() * 8
             if bits < 0:
                 log.warning('Bad source code, bitsize == %d <0 on %s'%(bits, name))
@@ -747,7 +737,21 @@ class CursorHandler(ClangHandler):
                     log.warning("Field %s is an %s type - ignoring field type"%(
                                 name,_canonical_type.kind.name))
                     return None
-        return typedesc.Field(name, _type, offset, bits, is_bitfield=cursor.is_bitfield())
+            if is_anonymous:
+                # find the first indirect field decl.
+                first_field = _type.members[0]
+                while first_field.is_anonymous:
+                    first_field = first_field.members[0]
+                # find the proper parent record decl.
+                parent = cursor.semantic_parent
+                while parent.spelling == "": #.is_anonymous:
+                    parent = parent.semantic_parent
+                offset = parent.type.get_offset(first_field.name)
+                log.debug('FIELD_DECL: is_anonymous first_field:%s parent:%s offset:%d'%(first_field.name,parent.spelling, offset))
+        return typedesc.Field(name, _type, offset, bits, 
+                              is_bitfield=cursor.is_bitfield(),
+                              is_anonymous=is_anonymous)
+                              #is_anonymous=cursor.is_anonymous())
 
     #############################
     # PREPROCESSING

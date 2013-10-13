@@ -107,7 +107,7 @@ class Clang_Parser(object):
                 if x.severity > 2:
                     log.warning("Source code has some error. Please fix.")
                     log.warning(x.spelling)
-                    code.interact(local=locals())
+                    #code.interact(local=locals())
                     break
         root = self.tu.cursor
         for node in root.get_children():

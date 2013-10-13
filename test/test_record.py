@@ -119,7 +119,7 @@ typedef struct _complex {
 		int a;
 	};
 } complex, *pcomplex;
-        ''')
+        ''',['-target','i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 4)
 
     def test_record_in_record_2(self):
@@ -132,9 +132,8 @@ typedef struct _complex {
         long b;
 	};
 } complex, *pcomplex;
-        ''')
-        self.assertEqual(ctypes.sizeof(self.namespace.complex), 12)
-        self.assertEqual(ctypes.sizeof(self.namespace.complex), 16)
+        ''',['-target','i386-linux'])
+        self.assertEqual(ctypes.sizeof(self.namespace.complex), 8)
 
     def test_record_in_record_3(self):
         self.convert('''
@@ -159,9 +158,21 @@ typedef struct _complex {
 	    int g;
     };
 } complex, *pcomplex;
-        ''')
-        self.assertEqual(ctypes.sizeof(self.namespace.complex), 12)
+        ''',['-target','i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 16)
+
+    def test_record_in_record_packed(self):
+        self.convert('''
+typedef struct _complex {
+	struct e{
+		char a;
+	};
+	struct __attribute__((packed)) {
+		char b;
+	};
+} complex, *pcomplex;
+        ''',['-target','i386-linux'])
+        self.assertEqual(ctypes.sizeof(self.namespace.complex), 4)
         
 import logging, sys
 if __name__ == "__main__":

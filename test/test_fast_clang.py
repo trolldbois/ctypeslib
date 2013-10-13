@@ -50,6 +50,14 @@ class CompareSizes(ClangTest):
             self.gen('test/data/test-clang2.cpp', flags)
             for name in targets:
                 self.assertSizes(name)
+
+    def test_record_anonymous(self):
+        """Test sizes of anonymous record fields."""
+        targets = ['complex2']#, 'complex2', 'complex3', 'complex4'] 
+        for flags in [ ['-target','i386-linux']]:#:, ['-target','x86_64-linux'] ]:
+            self.gen('test/data/test-clang6.c', flags)
+            for name in targets:
+                self.assertSizes(name)
         
 
 
