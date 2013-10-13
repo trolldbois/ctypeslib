@@ -172,7 +172,7 @@ typedef struct _complex {
 	};
 } complex, *pcomplex;
         ''',['-target','i386-linux'])
-        self.assertEqual(ctypes.sizeof(self.namespace.complex), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.complex), 2)
         
 import logging, sys
 if __name__ == "__main__":
