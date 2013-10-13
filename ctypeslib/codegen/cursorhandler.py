@@ -560,14 +560,16 @@ class CursorHandler(ClangHandler):
                 ## anonymous records definitions.
                 ## append childnum to child name, and de-register record type
                 c_name = self.get_unique_name(child)
-                c_newname = "%s_%d"%(name, childnum)
-                log.debug('_record_decl: field:%s'%(c_name))
-                _type = self.FIELD_DECL(child)
-                _type.name = "_%d"%(childnum)
-                _type.type.name = c_newname
-                c = self.register( c_newname, _type)
+                _field_type = self.FIELD_DECL(child)
+                _field_type.name = "_%d"%(childnum)
+                # change the name of the anonymous record type
+                c_newname = "%s_%d"%(_field_type.type.name, childnum)
+                _field_type.type.name = c_newname
+                # unregister it an register it under the new name
+                c = self.register( c_newname, _field_type)
                 self.parser.remove_registered(c_name)
                 members.append( c )
+                log.debug('_record_decl: field:%s'%(c_newname))
                 # there is probably no padding to have in between anonymous structure.
                 # padding would already be applied in the structure.
             elif child.kind == CursorKind.PACKED_ATTR:
@@ -632,15 +634,15 @@ class CursorHandler(ClangHandler):
             members.append(padding)
         elif s.size*8 < offset:
             log.debug('FIXUP_STRUCT: s:%d final_offset:%d '%(s.size*8, offset))
-            raise RuntimeError('bad calcs for offset')
+            #raise RuntimeError('bad calcs for offset')
         if len(members) > 0:
             offset = members[-1].offset + members[-1].bits
         # go
         s.members = members
         log.debug("FIXUP_STRUCT: size:%d offset:%d"%(s.size*8, offset))
         # FIXME:
-        if member and not member.is_bitfield:
-            assert offset == s.size*8 #, assert that the last field stop at the size limit
+        #if member and not member.is_bitfield:
+        #    assert offset == s.size*8 #, assert that the last field stop at the size limit
         return
 
     _fixup_Structure = _fixup_record
@@ -741,13 +743,21 @@ class CursorHandler(ClangHandler):
                 # find the first indirect field decl.
                 first_field = _type.members[0]
                 while first_field.is_anonymous:
-                    first_field = first_field.members[0]
-                # find the proper parent record decl.
-                parent = cursor.semantic_parent
-                while parent.spelling == "": #.is_anonymous:
-                    parent = parent.semantic_parent
-                offset = parent.type.get_offset(first_field.name)
-                log.debug('FIELD_DECL: is_anonymous first_field:%s parent:%s offset:%d'%(first_field.name,parent.spelling, offset))
+                    # DEBUG
+                    if not hasattr(first_field.type, 'members'):
+                        log.error('No members in a anonymous field ??')
+                        raise RuntimeError('bad offset')
+                    first_field = first_field.type.members[0]
+                if first_field is not None:
+                    # find the proper parent record decl.
+                    parent = cursor.semantic_parent
+                    while parent.spelling == "": #.is_anonymous:
+                        parent = parent.semantic_parent
+                    offset = parent.type.get_offset(first_field.name)
+                    log.debug('FIELD_DECL: is_anonymous first_field:%s parent:%s offset:%d'%(first_field.name,parent.spelling, offset))
+                    # DEBUG
+                    if offset < 0 :
+                        raise RuntimeError('bad offset')
         return typedesc.Field(name, _type, offset, bits, 
                               is_bitfield=cursor.is_bitfield(),
                               is_anonymous=is_anonymous)
