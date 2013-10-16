@@ -552,26 +552,11 @@ class CursorHandler(ClangHandler):
         # Go and recurse through children to get this record member's _id
         # Members fields will not be "parsed" here, but later.
         prev_child_offset = prev_child_size = 0
-        for childnum, child in enumerate(cursor.get_children()):
+        fields = list(cursor.type.get_fields())
+        log.debug('Fields: %s'%(str(['%s/%s'%(f.kind.name, f.spelling) for f in fields])))
+        for childnum, child in enumerate(fields):
             if child.kind == CursorKind.FIELD_DECL:
                 members.append( self.FIELD_DECL(child) )
-            elif (child.kind == CursorKind.UNION_DECL or
-                  child.kind == CursorKind.STRUCT_DECL):
-                ## anonymous records definitions.
-                ## append childnum to child name, and de-register record type
-                c_name = self.get_unique_name(child)
-                _field_type = self.FIELD_DECL(child)
-                _field_type.name = "_%d"%(childnum)
-                # change the name of the anonymous record type
-                c_newname = "%s_%d"%(_field_type.type.name, childnum)
-                _field_type.type.name = c_newname
-                # unregister it an register it under the new name
-                c = self.register( c_newname, _field_type)
-                self.parser.remove_registered(c_name)
-                members.append( c )
-                log.debug('_record_decl: field:%s'%(c_newname))
-                # there is probably no padding to have in between anonymous structure.
-                # padding would already be applied in the structure.
             elif child.kind == CursorKind.PACKED_ATTR:
                 obj.packed = True
                 continue # dont mess with field calculations
@@ -594,7 +579,7 @@ class CursorHandler(ClangHandler):
 
     def _fixup_record(self, s):
         """Fixup padding on a record"""
-        log.debug('FIXUP_STRUCT: %s '%(s.name))
+        log.debug('FIXUP_STRUCT: %s %d bits'%(s.name,s.size*8))
         if s.members is None:
             log.debug('FIXUP_STRUCT: no members')
             s.members = []
@@ -684,9 +669,17 @@ class CursorHandler(ClangHandler):
         record_name = self.get_unique_name(cursor.semantic_parent)
         #_id = cursor.get_usr()
         # anonymous fields
-        if cursor.displayname == '': # TODO FIXME libclang, get_usr() should return != ''
+        if cursor.displayname == '': # cursor.is_anonymous()
             is_anonymous = True
-            log.warning("Cursor has no displayname - anonymous field")
+            # get offset by iterating all fields of parent
+            offset = cursor.get_field_offsetof()
+            for i,_f in enumerate(parent.type.get_fields()):
+                if _f == cursor:
+                    fieldnum = i
+                    break
+            # make a name
+            name = "_%d"%(fieldnum)
+            log.warning("Cursor has no displayname - anonymous field renamed to %s"%(name))
         else:
             offset = parent.type.get_offset(name)
             if offset < 0:
@@ -724,13 +717,16 @@ class CursorHandler(ClangHandler):
                 _decl_name = self.get_unique_name(list(cursor.get_children())[0])
             else:
                 _decl_name = self.get_unique_name(cursor.type.get_declaration()) # .spelling ??
+            # rename anonymous field type name
+            if is_anonymous:
+                _decl_name += name
             if self.is_registered(_decl_name):
                 log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
                 _type = self.get_registered(_decl_name)
                 # then we shortcut
             else:
                 # is it always the case ?
-                log.debug("FIELD_DECL: name:'%s'"%(name))
+                log.debug("FIELD_DECL: name:'%s'"%(_decl_name))
                 log.debug("FIELD_DECL: %s: nb children:%s"%(cursor.type.kind, 
                                 len(children)))
                 # recurse into the right function
@@ -739,25 +735,11 @@ class CursorHandler(ClangHandler):
                     log.warning("Field %s is an %s type - ignoring field type"%(
                                 name,_canonical_type.kind.name))
                     return None
-            if is_anonymous:
-                # find the first indirect field decl.
-                first_field = _type.members[0]
-                while first_field.is_anonymous:
-                    # DEBUG
-                    if not hasattr(first_field.type, 'members'):
-                        log.error('No members in a anonymous field ??')
-                        raise RuntimeError('bad offset')
-                    first_field = first_field.type.members[0]
-                if first_field is not None:
-                    # find the proper parent record decl.
-                    parent = cursor.semantic_parent
-                    while parent.spelling == "": #.is_anonymous:
-                        parent = parent.semantic_parent
-                    offset = parent.type.get_offset(first_field.name)
-                    log.debug('FIELD_DECL: is_anonymous first_field:%s parent:%s offset:%d'%(first_field.name,parent.spelling, offset))
-                    # DEBUG
-                    if offset < 0 :
-                        raise RuntimeError('bad offset')
+        if is_anonymous:
+            # we have to unregister the _type and register a alternate named type.
+            self.parser.remove_registered(_type.name)
+            _type.name = _decl_name
+            self.register(_decl_name, _type)
         return typedesc.Field(name, _type, offset, bits, 
                               is_bitfield=cursor.is_bitfield(),
                               is_anonymous=is_anonymous)
