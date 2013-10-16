@@ -56,3 +56,12 @@ typedef struct _complex5 {
 	};
 } complex5, *pcomplex5;
 
+typedef struct _complex6 {
+	struct {
+		char a;
+	};
+	struct __attribute__((packed)) {
+		char b;
+	};
+} complex6, *pcomplex6;
+

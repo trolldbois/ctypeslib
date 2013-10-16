@@ -164,7 +164,7 @@ typedef struct _complex {
     def test_record_in_record_packed(self):
         self.convert('''
 typedef struct _complex {
-	struct e{
+	struct {
 		char a;
 	};
 	struct __attribute__((packed)) {
@@ -177,4 +177,5 @@ typedef struct _complex {
 import logging, sys
 if __name__ == "__main__":
     logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
+    #logging.getLogger('codegen').setLevel(logging.INFO)
     unittest.main()
