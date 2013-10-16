@@ -50,7 +50,7 @@ typedef struct _complex5 {
 	    int x;
 		char a;
 	};
-	struct  {
+	struct __attribute__((packed)) {
 		char b;
 	    int c;
 	};
