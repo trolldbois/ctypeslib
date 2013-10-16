@@ -549,23 +549,20 @@ class CursorHandler(ClangHandler):
             declared_instance = True
         # capture members declaration
         members = []
-        # Go and recurse through children to get this record member's _id
-        # Members fields will not be "parsed" here, but later.
-        prev_child_offset = prev_child_size = 0
+        # Go and recurse through fields
         fields = list(cursor.type.get_fields())
         log.debug('Fields: %s'%(str(['%s/%s'%(f.kind.name, f.spelling) for f in fields])))
-        for childnum, child in enumerate(fields):
-            if child.kind == CursorKind.FIELD_DECL:
-                members.append( self.FIELD_DECL(child) )
-            elif child.kind == CursorKind.PACKED_ATTR:
+        for field in fields:
+            members.append( self.FIELD_DECL(field) )
+        # check for other stuff
+        for child in cursor.get_children():
+            if child.kind == CursorKind.PACKED_ATTR:
                 obj.packed = True
+                log.debug('PACKED record')
                 continue # dont mess with field calculations
-            else: ## could be others....
-                log.error('Unhandled field %s in record %s'%(child.kind, name))
+            else: ## could be others.... struct_decl, etc...
+                log.debug('Unhandled field %s in record %s'%(child.kind, name))
                 continue
-            prev_child_size = members[-1].bits
-            prev_child_offset = members[-1].offset+prev_child_size
-            
         if self.is_registered(name): 
             # STRUCT_DECL as a child of TYPEDEF_DECL for example
             # FIXME: make a test case for that.
@@ -669,8 +666,7 @@ class CursorHandler(ClangHandler):
         record_name = self.get_unique_name(cursor.semantic_parent)
         #_id = cursor.get_usr()
         # anonymous fields
-        if cursor.displayname == '': # cursor.is_anonymous()
-            is_anonymous = True
+        if cursor.is_anonymous():
             # get offset by iterating all fields of parent
             offset = cursor.get_field_offsetof()
             for i,_f in enumerate(parent.type.get_fields()):
@@ -685,7 +681,6 @@ class CursorHandler(ClangHandler):
             if offset < 0:
                 log.error('BAD RECORD, Bad offset: %d for %s'%(offset, name))
                 # FIXME if c++ class ?
-            is_anonymous = False
         # bitfield
         bits = None
         if cursor.is_bitfield():
@@ -718,7 +713,7 @@ class CursorHandler(ClangHandler):
             else:
                 _decl_name = self.get_unique_name(cursor.type.get_declaration()) # .spelling ??
             # rename anonymous field type name
-            if is_anonymous:
+            if cursor.is_anonymous():
                 _decl_name += name
             if self.is_registered(_decl_name):
                 log.debug('FIELD_DECL: used type from cache: %s'%(_decl_name))
@@ -735,15 +730,14 @@ class CursorHandler(ClangHandler):
                     log.warning("Field %s is an %s type - ignoring field type"%(
                                 name,_canonical_type.kind.name))
                     return None
-        if is_anonymous:
+        if cursor.is_anonymous():
             # we have to unregister the _type and register a alternate named type.
             self.parser.remove_registered(_type.name)
             _type.name = _decl_name
             self.register(_decl_name, _type)
         return typedesc.Field(name, _type, offset, bits, 
                               is_bitfield=cursor.is_bitfield(),
-                              is_anonymous=is_anonymous)
-                              #is_anonymous=cursor.is_anonymous())
+                              is_anonymous=cursor.is_anonymous())
 
     #############################
     # PREPROCESSING
