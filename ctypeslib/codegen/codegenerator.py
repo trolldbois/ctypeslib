@@ -12,6 +12,8 @@ from ctypeslib.codegen import typedesc
 import logging
 log = logging.getLogger('codegen')
 
+import code
+
 ################################################################
 
 class Generator(object):
@@ -754,6 +756,7 @@ def generate_code(srcfiles,
                   preloaded_dlls=[],
                   generate_docstrings=False,
                   generate_locations=False,
+                  generate_includes=False,
                   flags=[]
                   ): 
 
@@ -774,12 +777,16 @@ def generate_code(srcfiles,
         parser.parse(srcfile)
         items += parser.get_result()
     log.debug('Input was parsed')
-
+    code.interact(local=locals())
     # filter symbols to generate
     todo = []
 
     if types:
         items = [i for i in items if isinstance(i, types)]
+    
+    if not generate_includes:
+        # limit generation to definitions in srcfiles only
+        items = [i for i in items if i.location[0] in srcfiles]
     
     if symbols:
         syms = set(symbols)
