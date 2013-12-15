@@ -53,6 +53,9 @@ def main(argv=None):
                  description='generate python ABI code from C code')
     parser.add_argument("--debug", dest="debug", action="store_const", 
                  const=True, help='setLevel to DEBUG')
+    parser.add_argument("-a", dest="generate_includes", action="store_true", 
+                 help="include declaration defined outside of the sourcefiles ",
+                 default=False)
     parser.add_argument("-c", dest="generate_comments", action="store_true", 
                  help="include source doxygen-style comments", default=False)
     parser.add_argument("-d", dest="generate_docstrings", action="store_true",
@@ -224,6 +227,7 @@ def main(argv=None):
                   generate_comments=options.generate_comments,
                   generate_docstrings=options.generate_docstrings,
                   generate_locations=options.generate_locations,
+                  generate_includes=options.generate_includes,
                   known_symbols=known_symbols,
                   searched_dlls=dlls,
                   preloaded_dlls=options.preload,
