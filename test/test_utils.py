@@ -8,8 +8,6 @@ import operator
 import os
 import unittest
 
-from haystack.config import Config
-
 import ctypes
 from haystack import memory_mapping
 from haystack.model import LoadableMembersStructure
