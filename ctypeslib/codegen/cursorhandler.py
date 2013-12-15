@@ -179,8 +179,8 @@ class CursorHandler(ClangHandler):
         obj = typedesc.Function(name, returns, attributes, extern)
         for arg in cursor.get_arguments():            
             arg_obj = self.parse_cursor(arg)
-            if arg_obj is None:
-                code.interact(local=locals())
+            #if arg_obj is None:
+            #    code.interact(local=locals())
             obj.add_argument(arg_obj)
         #code.interact(local=locals())
         self.register(name,obj)

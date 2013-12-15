@@ -777,7 +777,7 @@ def generate_code(srcfiles,
         parser.parse(srcfile)
         items += parser.get_result()
     log.debug('Input was parsed')
-    code.interact(local=locals())
+    #code.interact(local=locals())
     # filter symbols to generate
     todo = []
 

@@ -32,8 +32,9 @@ class _HasArgs(T):
     def fixup_argtypes(self, cb):
         #for a in self.arguments:
         #    getattr(cb, a.a.atype = typemap[a.atype]
-        import code
-        code.interact(local=locals())
+        #import code
+        #code.interact(local=locals())
+        pass
 
 
 ################
