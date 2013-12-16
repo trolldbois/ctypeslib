@@ -3,8 +3,8 @@
 class T(object):
     name = None
     location = None
-    comment = None    
-
+    comment = None            
+    
 class Argument(T):
     "a Parameter in the argument list of a callable (Function, Method, ...)"
     def __init__(self, name, _type):

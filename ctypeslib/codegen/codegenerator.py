@@ -198,11 +198,13 @@ class Generator(object):
             self.names.add(tp.name)
             return
         if tp.typ not in self.done:
-            if type(tp.typ) in (typedesc.Structure, typedesc.Union):
-                self.generate(tp.typ.get_head())
-                self.more.add(tp.typ)
-            else:
-                self.generate(tp.typ)
+            # generate only declaration code for records ?
+            #if type(tp.typ) in (typedesc.Structure, typedesc.Union):
+            #    self.generate(tp.typ.get_head())
+            #    self.more.add(tp.typ)
+            #else:
+            #    self.generate(tp.typ)
+            self.generate(tp.typ)
         # generate actual typedef code.
         if tp.name != self.type_name(tp.typ):
             print >> self.stream, "%s = %s" % \
@@ -377,13 +379,16 @@ class Generator(object):
             log.error('Error while parsing members for: %s'%(struct.name))
             return
         # look in bases class for dependencies
-        # FIXME
+        # FIXME - need a real dependency graph maker
         
+        # remove myself, just in case.
+        self.done.remove(struct)
         # checks members dependencies in bases
         for b in struct.bases:
             depends.update([self.get_undeclared_type(m.type) for m in b.members])
         # checks members dependencies
         depends.update([self.get_undeclared_type(m.type) for m in struct.members])
+        self.done.add(struct)
         depends.discard(None)
         if len(depends) > 0:
             log.debug('Generate %s DEPENDS %s'%(struct.name, depends ))
@@ -393,7 +398,7 @@ class Generator(object):
                 self.generate(dep)
             self.generate(struct.get_body(), False)
         else:
-            log.debug('No depends fo %s'%(struct.name))
+            log.debug('No depends for %s'%(struct.name))
             self.generate(struct.get_head(), True)
             self.generate(struct.get_body(), True)
         return
