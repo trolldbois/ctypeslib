@@ -33,7 +33,7 @@ class Clang_Parser(object):
 
     # FIXME, macro definition __SIZEOF_DOUBLE__
     ctypes_typename = {
-        TypeKind.VOID : 'void' ,
+        TypeKind.VOID : 'None' ,
         TypeKind.BOOL : 'c_bool' ,
         TypeKind.CHAR_U : 'c_ubyte' ,
         TypeKind.UCHAR : 'c_ubyte' ,

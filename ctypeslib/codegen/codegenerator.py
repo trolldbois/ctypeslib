@@ -124,8 +124,8 @@ class Generator(object):
         elif isinstance(t, typedesc.ArrayType):
             return "%s * %s" % (self.type_name(t.typ, generate), t.size)
         elif isinstance(t, typedesc.PointerType):
-            self.enable_pointer_type()
-            return "POINTER_T(%s)" %(self.type_name(t.typ, generate))
+            #FIXME DELETE self.enable_pointer_type()
+            return "ctypes.POINTER(%s)" %(self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.FunctionType):
             args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
             if "__stdcall__" in t.attributes:
@@ -642,8 +642,9 @@ class Generator(object):
         2) return appropriate name for type
         """
         log.debug('HERE in FundamentalType for %s %s'%(_type, _type.name))
-        if _type.name in ["void","c_long_double_t","c_uint128","c_int128"]:
-            self.enable_fundamental_type_wrappers()
+        #if _type.name in ["void","c_long_double_t","c_uint128","c_int128"]:
+        if _type.name in ["None","c_uint128","c_int128"]:
+            #FIXME DELETE self.enable_fundamental_type_wrappers()
             return _type.name
         return "ctypes.%s"%(_type.name)
 
