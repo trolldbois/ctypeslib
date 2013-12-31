@@ -826,7 +826,7 @@ def generate_code(srcfiles,
                     preloaded_dlls=preloaded_dlls)
 
     # change ctypes for arch dependent definition
-    gen.generate_headers(parser)
+    # FIXME: useless 20131230 gen.generate_headers(parser)
     # make the structures
     loops = gen.generate_code(items)
     if verbose:
