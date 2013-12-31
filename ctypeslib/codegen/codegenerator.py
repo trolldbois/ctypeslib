@@ -56,6 +56,8 @@ class Generator(object):
         If a type is a int128, a long_double_t or a void, some placeholders need
         to be in the generated code to be valid.
         """
+        log.warning('enable_fundamental_type_wrappers deprecated')
+        return # FIXME ignore
         self.enable_fundamental_type_wrappers = lambda : True
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/fundamental_type_name.tpl')
@@ -70,6 +72,8 @@ class Generator(object):
         If a type is a pointer, a platform-independent POINTER_T type needs
         to be in the generated code.
         """
+        log.warning('enable_pointer_type deprecated')
+        return # FIXME ignore
         self.enable_pointer_type = lambda : True
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/pointer_type.tpl')
@@ -825,8 +829,8 @@ def generate_code(srcfiles,
                     searched_dlls=searched_dlls,
                     preloaded_dlls=preloaded_dlls)
 
-    # change ctypes for arch dependent definition
-    # FIXME: useless 20131230 gen.generate_headers(parser)
+    # add some headers and ctypes import 
+    gen.generate_headers(parser)
     # make the structures
     loops = gen.generate_code(items)
     if verbose:
