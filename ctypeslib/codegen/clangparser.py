@@ -54,7 +54,7 @@ class Clang_Parser(object):
         TypeKind.INT128 : 'c_int128' , # FIXME
         TypeKind.FLOAT : 'c_float' , 
         TypeKind.DOUBLE : 'c_double' , 
-        TypeKind.LONGDOUBLE : 'TBD' ,
+        TypeKind.LONGDOUBLE : 'c_longdouble' ,
         TypeKind.POINTER : 'POINTER_T'
     }
     
@@ -196,10 +196,11 @@ typedef void* pointer_t;''', flags=_flags)
         size0 = util.get_cursor(tu, 'float_t').type.get_size()*8
         size1 = util.get_cursor(tu, 'double_t').type.get_size()*8
         size2 = util.get_cursor(tu, 'longdouble_t').type.get_size()*8
-        if size1 != size2:
-            self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_long_double_t'
-        else:
-            self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_double'
+        # 2014-01 stop generating crap.
+        #if size1 != size2:
+        #    self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_long_double_t'
+        #else:
+        #    self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_double'
         
         self.ctypes_sizes[TypeKind.FLOAT] = size0
         self.ctypes_sizes[TypeKind.DOUBLE] = size1
