@@ -66,15 +66,17 @@ def main(argv=None):
     parser.add_argument("-k", action="store",
                       dest="kind", help="kind of type descriptions to include: "
                         "a = Alias,\n"
+                        "c = Class,\n"
                         "d = Variable,\n"
                         "e = Enumeration,\n"
                         "f = Function,\n"
                         "m = Macro, #define\n"
-                        "s = Records, Structure,Union,Class \n"
+                        "s = Structure,\n"
                         "t = Typedef,\n"
-                        "default = 'defst'\n",
+                        "u = Union\n"
+                        "default = 'cdefstu'\n",
                       metavar="TYPEKIND",
-                      default="defst")
+                      default="cdefstu")
 
     parser.add_argument("-l",
                       dest="dlls",
@@ -203,12 +205,14 @@ def main(argv=None):
                 known_symbols[name] = mod.__name__
 
     type_table = {"a": [typedesc.Alias],
+           "c": [typedesc.Structure],
            "d": [typedesc.Variable],
            "e": [typedesc.Enumeration],#, typedesc.EnumValue],
            "f": [typedesc.Function],
            "m": [typedesc.Macro],
            "s": [typedesc.Structure],
            "t": [typedesc.Typedef],
+           "u": [typedesc.Union],
            }
     if options.kind:
         types = []
