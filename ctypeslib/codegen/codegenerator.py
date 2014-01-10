@@ -97,10 +97,14 @@ class Generator(object):
         headers = pkgutil.get_data('ctypeslib','data/headers.tpl')
         from clang.cindex import TypeKind
         # assuming a LONG also has the same sizeof than a pointer. 
-        word_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
+        word_size = self.parser.get_ctypes_size(TypeKind.LONG)/8
+        pointer_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
+        longdouble_size = self.parser.get_ctypes_size(TypeKind.LONGDOUBLE)/8
         # replacing template values
         headers = headers.replace('__FLAGS__', str(self.parser.flags))
-        headers = headers.replace('__POINTER_SIZE__', str(word_size))
+        headers = headers.replace('__WORD_SIZE__', str(word_size))
+        headers = headers.replace('__POINTER_SIZE__', str(pointer_size))
+        headers = headers.replace('__LONGDOUBLE_SIZE__', str(longdouble_size))
         print >> self.imports, headers
         return
 
