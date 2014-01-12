@@ -512,9 +512,11 @@ class Generator(object):
                 else:
                     # FIXME: Python bitfield is int32 only.
                     from clang.cindex import TypeKind                
-                    print >> self.stream, "    ('%s', ctypes.%s, %s)," % \
-                        (fieldname, self.parser.get_ctypes_name(TypeKind.LONG), 
-                        f.bits ) # self.type_name(f.type), f.bits)
+                    print >> self.stream, "    ('%s', %s, %s)," % \
+                                    (fieldname, 
+                                     #self.parser.get_ctypes_name(TypeKind.LONG), 
+                                     self.type_name(f.type),
+                                     f.bits )
             if inline:
                 print >> self.stream, prefix,
             print >> self.stream, "]\n"        

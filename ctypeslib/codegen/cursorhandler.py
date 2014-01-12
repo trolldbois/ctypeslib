@@ -578,6 +578,60 @@ class CursorHandler(ClangHandler):
             self._fixup_record(obj)
         return obj
 
+    def _fixup_record_bitfields_type(self, s):
+        """Fix the type of the bitfield for ctypes. 16 bits on a int32 is 
+        usually packed on a int16. Python need to be aware that the type is
+        int16, because ctypes will take 16 bits on a int32, as 4 bytes.
+        
+        1 case will never work: 
+        when a bitfield is 16 < size < 24 and a member is left and right of the
+        16 bits mark.
+        Python will not be able to make it work, as a 3 byte type for bit field 
+        does not exists.
+        we could cram the first 16 bits in one field, and the next 8 in a char.
+        but if a member is over 
+        """
+        bitfields = []
+        bit_members = []
+        done = True
+        for m in s.members:
+            if m.is_bitfield:
+                bit_members.append(m)
+                done = False
+            elif len(bit_members) == 0:
+                continue
+            else:
+                # end of the bitfield. Make calculations.
+                size = sum([m.bits for m in bit_members])
+                bitfields.append((size,bit_members))
+                bit_members = []
+                done = True
+        if not done:
+            size = sum([m.bits for m in bit_members])
+            bitfields.append((size,bit_members))
+        # now, take the first bitfield, and count bits
+        for s, members in bitfields:
+            name = members[0].type.name
+            if s <= 8: # use 1 byte - type = char
+                name = 'c_uint8'
+            elif s <= 16: # use 2 byte
+                name = 'c_uint16'
+            elif s <= 24: # use 3 byte ?
+                log.warning('_fixup_record_bitfield_size: 3 bytes bitfield.')
+                pass
+            elif s <= 32: # use a char
+                name = 'c_uint32'
+            # change the type to harmonise the bitfield
+            log.debug('_fixup_record_bitfield_size: fix type to %s'%(name))
+            for m in members:
+                m.type.name = name
+            #print members[0].type.__dict__
+            #field_types = set([m.type.name for m in members])
+            #if len()
+        import code
+        if len(bitfields) > 0:
+            code.interact(local=locals())
+
     def _fixup_record(self, s):
         """Fixup padding on a record"""
         log.debug('Struct/Union_FIX: %s '%(s.name))
@@ -591,7 +645,9 @@ class CursorHandler(ClangHandler):
         offset = 0
         padding_nb = 0
         member = None
+        prev_member = None
         # create padding fields
+        self._fixup_record_bitfields_type(s)
         #DEBUG FIXME: why are s.members already typedesc objet ?
         #fields = self.fields[s.name]
         for m in s.members: # s.members are strings - NOT
@@ -608,6 +664,8 @@ class CursorHandler(ClangHandler):
                 raise TypeError('Fixup_struct: Member not a typedesc : %s'%(m))
             member = fields[m]
             '''
+            # we need to check total size of bitfield, so to choose the right
+            # bitfield type
             member = m
             log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d'%(
                     member.name, member.offset, member.offset + member.bits, offset))
@@ -616,13 +674,14 @@ class CursorHandler(ClangHandler):
                 length = member.offset - offset
                 log.debug('Fixup_struct: create padding for %d bits %d bytes'%(length, length/8))
                 p_name = 'PADDING_%d'%padding_nb
-                padding = self._make_padding(p_name, offset, length)
+                padding = self._make_padding(p_name, offset, length, prev_member)
                 members.append(padding)
                 padding_nb+=1
             if member.type is None:
                 log.error('FIXUP_STRUCT: %s.type is None'%(member.name))
             members.append(member)
             offset = member.offset + member.bits
+            prev_member = member
         # tail padding if necessary and last field is NOT a bitfield
         # FIXME: this isn't right. Why does Union.size returns 1.
         # Probably because of sizeof returning standard size instead of real size
@@ -632,7 +691,7 @@ class CursorHandler(ClangHandler):
             length = s.size*8 - offset
             log.debug('Fixup_struct: s:%d create tail padding for %d bits %d bytes'%(s.size, length, length/8))
             p_name = 'PADDING_%d'%padding_nb
-            padding = self._make_padding(p_name, offset, length)
+            padding = self._make_padding(p_name, offset, length, prev_member)
             members.append(padding)
         if len(members) > 0:
             offset = members[-1].offset + members[-1].bits
@@ -647,12 +706,14 @@ class CursorHandler(ClangHandler):
     _fixup_Structure = _fixup_record
     _fixup_Union = _fixup_record
 
-    def _make_padding(self, name, offset, length):
+    def _make_padding(self, name, offset, length, prev_member=None):
         """Make padding Fields for a specifed size."""
         log.debug("_make_padding: for %d bits"%(length))
         if (length % 8) != 0:
-            # FIXME
-            log.warning('_make_padding: FIXME we need sub-bytes padding definition')
+            typename = prev_member.type.name
+            return typedesc.Field(name,
+                         typedesc.FundamentalType( typename, 1, 1 ),
+                                  offset, length, is_bitfield=True)
         if length > 8:
             bytes = length/8
             return typedesc.Field(name,

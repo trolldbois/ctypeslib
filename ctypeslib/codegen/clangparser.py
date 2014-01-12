@@ -33,28 +33,28 @@ class Clang_Parser(object):
 
     # FIXME, macro definition __SIZEOF_DOUBLE__
     ctypes_typename = {
-        TypeKind.VOID : 'None' ,
-        TypeKind.BOOL : 'c_bool' ,
-        TypeKind.CHAR_U : 'c_ubyte' ,
-        TypeKind.UCHAR : 'c_ubyte' ,
-        TypeKind.CHAR16 : 'c_wchar' , # char16_t
-        TypeKind.CHAR32 : 'c_wchar' , # char32_t
-        TypeKind.USHORT : 'TBD' ,
-        TypeKind.UINT : 'TBD' ,
-        TypeKind.ULONG : 'TBD' ,
-        TypeKind.ULONGLONG : 'TBD' ,
-        TypeKind.UINT128 : 'c_uint128' , # FIXME
-        TypeKind.CHAR_S : 'c_char' , 
-        TypeKind.SCHAR : 'c_char' , #? 
-        TypeKind.WCHAR : 'c_wchar' , # 
-        TypeKind.SHORT : 'TBD' ,
-        TypeKind.INT : 'TBD' ,
-        TypeKind.LONG : 'TBD' ,
-        TypeKind.LONGLONG : 'TBD' ,
-        TypeKind.INT128 : 'c_int128' , # FIXME
-        TypeKind.FLOAT : 'c_float' , 
-        TypeKind.DOUBLE : 'c_double' , 
-        TypeKind.LONGDOUBLE : 'c_longdouble' ,
+        TypeKind.VOID : 'None',
+        TypeKind.BOOL : 'c_bool',
+        TypeKind.CHAR_U : 'c_ubyte', # ?? used for PADDING
+        TypeKind.UCHAR : 'c_ubyte', # unsigned char
+        TypeKind.CHAR16 : 'c_wchar', # char16_t
+        TypeKind.CHAR32 : 'c_wchar', # char32_t
+        TypeKind.USHORT : 'TBD',
+        TypeKind.UINT : 'c_uint',
+        TypeKind.ULONG : 'TBD',
+        TypeKind.ULONGLONG : 'TBD',
+        TypeKind.UINT128 : 'c_uint128', # FIXME
+        TypeKind.CHAR_S : 'c_byte', # char
+        TypeKind.SCHAR : 'c_byte', # signed char
+        TypeKind.WCHAR : 'c_wchar', # 
+        TypeKind.SHORT : 'c_short',
+        TypeKind.INT : 'c_int',
+        TypeKind.LONG : 'TBD',
+        TypeKind.LONGLONG : 'c_longlong',
+        TypeKind.INT128 : 'c_int128', # FIXME
+        TypeKind.FLOAT : 'c_float', 
+        TypeKind.DOUBLE : 'c_double', 
+        TypeKind.LONGDOUBLE : 'c_longdouble',
         TypeKind.POINTER : 'POINTER_T'
     }
     
