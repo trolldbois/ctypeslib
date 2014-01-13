@@ -22,17 +22,15 @@ class RecordTest(ClangTest):
         self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes2), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes2b), 4)
 
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes3), 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes3b), 4)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes3c), 8)
+
         self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes4), 12)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes4b), 4)
 
-    @unittest.expectedFailure
-    def test_simple_3bytes_bitfield(self):
-        """Test sizes for simple POD types on i386.
-        """
-        flags = ['-target','i386-linux']
-        self.gen('test/data/test-bitfield.c', flags)
-        self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes3), 8)
-        self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes3b), 4)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_complex), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_complex2), 16)
 
     #@unittest.skip('')
     def test_simple_x64(self):
@@ -46,9 +44,27 @@ class RecordTest(ClangTest):
         self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes2), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes2b), 4)
 
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes3), 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes3b), 4)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes3c), 8)
+
         self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes4), 12)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes4b), 4)
 
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_complex), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_complex2), 16)
+
+
+def p(s):
+    import ctypes
+    print 'sizeof',ctypes.sizeof(s)
+    for x in s._fields_:
+        if len(x) == 2:
+            f,t = x
+            print f,getattr(s,f)
+        else:
+            f,t,o = x
+            print f,getattr(s,f)
         
 if __name__ == "__main__":
     logging.basicConfig( level=logging.INFO)

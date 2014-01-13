@@ -522,7 +522,7 @@ class CursorHandler(ClangHandler):
         bases = [] # FIXME: support CXX
         size = cursor.type.get_size()
         align = cursor.type.get_align() 
-        if align < 0 :
+        if size < 0 or align < 0 :
             log.error('invalid structure %s %s align:%d size:%d'%(
                         name, cursor.location, align, size))
             raise InvalidDefinitionError('invalid structure %s %s align:%d size:%d'%(
@@ -579,56 +579,108 @@ class CursorHandler(ClangHandler):
         return obj
 
     def _fixup_record_bitfields_type(self, s):
-        """Fix the type of the bitfield for ctypes. 16 bits on a int32 is 
-        usually packed on a int16. Python need to be aware that the type is
-        int16, because ctypes will take 16 bits on a int32, as 4 bytes.
+        """Fix the bitfield packing issue for python ctypes, by changing the 
+        bitfield type, and respecting compiler alignement rules.
         
-        1 case will never work: 
-        when a bitfield is 16 < size < 24 and a member is left and right of the
-        16 bits mark.
-        Python will not be able to make it work, as a 3 byte type for bit field 
-        does not exists.
-        we could cram the first 16 bits in one field, and the next 8 in a char.
-        but if a member is over 
+        This method should be called AFTER padding to have a perfect continuous
+        layout.
+        
+        There is one very special case:
+            struct bytes3 { 
+                unsigned int b1:23; // 0-23
+                // 1 bit padding 
+                char a2; // 24-32 
+            };
+            
+        where we would need to actually put a2 in the int32 bitfield.
+        
+        We also need to change the member type to the smallest type possible
+        that can contains the number of bits.
+        Otherwise ctypes has strange bitfield rules packing stuff to the biggest
+        type possible.
         """
         bitfields = []
-        bit_members = []
-        done = True
+        bitfield_members = []
+        current_bits = 0
         for m in s.members:
+            # a bitfield is defined by the compiler with padding.
+            # not with alignement rules.
+            # but how will python react to that ?
+            # if there is a padding, the alignement is going to be better than 
+            # 8 bits. So we should leverage that.
             if m.is_bitfield:
-                bit_members.append(m)
-                done = False
-            elif len(bit_members) == 0:
+                # change the type
+                if True:
+                    if m.bits <= 8:
+                        m.type.name = 'c_uint8'
+                    elif m.bits <= 16:
+                        m.type.name = 'c_uint16'
+                    else:
+                        m.type.name = 'c_uint32'
+                # make calculation
+                current_bits += m.bits
+                bitfield_members.append(m)
+                if (current_bits%24) == 0:
+                    # the only reason why we would have that, is if a bf member
+                    # + padding is aligned to 24, with a non-bf char member as 
+                    # the fourth bit.
+                    # we need to check for a 3bytes + char corner case
+                    i = s.members.index(m)
+                    if len(s.members) > i+1:
+                        # has to exists, no arch is aligned on 24 bits.
+                        next = s.members[i+1]
+                        if next.bits == 8: 
+                            # next field is a char.
+                            # it will be aggregated in a 32 bits space
+                            # we need to make it a member of 32bit bitfield
+                            next.is_bitfield = True
+                            next.comment = "Promoted to bitfield member to handle 3-bytes situation"
+                            continue
+                    print m.name, m.bits, bitfields
+                    assert False # 3 bytes + char rules is fucked up.
+                elif (current_bits%8) == 0:
+                    # we have a aligned bitfield member, make that a bitfield
+                    size = current_bits
+                    bitfields.append((size,bitfield_members))
+                    bitfield_members = []
+                    current_bits = 0
+            elif len(bitfield_members) == 0:
+                # no opened bitfield
                 continue
             else:
-                # end of the bitfield. Make calculations.
-                size = sum([m.bits for m in bit_members])
-                bitfields.append((size,bit_members))
-                bit_members = []
-                done = True
-        if not done:
-            size = sum([m.bits for m in bit_members])
-            bitfields.append((size,bit_members))
+                # we reach the end of the bitfield. Make calculations.
+                assert (current_bits%8) == 0 # PADDING is included
+                size = current_bits
+                bitfields.append((size,bitfield_members))
+                bitfield_members = []
+                current_bits = 0
+        # Last member of bitfield is covered in case 1
+        assert current_bits == 0
         # now, take the first bitfield, and count bits
-        for s, members in bitfields:
-            name = members[0].type.name
-            if s <= 8: # use 1 byte - type = char
-                name = 'c_uint8'
-            elif s <= 16: # use 2 byte
-                name = 'c_uint16'
-            elif s <= 24: # use 3 byte ?
-                log.error('_fixup_record_bitfield_size: 3 bytes bitfield not supported.')
-                continue
-            elif s <= 32: # use a char
-                name = 'c_uint32'
-            # change the type to harmonise the bitfield
-            log.debug('_fixup_record_bitfield_size: fix type to %s'%(name))
-            for m in members:
-                m.type.name = name
-            #print members[0].type.__dict__
-            #field_types = set([m.type.name for m in members])
-            #if len()
-        #import code
+        # change type for members 
+        if True:
+            # The type of the first member of a bitfield, should be small enough, not to 
+            # be included in the previous bitfield.or extend it.
+            for bf_size, members in bitfields:
+                name = members[0].type.name
+                if bf_size == 8: # use 1 byte - type = char
+                    name = 'c_uint8'
+                elif bf_size == 16: # use 2 byte
+                    name = 'c_uint16'
+                #elif bf_size == 24: # use 3 byte ?
+                #    log.error('_fixup_record_bitfield_size: 3 bytes bitfield not supported.')
+                #    continue
+                #elif bf_size == 32: # use a char
+                else:
+                    name = 'c_uint32'
+                # change the type to harmonise the bitfield
+                log.debug('_fixup_record_bitfield_size: fix type to %s'%(name))
+                for m in members:
+                    m.type.name = name
+                #print members[0].type.__dict__
+                #field_types = set([m.type.name for m in members])
+                #if len()
+        import code
         #if len(bitfields) > 0:
         #    code.interact(local=locals())
 
@@ -647,7 +699,6 @@ class CursorHandler(ClangHandler):
         member = None
         prev_member = None
         # create padding fields
-        self._fixup_record_bitfields_type(s)
         #DEBUG FIXME: why are s.members already typedesc objet ?
         #fields = self.fields[s.name]
         for m in s.members: # s.members are strings - NOT
@@ -677,6 +728,7 @@ class CursorHandler(ClangHandler):
         s.members = members
         log.debug("FIXUP_STRUCT: size:%d offset:%d"%(s.size*8, offset))
         #if member and not member.is_bitfield:
+        self._fixup_record_bitfields_type(s)
         assert offset == s.size*8 #, assert that the last field stop at the size limit
         return
 
@@ -689,18 +741,19 @@ class CursorHandler(ClangHandler):
         padding_nb += 1
         log.debug("_make_padding: for %d bits"%(length))
         if (length % 8) != 0:
-            # add a padding to align to word size
+            # add a padding to align with the bitfield type
             # then multiple bytes if required.
-            pad_length = (length % 8)
+            #pad_length = (length % 8)
             typename = prev_member.type.name
             padding = typedesc.Field(name,
                          typedesc.FundamentalType( typename, 1, 1 ),
-                                  offset, pad_length, is_bitfield=True)
+                                  #offset, pad_length, is_bitfield=True)
+                                  offset, length, is_bitfield=True)
             members.append(padding)
             # check for multiple bytes
-            if (length//8) > 0:
-                padding_nb = self._make_padding(members, padding_nb, offset+pad_length, 
-                                        (length//8)*8, prev_member=padding)
+            #if (length//8) > 0:
+            #    padding_nb = self._make_padding(members, padding_nb, offset+pad_length, 
+            #                            (length//8)*8, prev_member=padding)
             return padding_nb
         elif length > 8:
             bytes = length/8
@@ -738,6 +791,8 @@ class CursorHandler(ClangHandler):
         if offset < 0:
             log.error('BAD RECORD, Bad offset: %d for %s'%(offset, name))
             # FIXME if c++ class ?
+            raise InvalidDefinitionError('invalid structure %s %s offset:%d'%(
+                                            name, cursor.location, offset))
         # bitfield
         bits = None
         if cursor.is_bitfield():
