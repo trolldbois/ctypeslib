@@ -18,7 +18,6 @@ struct bytes4b {
     unsigned int d1:9;
 };
 
-
 // 3 bytes bitfield +1 char packed into a int32
 // packed on 4 bytes by compiler. 
 // But ctypes cannot put b1 in 3 bytes type

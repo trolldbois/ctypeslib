@@ -39,12 +39,12 @@ class Clang_Parser(object):
         TypeKind.UCHAR : 'c_ubyte', # unsigned char
         TypeKind.CHAR16 : 'c_wchar', # char16_t
         TypeKind.CHAR32 : 'c_wchar', # char32_t
-        TypeKind.USHORT : 'TBD',
+        TypeKind.USHORT : 'c_ushort',
         TypeKind.UINT : 'c_uint',
         TypeKind.ULONG : 'TBD',
-        TypeKind.ULONGLONG : 'TBD',
+        TypeKind.ULONGLONG : 'c_ulonglong',
         TypeKind.UINT128 : 'c_uint128', # FIXME
-        TypeKind.CHAR_S : 'c_byte', # char
+        TypeKind.CHAR_S : 'c_char', # char
         TypeKind.SCHAR : 'c_byte', # signed char
         TypeKind.WCHAR : 'c_wchar', # 
         TypeKind.SHORT : 'c_short',
