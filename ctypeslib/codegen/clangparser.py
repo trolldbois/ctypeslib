@@ -71,6 +71,7 @@ class Clang_Parser(object):
         self.make_ctypes_convertor(flags)
         self.cursorkind_handler = cursorhandler.CursorHandler(self)
         self.typekind_handler = typehandler.TypeHandler(self)
+        self.__filter_location = None
     
     def init_parsing_options(self):
         """Set the Translation Unit to skip functions bodies per default."""
@@ -84,6 +85,9 @@ class Clang_Parser(object):
     def activate_comment_parsing(self):
         """Activates the comment parsing options in the Translation Unit."""
         self.tu_options |= TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION 
+
+    def filter_location(self, src_files):
+        self.__filter_location = list(src_files)
         
     def parse(self, filename):
         """
@@ -116,6 +120,14 @@ class Clang_Parser(object):
         """Recurses in children of this node"""
         if node is None:
             return
+
+        if self.filter_location is not None:
+            # dont even parse includes.
+            # FIXME: go back on dependencies ?
+            if node.location.file is None:
+                return
+            elif node.location.file.name not in self.__filter_location:
+                return
         # find and call the handler for this element
         log.debug('Found a %s|%s|%s'%(node.kind.name, node.displayname, node.spelling))
         # build stuff.

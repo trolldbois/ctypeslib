@@ -773,6 +773,7 @@ def generate_code(srcfiles,
                   generate_docstrings=False,
                   generate_locations=False,
                   generate_includes=False,
+                  filter_location=True,
                   flags=[]
                   ): 
 
@@ -784,6 +785,9 @@ def generate_code(srcfiles,
         parser.activate_macros_parsing()
     if generate_comments is True:
         parser.activate_comment_parsing()
+
+    if filter_location is True:
+        parser.filter_location(srcfiles)
     #
     items = []
     for srcfile in srcfiles:

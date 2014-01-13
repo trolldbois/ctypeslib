@@ -84,6 +84,19 @@ def main(argv=None):
                       action="append",
                       default=[])
 
+    if os.name in ("ce", "nt"):
+        default_modules = ["ctypes.wintypes" ]
+    else:
+        default_modules = [ ] # ctypes is already imported
+
+    parser.add_argument("-m",
+                      dest="modules",
+                      metavar="module",
+                      help="Python module(s) containing symbols which will "
+                      "be imported instead of generated",
+                      action="append",
+                      default=default_modules)
+
     parser.add_argument("-o",
                       dest="output",
                       help="output filename (if not specified, standard output will be used)",
@@ -118,18 +131,11 @@ def main(argv=None):
                       default=windows_dlls,
                       help="add all standard windows dlls to the searched dlls list")
 
-    if os.name in ("ce", "nt"):
-        default_modules = ["ctypes.wintypes" ]
-    else:
-        default_modules = [ ] # ctypes is already imported
+    parser.add_argument("-x",
+                      action="store_true",
+                      default=False,
+                      help="Parse object in sources files only. Ignore includes")
 
-    parser.add_argument("-m",
-                      dest="modules",
-                      metavar="module",
-                      help="Python module(s) containing symbols which will "
-                      "be imported instead of generated",
-                      action="append",
-                      default=default_modules)
 
     parser.add_argument("--preload",
                       dest="preload",
