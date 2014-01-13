@@ -30,6 +30,7 @@ class RecordTest(ClangTest):
         self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes4b), 4)
 
         self.assertEquals(ctypes.sizeof(self.namespace.struct_complex), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_complex1), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_complex2), 16)
 
     #@unittest.skip('')
@@ -52,6 +53,7 @@ class RecordTest(ClangTest):
         self.assertEquals(ctypes.sizeof(self.namespace.struct_bytes4b), 4)
 
         self.assertEquals(ctypes.sizeof(self.namespace.struct_complex), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_complex1), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_complex2), 16)
 
 
