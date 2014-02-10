@@ -573,7 +573,7 @@ class CursorHandler(ClangHandler):
                 log.debug('_record_decl: %s was previously registered'%(name))
             obj = self.get_registered(name)
             obj.members = members
-            obh.packed = packed
+            obj.packed = packed
             # final fixup
             self._fixup_record(obj)
         return obj
