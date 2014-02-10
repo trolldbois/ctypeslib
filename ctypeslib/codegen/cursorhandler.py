@@ -636,8 +636,10 @@ class CursorHandler(ClangHandler):
                 name = 'c_uint8'
             elif bf_size == 16: # use 2 byte
                 name = 'c_uint16'
+            elif bf_size == 32: # use 2 byte
+                name = 'c_uint32'
             else:
-                name = 'c_uint32' # also the 3 bytes + char thing
+                name = 'c_uint64' # also the 3 bytes + char thing
             # change the type to harmonise the bitfield
             log.debug('_fixup_record_bitfield_size: fix type to %s'%(name))
             # set the whole bitfield to the appropriate type size.

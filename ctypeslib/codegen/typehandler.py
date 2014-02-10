@@ -5,6 +5,7 @@ from clang.cindex import TypeKind
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.util import log_entity
 from ctypeslib.codegen.handler import ClangHandler
+from ctypeslib.codegen.handler import InvalidDefinitionError
 
 import logging
 log = logging.getLogger('typehandler')
@@ -100,6 +101,7 @@ class TypeHandler(ClangHandler):
         #
         #
         # we shortcut to canonical typedefs and to pointee canonical defs
+        comment = None
         _type = _cursor_type.get_pointee().get_canonical()
         _p_type_name = self.get_unique_name(_type)
         # get pointer size
@@ -123,11 +125,18 @@ class TypeHandler(ClangHandler):
                 p_type = self.get_registered(decl_name)
             else: # forward declaration, without looping
                 log.debug('POINTER: %s type was not previously declared'%(decl_name))
-                p_type = self.parse_cursor(decl)
+                try:
+                    p_type = self.parse_cursor(decl)
+                except InvalidDefinitionError as e:
+                    # no declaration in source file. Fake a void * 
+                    p_type = typedesc.FundamentalType('None',1,1)
+                    comment = "InvalidDefinitionError"
         log.debug("POINTER: pointee type_name:'%s'"%(_p_type_name))
         # return the pointer
         obj = typedesc.PointerType( p_type, size, align)
         obj.location = p_type.location
+        if comment is not None:
+            obj.comment = comment
         return obj
 
     @log_entity
