@@ -73,8 +73,23 @@ class TypeHandler(ClangHandler):
     # not listed has node in the AST.
     # not very useful in python anyway.
     TYPEDEF = ClangHandler._do_nothing
-    ENUM = ClangHandler._do_nothing
-
+    #ENUM = ClangHandler._do_nothing
+    
+    
+    @log_entity
+    def ENUM(self, _cursor_type):
+        """
+        Handles ENUM typedef.
+        """
+        _decl = _cursor_type.get_declaration() 
+        name = self.get_unique_name(_decl)
+        if self.is_registered(name):
+            obj = self.get_registered(name)
+        else:
+            log.warning('Was in ENUM but had to parse record declaration ')
+            obj = self.parse_cursor(_decl)
+        return obj
+    
     @log_entity
     def POINTER(self, _cursor_type):
         """

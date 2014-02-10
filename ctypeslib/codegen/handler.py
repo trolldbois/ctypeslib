@@ -159,7 +159,7 @@ class ClangHandler(object):
         return True
         
     def _do_nothing(self, node, **args):
-        log.debug('_do_nothing for %s'%(node.kind.name))
+        log.warning('_do_nothing for %s'%(node.kind.name))
         return True
 
 

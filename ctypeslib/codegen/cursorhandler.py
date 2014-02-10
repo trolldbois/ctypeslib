@@ -218,6 +218,7 @@ class CursorHandler(ClangHandler):
         """
         Handles typedef statements. 
         Gets Type from cache if we known it. Add it to cache otherwise.
+        #typedef of an enum
         """
         name = self.get_unique_name(cursor)
         # if the typedef is known, get it from cache
@@ -227,17 +228,14 @@ class CursorHandler(ClangHandler):
         _type = cursor.type.get_canonical()
         log.debug("TYPEDEF_DECL: name:%s"%(name))
         log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind))
-        #FIXME: check if this can be useful to filter internal declaration
-        #_decl_cursor = _type.get_declaration()
-        #if _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
-        #    log.warning('TYPE %s has no declaration. Builtin type?'%(name))
-        #    code.interact(local=locals())        
-        
+
         # For all types (array, fundament, pointer, others), get the type
         p_type = self.parse_cursor_type(_type)
         if not isinstance(p_type, typedesc.T):
-            log.error('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type))
-            raise TypeError('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type))
+            log.error('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type.spelling))
+            import code
+            code.interact(local=locals())
+            raise TypeError('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type.spelling))
         # register the type
         obj = self.register(name, typedesc.Typedef(name, p_type))
         self.set_location(obj, cursor)
