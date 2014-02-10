@@ -407,14 +407,18 @@ class Generator(object):
             self.generate(struct.get_body(), False)
         else:
             log.debug('No depends for %s'%(struct.name))
-            self.generate(struct.get_head(), True)
-            self.generate(struct.get_body(), True)
+            if struct.name in self.names:
+                # headers already produced
+                self.generate(struct.get_body(), False)
+            else:
+                self.generate(struct.get_head(), True)
+                self.generate(struct.get_body(), True)
         return
 
     Union = Structure
 
     def StructureHead(self, head, inline=False):
-        log.debug('Head start for %s'%(head.name))
+        log.debug('Head start for %s inline:%s'%(head.name, inline))
         for struct in head.struct.bases:
             self.generate(struct.get_head())
             # add dependencies
