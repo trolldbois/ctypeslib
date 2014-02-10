@@ -95,6 +95,10 @@ class TypeHandler(ClangHandler):
         """
         Handles POINTER types.
         """
+        #
+        # FIXME catch InvalidDefinitionError and return a void *
+        #
+        #
         # we shortcut to canonical typedefs and to pointee canonical defs
         _type = _cursor_type.get_pointee().get_canonical()
         _p_type_name = self.get_unique_name(_type)
