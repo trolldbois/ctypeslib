@@ -538,6 +538,7 @@ class CursorHandler(ClangHandler):
         # save the type in the registry. Useful for not looping in case of 
         # members with forward references
         obj = None
+        packed = False
         declared_instance = False
         if not self.is_registered(name): 
             obj = _output_type(name, align, None, bases, size, packed=False)
@@ -564,7 +565,7 @@ class CursorHandler(ClangHandler):
                 #continue
             # LLVM-CLANG, patched 
             if child.kind == CursorKind.PACKED_ATTR:
-                obj.packed = True
+                packed = True
         if self.is_registered(name): 
             # STRUCT_DECL as a child of TYPEDEF_DECL for example
             # FIXME: make a test case for that.
@@ -572,6 +573,7 @@ class CursorHandler(ClangHandler):
                 log.debug('_record_decl: %s was previously registered'%(name))
             obj = self.get_registered(name)
             obj.members = members
+            obh.packed = packed
             # final fixup
             self._fixup_record(obj)
         return obj
