@@ -159,7 +159,10 @@ class ClangHandler(object):
         return True
         
     def _do_nothing(self, node, **args):
-        log.warning('_do_nothing for %s'%(node.kind.name))
+        name = self.get_unique_name(node)
+        #import code
+        #code.interact(local=locals())
+        log.warning('_do_nothing for %s/%s'%(node.kind.name, name))
         return True
 
 

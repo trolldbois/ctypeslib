@@ -139,6 +139,8 @@ class CursorHandler(ClangHandler):
     #          within _get_var_decl_init_value
     #
 
+    NO_DECL_FOUND = ClangHandler._do_nothing
+
     UNEXPOSED_DECL = ClangHandler._pass_through_children
     """Undexposed declaration. Go and see children. """
     

@@ -108,6 +108,8 @@ class TypeHandler(ClangHandler):
             p_type = self.parse_cursor_type(_type)
         elif _type.kind == TypeKind.FUNCTIONPROTO:
             p_type = self.parse_cursor_type(_type)
+        elif _type.kind == TypeKind.FUNCTIONNOPROTO:
+            p_type = self.parse_cursor_type(_type)
         else: #elif _type.kind == TypeKind.RECORD:
             # check registration
             decl = _type.get_declaration()
@@ -118,9 +120,6 @@ class TypeHandler(ClangHandler):
             else: # forward declaration, without looping
                 log.debug('POINTER: %s type was not previously declared'%(decl_name))
                 p_type = self.parse_cursor(decl)
-        #elif _type.kind == TypeKind.FUNCTIONPROTO:
-        #    log.error('TypeKind.FUNCTIONPROTO not implemented')
-        #    return None
         log.debug("POINTER: pointee type_name:'%s'"%(_p_type_name))
         # return the pointer
         obj = typedesc.PointerType( p_type, size, align)
@@ -172,17 +171,30 @@ class TypeHandler(ClangHandler):
         """Handles function prototype."""
         # id, returns, attributes
         returns = _cursor_type.get_result()
-        if self.is_fundamental_type(returns):
-            returns = self.parse_cursor_type(returns)
+        #if self.is_fundamental_type(returns):
+        returns = self.parse_cursor_type(returns)
         attributes = []
         obj = typedesc.FunctionType(returns, attributes)
         for i, _attr_type in enumerate(_cursor_type.argument_types()):
             arg = typedesc.Argument("a%d"%(i), self.parse_cursor_type(_attr_type))
             obj.add_argument( arg )
-        #log.debug('FUNCTIONPROTO: can I get args ?')
-        #code.interact(local=locals())    
         self.set_location(obj, None)
         return obj
+
+    @log_entity
+    def FUNCTIONNOPROTO(self, _cursor_type):
+        """Handles function with no prototype."""
+        # id, returns, attributes
+        returns = _cursor_type.get_result()
+        #if self.is_fundamental_type(returns):
+        returns = self.parse_cursor_type(returns)
+        attributes = []
+        obj = typedesc.FunctionType(returns, attributes)
+        # argument_types cant be asked. no arguments.
+        self.set_location(obj, None)
+        return obj
+        
+
 
     # structures, unions, classes
     

@@ -80,11 +80,11 @@ class OperatorFunction(_HasArgs):
         self.returns = returns
 
 class FunctionType(_HasArgs):
-    def __init__(self, returns, attributes):
+    def __init__(self, returns, attributes, name=''):
         _HasArgs.__init__(self)
         self.returns = returns
         self.attributes = attributes
-        self.name = "FP_"
+        self.name = "FP_%s"%(name)
 
 class Method(_HasArgs):
     def __init__(self, name, returns):
