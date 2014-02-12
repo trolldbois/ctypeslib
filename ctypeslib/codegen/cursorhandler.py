@@ -553,7 +553,8 @@ class CursorHandler(ClangHandler):
         # Go and recurse through children to get this record member's _id
         # Members fields will not be "parsed" here, but later.
         for childnum, child in enumerate(cursor.get_children()):
-            if child.kind == CursorKind.FIELD_DECL:
+            if (child.kind == CursorKind.FIELD_DECL ):# or (
+                #child.kind in [CursorKind.STRUCT_DECL, CursorKind.UNION_DECL ]):
                 # CIndexUSR.cpp:800+ // Bit fields can be anonymous.
                 _cid = self.get_unique_name(child)
                 ## FIXME 2: no get_usr() for members of builtin struct
@@ -561,13 +562,26 @@ class CursorHandler(ClangHandler):
                     _cid = cursor.get_usr() + "@Ab#" + str(childnum)
                 # END FIXME
                 #try: # FIXME error on child type 
-                members.append( self.FIELD_DECL(child) )
+                #members.append( self.FIELD_DECL(child) )
+                field = getattr(self, child.kind.name)(child)
+                if child.kind in [CursorKind.STRUCT_DECL, CursorKind.UNION_DECL]:
+                    bits = child.type.get_size() * 8 
+                    is_bitfield = child.is_bitfield()
+                    offset =0
+                    import code
+                    code.interact(local=locals())
+                    field = typedesc.Field('anonymous_%d'%(childnum), field, offset, bits, is_bitfield=False)
+                members.append(field)
                 #except InvalidDefinitionError,e:
                 #    code.interact(local=locals())
                 #continue
             # LLVM-CLANG, patched 
             if child.kind == CursorKind.PACKED_ATTR:
                 packed = True
+        log.debug('_record_decl: %d members'%(len(members)))
+        #if len(members) == 0:
+        #    import code
+        #    code.interact(local=locals())
         if self.is_registered(name): 
             # STRUCT_DECL as a child of TYPEDEF_DECL for example
             # FIXME: make a test case for that.
