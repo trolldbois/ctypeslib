@@ -215,7 +215,7 @@ class Generator(object):
             self.generate(tp.typ)
         # generate actual typedef code.
         if tp.name != self.type_name(tp.typ):
-            print >> self.stream, "%s = %s\n" % \
+            print >> self.stream, "%s = %s" % \
                   (name, self.type_name(tp.typ))
         self.names.add(tp.name)
         self._typedefs += 1
