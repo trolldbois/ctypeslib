@@ -490,27 +490,30 @@ class CursorHandler(ClangHandler):
     BINARY_OPERATOR = _operator_handling
 
     @log_entity
-    def STRUCT_DECL(self, cursor):
+    def STRUCT_DECL(self, cursor, num=None):
         """
         Handles Structure declaration.
         Its a wrapper to _record_decl.
         """
-        return self._record_decl(cursor, typedesc.Structure)
+        return self._record_decl(cursor, typedesc.Structure, num)
 
     @log_entity
-    def UNION_DECL(self, cursor):
+    def UNION_DECL(self, cursor, num=None):
         """
         Handles Union declaration.
         Its a wrapper to _record_decl.
         """
-        return self._record_decl(cursor, typedesc.Union)
+        return self._record_decl(cursor, typedesc.Union, num)
 
-    def _record_decl(self, cursor, _output_type):
+    def _record_decl(self, cursor, _output_type, num=None):
         """
         Handles record type declaration.
         Structure, Union...
         """
         name = self.get_unique_name(cursor)
+        # FIXME, handling anonymous field by adding a child id.
+        if num is not None:
+            name = "%s_%d"%(name,num)
         # TODO unittest: try redefinition.
         # check for definition already parsed 
         if (self.is_registered(name) and
@@ -533,10 +536,10 @@ class CursorHandler(ClangHandler):
         # in the first declaration instance.
         if not self.is_registered(name) and not cursor.is_definition():
             # juste save the spot, don't look at members == None
-            log.debug('XXX cursor %s is not on a definition'%(name))
+            log.debug('cursor %s is not on a definition'%(name))
             obj = _output_type(name, align, None, bases, size, packed=False)
             return self.register(name, obj)
-        log.debug('XXX cursor %s is a definition'%(name))
+        log.debug('cursor %s is a definition'%(name))
         # save the type in the registry. Useful for not looping in case of 
         # members with forward references
         obj = None
@@ -553,8 +556,8 @@ class CursorHandler(ClangHandler):
         # Go and recurse through children to get this record member's _id
         # Members fields will not be "parsed" here, but later.
         for childnum, child in enumerate(cursor.get_children()):
-            if (child.kind == CursorKind.FIELD_DECL ):# or (
-                #child.kind in [CursorKind.STRUCT_DECL, CursorKind.UNION_DECL ]):
+            if (child.kind == CursorKind.FIELD_DECL ) or (
+                child.kind in [CursorKind.STRUCT_DECL, CursorKind.UNION_DECL ]):
                 # CIndexUSR.cpp:800+ // Bit fields can be anonymous.
                 _cid = self.get_unique_name(child)
                 ## FIXME 2: no get_usr() for members of builtin struct
@@ -563,13 +566,16 @@ class CursorHandler(ClangHandler):
                 # END FIXME
                 #try: # FIXME error on child type 
                 #members.append( self.FIELD_DECL(child) )
-                field = getattr(self, child.kind.name)(child)
-                if child.kind in [CursorKind.STRUCT_DECL, CursorKind.UNION_DECL]:
+                if child.kind == CursorKind.FIELD_DECL:
+                    # FIELD_DECL
+                    field = self.FIELD_DECL(child)
+                elif child.kind in [CursorKind.STRUCT_DECL, CursorKind.UNION_DECL]:
+                    field = getattr(self, child.kind.name)(child, childnum)
                     bits = child.type.get_size() * 8 
                     is_bitfield = child.is_bitfield()
-                    offset =0
-                    import code
-                    code.interact(local=locals())
+                    offset = 0
+                    #import code
+                    #code.interact(local=locals())
                     field = typedesc.Field('anonymous_%d'%(childnum), field, offset, bits, is_bitfield=False)
                 members.append(field)
                 #except InvalidDefinitionError,e:
