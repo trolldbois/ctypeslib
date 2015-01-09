@@ -1,0 +1,38 @@
+# .travis.yml for ctypeslib2
+
+language: python
+
+python:
+  - "2.7"
+# python-clang is Python2 only
+#  - "3.4"
+
+
+install:
+# travis-ci use Ubuntu 12.04.5 LTS (Precise Pangolin) 64bit
+# install libclang1-3.4 libclang-common-3.4-dev
+  - sudo apt-add-repository "deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.4 main" --yes
+  - sudo apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main"  --yes
+  - sudo apt-get update 
+  - sudo apt-get install libclang1-3.4 libclang-common-3.4-dev  --yes --force-yes
+  - sudo echo `echo "/usr/lib/llvm-3.4/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
+
+# Fixes libclang installation because libclang is named in Ubuntu 12.04 to 14.10 as libclang.so.1, 
+# however python-clang expects the library is named libclang.so
+# libclang.so is hardcoded in https://github.com/trolldbois/python-clang/blob/master/clang/cindex.py#L3361
+  - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
+
+# install python-clang
+  - pip install clang
+
+script:
+  - python setup.py test
+
+#after_success:
+#  coveralls
+
+# disable email notifications
+notifications:
+  email:
+    on_success: never
+    on_failure: never
