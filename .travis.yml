@@ -1,4 +1,5 @@
 # .travis.yml for ctypeslib2
+# master should compile to llvm/clang-3.5 until 3.6 is released
 
 language: python
 
@@ -10,29 +11,40 @@ python:
 
 install:
 # travis-ci use Ubuntu 12.04.5 LTS (Precise Pangolin) 64bit
-# install libclang1-3.4 libclang-common-3.4-dev
-  - sudo apt-add-repository "deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.4 main" --yes
+# install snapshot version of libclang1 libclang-common-3.X-dev
+  - sudo apt-add-repository "deb http://llvm.org/apt/precise/ llvm-toolchain-precise main" --yes
   - sudo apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main"  --yes
   - sudo apt-get update 
-  - sudo apt-get install libclang1-3.4 libclang-common-3.4-dev  --yes --force-yes
-  - sudo echo `echo "/usr/lib/llvm-3.4/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
-
+  - sudo apt-get install libclang1-3.5 libclang-common-3.5-dev  --yes --force-yes
+#permission denied  - sudo echo `echo "/usr/lib/llvm-3.7/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
 # Fixes libclang installation because libclang is named in Ubuntu 12.04 to 14.10 as libclang.so.1, 
 # however python-clang expects the library is named libclang.so
 # libclang.so is hardcoded in https://github.com/trolldbois/python-clang/blob/master/clang/cindex.py#L3361
-  - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
-
-# install python-clang
+  - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang-3.7.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
+  - sudo ldconfig  
+# tests dependencies
+#  - pip install nose
   - pip install clang
+  - pip install coveralls
 
 script:
+# run tests
   - python setup.py test
+  - coverage run --source=ctypeslib setup.py test
 
-#after_success:
-#  coveralls
+after_success:
+  coveralls
 
 # disable email notifications
 notifications:
   email:
     on_success: never
     on_failure: never
+
+#http://docs.travis-ci.com/user/deployment/pypi/
+#deploy:
+#  provider: pypi
+#  user: ...
+#  password: ...
+#  on:
+#    tags: true
