@@ -121,6 +121,7 @@ class ClangTest(unittest.TestCase):
             pass
         self.parser.parse(fname)
         items = self.parser.get_result()
+        self.assertGreater(len(items),0, 'WARNING: parser returned nothing')
         # gen code
         gen = codegenerator.Generator(ofi)
         gen.generate_headers(self.parser)

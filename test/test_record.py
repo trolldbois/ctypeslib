@@ -187,6 +187,6 @@ struct entry {
         
 import logging, sys
 if __name__ == "__main__":
-    logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
-    #logging.getLogger('codegen').setLevel(logging.INFO)
+    logging.basicConfig( stream=sys.stderr, level=logging.INFO )
+    #logging.getLogger('codegen').setLevel(logging.DEBUG)
     unittest.main()
