@@ -58,14 +58,14 @@ class Generator(object):
         """
         log.warning('enable_fundamental_type_wrappers deprecated')
         return # FIXME ignore
-        self.enable_fundamental_type_wrappers = lambda : True
-        import pkgutil
-        headers = pkgutil.get_data('ctypeslib','data/fundamental_type_name.tpl')
-        from clang.cindex import TypeKind
-        size = str(self.parser.get_ctypes_size(TypeKind.LONGDOUBLE)/8)
-        headers = headers.replace('__LONG_DOUBLE_SIZE__', size)
-        print >> self.imports, headers
-        return 
+        #self.enable_fundamental_type_wrappers = lambda : True
+        #import pkgutil
+        #headers = pkgutil.get_data('ctypeslib','data/fundamental_type_name.tpl')
+        #from clang.cindex import TypeKind
+        #size = str(self.parser.get_ctypes_size(TypeKind.LONGDOUBLE)/8)
+        #headers = headers.replace('__LONG_DOUBLE_SIZE__', size)
+        #print >> self.imports, headers
+        #return 
             
     def enable_pointer_type(self):
         """
@@ -74,21 +74,21 @@ class Generator(object):
         """
         log.warning('enable_pointer_type deprecated')
         return # FIXME ignore
-        self.enable_pointer_type = lambda : True
-        import pkgutil
-        headers = pkgutil.get_data('ctypeslib','data/pointer_type.tpl')
-        import ctypes
-        from clang.cindex import TypeKind
-        # assuming a LONG also has the same sizeof than a pointer. 
-        word_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
-        word_type = self.parser.get_ctypes_name(TypeKind.ULONG)
-        word_char = getattr(ctypes,word_type)._type_
-        # replacing template values
-        headers = headers.replace('__POINTER_SIZE__', str(word_size))
-        headers = headers.replace('__REPLACEMENT_TYPE__' , word_type)
-        headers = headers.replace('__REPLACEMENT_TYPE_CHAR__', word_char)
-        print >> self.imports, headers
-        return 
+        #self.enable_pointer_type = lambda : True
+        #import pkgutil
+        #headers = pkgutil.get_data('ctypeslib','data/pointer_type.tpl')
+        #import ctypes
+        #from clang.cindex import TypeKind
+        ## assuming a LONG also has the same sizeof than a pointer. 
+        #word_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
+        #word_type = self.parser.get_ctypes_name(TypeKind.ULONG)
+        #word_char = getattr(ctypes,word_type)._type_
+        ## replacing template values
+        #headers = headers.replace('__POINTER_SIZE__', str(word_size))
+        #headers = headers.replace('__REPLACEMENT_TYPE__' , word_type)
+        #headers = headers.replace('__REPLACEMENT_TYPE_CHAR__', word_char)
+        #print >> self.imports, headers
+        #return 
 
     def generate_headers(self, parser):
         # fix parser in self for later use

@@ -136,7 +136,7 @@ class ClangTest(unittest.TestCase):
         # load code 
         namespace = {}
         # DEBUG
-        #print ofi.getvalue()
+        print ofi.getvalue()
         # DEBUG 
         ofi.seek(0)
         ignore_coding = ofi.readline()

@@ -58,3 +58,19 @@ typedef struct __attribute__((packed)) {
 struct Anon;
 struct Anon2;
 
+/* sudo apt-get install libc6-dev-i386  */
+/*
+#include <stdio.h>
+
+void main() {
+printf("struct Name:  %d\n",sizeof(struct Name));
+printf("struct Name2: %d\n",sizeof(struct Name2));
+printf("struct Node:  %d\n",sizeof(struct Node));
+printf("struct Node2: %d\n",sizeof(struct Node2));
+printf("myEnum:       %d\n",sizeof(ONE));
+printf("my__quad_t:   %d\n",sizeof(my__quad_t));
+printf("my_bitfield:  %d\n",sizeof(my_bitfield));
+printf("mystruct:     %d\n",sizeof(mystruct));
+//printf("struct Anon:     %d\n",sizeof(struct Anon));
+}
+*/

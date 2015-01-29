@@ -6,14 +6,19 @@ from util import get_tu
 from util import ClangTest
     
 class RecordTest(ClangTest):
-    """Test if records are correctly generated for different target archictecture.
+    """Test if records are correctly generated for different target architecture.
     """
     #@unittest.skip('')
     def test_simple_x32(self):
         """Test sizes for simple POD types on i386.
+        you can manually test taht with clang -m32 or gcc -m32.
+        Best guess if this is in error, there is probably an error in the 
+        command line parsing.
         """
         flags = ['-target','i386-linux']
         self.gen('test/data/test-clang0.c', flags)
+        #if ctypes.sizeof(self.namespace.long_double_badaboum) != 12:
+        #    print self.name
         self.assertEquals(ctypes.sizeof(self.namespace.badaboum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.you_badaboum), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.big_badaboum), 4)
@@ -187,6 +192,6 @@ struct entry {
         
 import logging, sys
 if __name__ == "__main__":
-    logging.basicConfig( stream=sys.stderr, level=logging.INFO )
+    logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
     #logging.getLogger('codegen').setLevel(logging.DEBUG)
     unittest.main()
