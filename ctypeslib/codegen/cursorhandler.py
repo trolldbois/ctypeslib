@@ -235,8 +235,8 @@ class CursorHandler(ClangHandler):
         p_type = self.parse_cursor_type(_type)
         if not isinstance(p_type, typedesc.T):
             log.error('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type.spelling))
-            import code
-            code.interact(local=locals())
+            #import code
+            #code.interact(local=locals())
             raise TypeError('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type.spelling))
         # register the type
         obj = self.register(name, typedesc.Typedef(name, p_type))
