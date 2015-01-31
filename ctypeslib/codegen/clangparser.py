@@ -123,7 +123,7 @@ class Clang_Parser(object):
         if node is None:
             return
 
-        if self.filter_location is not None:
+        if self.__filter_location is not None:
             # dont even parse includes.
             # FIXME: go back on dependencies ?
             if node.location.file is None:
