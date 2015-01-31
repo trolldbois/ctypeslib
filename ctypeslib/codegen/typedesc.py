@@ -175,7 +175,6 @@ class Union(_Struct_Union_Base):
 class Field(T):
     ''' Change bits if its a bitfield'''
     def __init__(self, name, typ, offset, bits, is_bitfield=False, is_anonymous=False, is_padding=False):
-        raise CheckMyCallersForTheNewTwoFields
         self.name = name
         self.type = typ
         self.offset = offset
