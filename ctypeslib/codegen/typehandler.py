@@ -5,6 +5,7 @@ from clang.cindex import TypeKind
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.util import log_entity
 from ctypeslib.codegen.handler import ClangHandler
+from ctypeslib.codegen.handler import InvalidDefinitionError
 
 import logging
 log = logging.getLogger('typehandler')
@@ -73,14 +74,34 @@ class TypeHandler(ClangHandler):
     # not listed has node in the AST.
     # not very useful in python anyway.
     TYPEDEF = ClangHandler._do_nothing
-    ENUM = ClangHandler._do_nothing
-
+    #ENUM = ClangHandler._do_nothing
+    
+    
+    @log_entity
+    def ENUM(self, _cursor_type):
+        """
+        Handles ENUM typedef.
+        """
+        _decl = _cursor_type.get_declaration() 
+        name = self.get_unique_name(_decl)
+        if self.is_registered(name):
+            obj = self.get_registered(name)
+        else:
+            log.warning('Was in ENUM but had to parse record declaration ')
+            obj = self.parse_cursor(_decl)
+        return obj
+    
     @log_entity
     def POINTER(self, _cursor_type):
         """
         Handles POINTER types.
         """
+        #
+        # FIXME catch InvalidDefinitionError and return a void *
+        #
+        #
         # we shortcut to canonical typedefs and to pointee canonical defs
+        comment = None
         _type = _cursor_type.get_pointee().get_canonical()
         _p_type_name = self.get_unique_name(_type)
         # get pointer size
@@ -93,6 +114,8 @@ class TypeHandler(ClangHandler):
             p_type = self.parse_cursor_type(_type)
         elif _type.kind == TypeKind.FUNCTIONPROTO:
             p_type = self.parse_cursor_type(_type)
+        elif _type.kind == TypeKind.FUNCTIONNOPROTO:
+            p_type = self.parse_cursor_type(_type)
         else: #elif _type.kind == TypeKind.RECORD:
             # check registration
             decl = _type.get_declaration()
@@ -102,14 +125,18 @@ class TypeHandler(ClangHandler):
                 p_type = self.get_registered(decl_name)
             else: # forward declaration, without looping
                 log.debug('POINTER: %s type was not previously declared'%(decl_name))
-                p_type = self.parse_cursor(decl)
-        #elif _type.kind == TypeKind.FUNCTIONPROTO:
-        #    log.error('TypeKind.FUNCTIONPROTO not implemented')
-        #    return None
+                try:
+                    p_type = self.parse_cursor(decl)
+                except InvalidDefinitionError as e:
+                    # no declaration in source file. Fake a void * 
+                    p_type = typedesc.FundamentalType('None',1,1)
+                    comment = "InvalidDefinitionError"
         log.debug("POINTER: pointee type_name:'%s'"%(_p_type_name))
         # return the pointer
         obj = typedesc.PointerType( p_type, size, align)
         obj.location = p_type.location
+        if comment is not None:
+            obj.comment = comment
         return obj
 
     @log_entity
@@ -157,17 +184,30 @@ class TypeHandler(ClangHandler):
         """Handles function prototype."""
         # id, returns, attributes
         returns = _cursor_type.get_result()
-        if self.is_fundamental_type(returns):
-            returns = self.parse_cursor_type(returns)
+        #if self.is_fundamental_type(returns):
+        returns = self.parse_cursor_type(returns)
         attributes = []
         obj = typedesc.FunctionType(returns, attributes)
         for i, _attr_type in enumerate(_cursor_type.argument_types()):
             arg = typedesc.Argument("a%d"%(i), self.parse_cursor_type(_attr_type))
             obj.add_argument( arg )
-        #log.debug('FUNCTIONPROTO: can I get args ?')
-        #code.interact(local=locals())    
         self.set_location(obj, None)
         return obj
+
+    @log_entity
+    def FUNCTIONNOPROTO(self, _cursor_type):
+        """Handles function with no prototype."""
+        # id, returns, attributes
+        returns = _cursor_type.get_result()
+        #if self.is_fundamental_type(returns):
+        returns = self.parse_cursor_type(returns)
+        attributes = []
+        obj = typedesc.FunctionType(returns, attributes)
+        # argument_types cant be asked. no arguments.
+        self.set_location(obj, None)
+        return obj
+        
+
 
     # structures, unions, classes
     

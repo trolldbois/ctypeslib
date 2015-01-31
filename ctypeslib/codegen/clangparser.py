@@ -33,28 +33,28 @@ class Clang_Parser(object):
 
     # FIXME, macro definition __SIZEOF_DOUBLE__
     ctypes_typename = {
-        TypeKind.VOID : 'void' ,
-        TypeKind.BOOL : 'c_bool' ,
-        TypeKind.CHAR_U : 'c_ubyte' ,
-        TypeKind.UCHAR : 'c_ubyte' ,
-        TypeKind.CHAR16 : 'c_wchar' , # char16_t
-        TypeKind.CHAR32 : 'c_wchar' , # char32_t
-        TypeKind.USHORT : 'TBD' ,
-        TypeKind.UINT : 'TBD' ,
-        TypeKind.ULONG : 'TBD' ,
-        TypeKind.ULONGLONG : 'TBD' ,
-        TypeKind.UINT128 : 'c_uint128' , # FIXME
-        TypeKind.CHAR_S : 'c_char' , 
-        TypeKind.SCHAR : 'c_char' , #? 
-        TypeKind.WCHAR : 'c_wchar' , # 
-        TypeKind.SHORT : 'TBD' ,
-        TypeKind.INT : 'TBD' ,
-        TypeKind.LONG : 'TBD' ,
-        TypeKind.LONGLONG : 'TBD' ,
-        TypeKind.INT128 : 'c_int128' , # FIXME
-        TypeKind.FLOAT : 'c_float' , 
-        TypeKind.DOUBLE : 'c_double' , 
-        TypeKind.LONGDOUBLE : 'TBD' ,
+        TypeKind.VOID : 'None',
+        TypeKind.BOOL : 'c_bool',
+        TypeKind.CHAR_U : 'c_ubyte', # ?? used for PADDING
+        TypeKind.UCHAR : 'c_ubyte', # unsigned char
+        TypeKind.CHAR16 : 'c_wchar', # char16_t
+        TypeKind.CHAR32 : 'c_wchar', # char32_t
+        TypeKind.USHORT : 'c_ushort',
+        TypeKind.UINT : 'c_uint',
+        TypeKind.ULONG : 'TBD',
+        TypeKind.ULONGLONG : 'c_ulonglong',
+        TypeKind.UINT128 : 'c_uint128', # FIXME
+        TypeKind.CHAR_S : 'c_char', # char
+        TypeKind.SCHAR : 'c_byte', # signed char
+        TypeKind.WCHAR : 'c_wchar', # 
+        TypeKind.SHORT : 'c_short',
+        TypeKind.INT : 'c_int',
+        TypeKind.LONG : 'TBD',
+        TypeKind.LONGLONG : 'c_longlong',
+        TypeKind.INT128 : 'c_int128', # FIXME
+        TypeKind.FLOAT : 'c_float', 
+        TypeKind.DOUBLE : 'c_double', 
+        TypeKind.LONGDOUBLE : 'c_longdouble',
         TypeKind.POINTER : 'POINTER_T'
     }
     
@@ -71,6 +71,7 @@ class Clang_Parser(object):
         self.make_ctypes_convertor(flags)
         self.cursorkind_handler = cursorhandler.CursorHandler(self)
         self.typekind_handler = typehandler.TypeHandler(self)
+        self.__filter_location = None
     
     def init_parsing_options(self):
         """Set the Translation Unit to skip functions bodies per default."""
@@ -84,6 +85,9 @@ class Clang_Parser(object):
     def activate_comment_parsing(self):
         """Activates the comment parsing options in the Translation Unit."""
         self.tu_options |= TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION 
+
+    def filter_location(self, src_files):
+        self.__filter_location = list(src_files)
         
     def parse(self, filename):
         """
@@ -118,6 +122,14 @@ class Clang_Parser(object):
         """Recurses in children of this node"""
         if node is None:
             return
+
+        if self.filter_location is not None:
+            # dont even parse includes.
+            # FIXME: go back on dependencies ?
+            if node.location.file is None:
+                return
+            elif node.location.file.name not in self.__filter_location:
+                return
         # find and call the handler for this element
         log.debug('Found a %s|%s|%s'%(node.kind.name, node.displayname, node.spelling))
         # build stuff.
@@ -203,6 +215,10 @@ typedef void* pointer_t;''', flags=_flags)
         size0 = util.get_cursor(tu, 'float_t').type.get_size()*8
         size1 = util.get_cursor(tu, 'double_t').type.get_size()*8
         size2 = util.get_cursor(tu, 'longdouble_t').type.get_size()*8
+        # 2014-01 stop generating crap.
+        # 2015-01 reverse until better solution is found
+        # the idea is that a you cannot assume a c_double will be same format as a c_long_double.
+        # at least this pass size TU 
         if size1 != size2:
             self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_long_double_t'
         else:

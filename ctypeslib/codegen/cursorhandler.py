@@ -139,6 +139,8 @@ class CursorHandler(ClangHandler):
     #          within _get_var_decl_init_value
     #
 
+    NO_DECL_FOUND = ClangHandler._do_nothing
+
     UNEXPOSED_DECL = ClangHandler._pass_through_children
     """Undexposed declaration. Go and see children. """
     
@@ -218,6 +220,7 @@ class CursorHandler(ClangHandler):
         """
         Handles typedef statements. 
         Gets Type from cache if we known it. Add it to cache otherwise.
+        #typedef of an enum
         """
         name = self.get_unique_name(cursor)
         # if the typedef is known, get it from cache
@@ -227,17 +230,14 @@ class CursorHandler(ClangHandler):
         _type = cursor.type.get_canonical()
         log.debug("TYPEDEF_DECL: name:%s"%(name))
         log.debug("TYPEDEF_DECL: typ.kind.displayname:%s"%(_type.kind))
-        #FIXME: check if this can be useful to filter internal declaration
-        #_decl_cursor = _type.get_declaration()
-        #if _decl_cursor.kind == CursorKind.NO_DECL_FOUND:
-        #    log.warning('TYPE %s has no declaration. Builtin type?'%(name))
-        #    code.interact(local=locals())        
-        
+
         # For all types (array, fundament, pointer, others), get the type
         p_type = self.parse_cursor_type(_type)
         if not isinstance(p_type, typedesc.T):
-            log.error('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type))
-            raise TypeError('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type))
+            log.error('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type.spelling))
+            import code
+            code.interact(local=locals())
+            raise TypeError('Bad TYPEREF parsing in TYPEDEF_DECL: %s'%(_type.spelling))
         # register the type
         obj = self.register(name, typedesc.Typedef(name, p_type))
         self.set_location(obj, cursor)
@@ -490,27 +490,30 @@ class CursorHandler(ClangHandler):
     BINARY_OPERATOR = _operator_handling
 
     @log_entity
-    def STRUCT_DECL(self, cursor):
+    def STRUCT_DECL(self, cursor, num=None):
         """
         Handles Structure declaration.
         Its a wrapper to _record_decl.
         """
-        return self._record_decl(cursor, typedesc.Structure)
+        return self._record_decl(cursor, typedesc.Structure, num)
 
     @log_entity
-    def UNION_DECL(self, cursor):
+    def UNION_DECL(self, cursor, num=None):
         """
         Handles Union declaration.
         Its a wrapper to _record_decl.
         """
-        return self._record_decl(cursor, typedesc.Union)
+        return self._record_decl(cursor, typedesc.Union, num)
 
-    def _record_decl(self, cursor, _output_type):
+    def _record_decl(self, cursor, _output_type, num=None):
         """
         Handles record type declaration.
         Structure, Union...
         """
         name = self.get_unique_name(cursor)
+        # FIXME, handling anonymous field by adding a child id.
+        if num is not None:
+            name = "%s_%d"%(name,num)
         # TODO unittest: try redefinition.
         # check for definition already parsed 
         if (self.is_registered(name) and
@@ -522,7 +525,7 @@ class CursorHandler(ClangHandler):
         bases = [] # FIXME: support CXX
         size = cursor.type.get_size()
         align = cursor.type.get_align() 
-        if align < 0 :
+        if size < 0 or align < 0 :
             log.error('invalid structure %s %s align:%d size:%d'%(
                         name, cursor.location, align, size))
             raise InvalidDefinitionError('invalid structure %s %s align:%d size:%d'%(
@@ -533,13 +536,14 @@ class CursorHandler(ClangHandler):
         # in the first declaration instance.
         if not self.is_registered(name) and not cursor.is_definition():
             # juste save the spot, don't look at members == None
-            log.debug('XXX cursor %s is not on a definition'%(name))
+            log.debug('cursor %s is not on a definition'%(name))
             obj = _output_type(name, align, None, bases, size, packed=False)
             return self.register(name, obj)
-        log.debug('XXX cursor %s is a definition'%(name))
+        log.debug('cursor %s is a definition'%(name))
         # save the type in the registry. Useful for not looping in case of 
         # members with forward references
         obj = None
+        packed = False
         declared_instance = False
         if not self.is_registered(name): 
             obj = _output_type(name, align, None, bases, size, packed=False)
@@ -563,6 +567,10 @@ class CursorHandler(ClangHandler):
             else: ## could be others.... struct_decl, etc...
                 log.debug('Unhandled field %s in record %s'%(child.kind, name))
                 continue
+        log.debug('_record_decl: %d members'%(len(members)))
+        #if len(members) == 0:
+        #    import code
+        #    code.interact(local=locals())
         if self.is_registered(name): 
             # STRUCT_DECL as a child of TYPEDEF_DECL for example
             # FIXME: make a test case for that.
@@ -570,9 +578,105 @@ class CursorHandler(ClangHandler):
                 log.debug('_record_decl: %s was previously registered'%(name))
             obj = self.get_registered(name)
             obj.members = members
+            obj.packed = packed
             # final fixup
             self._fixup_record(obj)
         return obj
+
+    def _fixup_record_bitfields_type(self, s):
+        """Fix the bitfield packing issue for python ctypes, by changing the 
+        bitfield type, and respecting compiler alignement rules.
+        
+        This method should be called AFTER padding to have a perfect continuous
+        layout.
+        
+        There is one very special case:
+            struct bytes3 { 
+                unsigned int b1:23; // 0-23
+                // 1 bit padding 
+                char a2; // 24-32 
+            };
+            
+        where we would need to actually put a2 in the int32 bitfield.
+        
+        We also need to change the member type to the smallest type possible
+        that can contains the number of bits.
+        Otherwise ctypes has strange bitfield rules packing stuff to the biggest
+        type possible.
+        """
+        # phase 1, make bitfield, relying upon padding.
+        bitfields = []
+        bitfield_members = []
+        current_bits = 0
+        for m in s.members:
+            if m.is_bitfield:
+                current_bits += m.bits
+                bitfield_members.append(m)
+                if m.is_padding:
+                    # compiler says this ends the bitfield
+                    size = current_bits
+                    bitfields.append((size,bitfield_members))
+                    bitfield_members = []
+                    current_bits = 0
+            elif len(bitfield_members) == 0:
+                # no opened bitfield
+                continue
+            else:
+                # we reach the end of the bitfield. Make calculations.
+                size = current_bits
+                bitfields.append((size,bitfield_members))
+                bitfield_members = []
+                current_bits = 0
+        if current_bits != 0:
+            size = current_bits
+            bitfields.append((size,bitfield_members))
+
+        # set the proper type name for the bitfield.
+        for bf_size, members in bitfields:
+            name = members[0].type.name
+            # set the whole bitfield to the appropriate type size.
+            if bf_size == 8: # use 1 byte - type = char
+                name = 'c_uint8'
+            elif bf_size == 16: # use 2 byte
+                name = 'c_uint16'
+            elif bf_size == 32: # use 2 byte
+                name = 'c_uint32'
+            else:
+                name = 'c_uint64' # also the 3 bytes + char thing
+            # change the type to harmonise the bitfield
+            log.debug('_fixup_record_bitfield_size: fix type to %s'%(name))
+            # set the whole bitfield to the appropriate type size.
+            for m in members:
+                m.type.name = name
+
+            ## Hack the first members to be the smallest possible.
+            # so that they do not extend the previous bitfield in python
+            if members[0].bits <= 8:
+                members[0].type.name = 'c_uint8'
+            elif members[0].bits <= 16:
+                members[0].type.name = 'c_uint16'
+
+
+        # phase 2 - integrate the special 3 Bytes + char fix
+        for bf_size, members in bitfields:
+            if bf_size == 24:
+                # we need to check for a 3bytes + char corner case
+                m = members[-1]
+                i = s.members.index(m)
+                if len(s.members) > i+1:
+                    # has to exists, no arch is aligned on 24 bits.
+                    next = s.members[i+1]
+                    if next.bits == 8: 
+                        # next field is a char.
+                        # it will be aggregated in a 32 bits space
+                        # we need to make it a member of 32bit bitfield
+                        next.is_bitfield = True
+                        next.comment = "Promoted to bitfield member to handle 3-bytes situation"
+                        continue
+        
+        #
+        return
+
 
     def _fixup_record(self, s):
         """Fixup padding on a record"""
@@ -587,66 +691,81 @@ class CursorHandler(ClangHandler):
         member = None
         offset = 0
         padding_nb = 0
+        member = None
+        prev_member = None
         # create padding fields
-        for member in s.members: 
-            log.debug('FIXUP_STRUCT: field:%s offset:%d->%d expecting offset:%d'%(
+        #DEBUG FIXME: why are s.members already typedesc objet ?
+        #fields = self.fields[s.name]
+        for m in s.members: # s.members are strings - NOT
+            # we need to check total size of bitfield, so to choose the right
+            # bitfield type
+            member = m
+            log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d'%(
                     member.name, member.offset, member.offset + member.bits, offset))
             if member.offset > offset:
                 #create padding
                 length = member.offset - offset
-                p_name = 'PADDING_%d'%padding_nb
-                log.debug('FIXUP_STRUCT: create %s for %d bits %d bytes'%(p_name, length, length/8))
-                padding = self._make_padding(p_name, offset, length)
-                members.append(padding)
-                padding_nb+=1
+                log.debug('Fixup_struct: create padding for %d bits %d bytes'%(length, length/8))
+                padding_nb = self._make_padding(members, padding_nb, offset, length, prev_member)
             if member.type is None:
                 log.error('FIXUP_STRUCT: %s.type is None'%(member.name))
             members.append(member)
             offset = member.offset + member.bits
-        # tail padding if necessary and last field is NOT a bitfield
-        # FIXME: this isn't right. Why does Union.size returns 1.
-        # Probably because of sizeof returning standard size instead of real size
-        if member and member.is_bitfield:
-            pass
-        elif s.size*8 > offset:                
+            prev_member = member
+        # tail padding if necessary
+        if s.size*8 != offset:                
             length = s.size*8 - offset
-            log.debug('FIXUP_STRUCT: s:%d create tail padding for %d bits %d bytes'%(s.size, length, length/8))
-            p_name = 'PADDING_%d'%padding_nb
-            padding = self._make_padding(p_name, offset, length)
-            members.append(padding)
-        elif s.size*8 < offset:
-            log.debug('FIXUP_STRUCT: s:%d final_offset:%d '%(s.size*8, offset))
-            #raise RuntimeError('bad calcs for offset')
+            log.debug('Fixup_struct: s:%d create tail padding for %d bits %d bytes'%(s.size, length, length/8))
+            padding_nb = self._make_padding(members, padding_nb, offset, length, prev_member)
         if len(members) > 0:
             offset = members[-1].offset + members[-1].bits
         # go
         s.members = members
         log.debug("FIXUP_STRUCT: size:%d offset:%d"%(s.size*8, offset))
-        # FIXME:
         #if member and not member.is_bitfield:
-        #    assert offset == s.size*8 #, assert that the last field stop at the size limit
+        self._fixup_record_bitfields_type(s)
+        assert offset == s.size*8 #, assert that the last field stop at the size limit
         return
 
     _fixup_Structure = _fixup_record
     _fixup_Union = _fixup_record
 
-    def _make_padding(self, name, offset, length):
+    def _make_padding(self, members, padding_nb, offset, length, prev_member=None):
         """Make padding Fields for a specifed size."""
+        name = 'PADDING_%d'%padding_nb
+        padding_nb += 1
         log.debug("_make_padding: for %d bits"%(length))
         if (length % 8) != 0:
-            # FIXME
-            log.warning('_make_padding: FIXME we need sub-bytes padding definition')
-        if length > 8:
+            # add a padding to align with the bitfield type
+            # then multiple bytes if required.
+            #pad_length = (length % 8)
+            typename = prev_member.type.name
+            padding = typedesc.Field(name,
+                         typedesc.FundamentalType( typename, 1, 1 ),
+                                  #offset, pad_length, is_bitfield=True)
+                                  offset, length, is_bitfield=True, is_padding=True)
+            members.append(padding)
+            # check for multiple bytes
+            #if (length//8) > 0:
+            #    padding_nb = self._make_padding(members, padding_nb, offset+pad_length, 
+            #                            (length//8)*8, prev_member=padding)
+            return padding_nb
+        elif length > 8:
             bytes = length/8
-            return typedesc.Field(name,
+            padding = typedesc.Field(name,
                      typedesc.ArrayType(
                        typedesc.FundamentalType(
                          self.get_ctypes_name(TypeKind.CHAR_U), length, 1 ),
                        bytes),
-                     offset, length)
-        return typedesc.Field(name,
+                     offset, length, is_padding=True)
+            members.append(padding)
+            return padding_nb
+        # simple char padding
+        padding = typedesc.Field(name,
                  typedesc.FundamentalType( self.get_ctypes_name(TypeKind.CHAR_U), 1, 1 ),
-                 offset, length)
+                 offset, length, is_padding=True)
+        members.append(padding)
+        return padding_nb
 
 
     # FIXME

@@ -66,21 +66,36 @@ def main(argv=None):
     parser.add_argument("-k", action="store",
                       dest="kind", help="kind of type descriptions to include: "
                         "a = Alias,\n"
+                        "c = Class,\n"
                         "d = Variable,\n"
                         "e = Enumeration,\n"
                         "f = Function,\n"
                         "m = Macro, #define\n"
-                        "s = Records, Structure,Union,Class \n"
+                        "s = Structure,\n"
                         "t = Typedef,\n"
-                        "default = 'defst'\n",
+                        "u = Union\n"
+                        "default = 'cdefstu'\n",
                       metavar="TYPEKIND",
-                      default="defst")
+                      default="cdefstu")
 
     parser.add_argument("-l",
                       dest="dlls",
                       help="libraries to search for exported functions",
                       action="append",
                       default=[])
+
+    if os.name in ("ce", "nt"):
+        default_modules = ["ctypes.wintypes" ]
+    else:
+        default_modules = [ ] # ctypes is already imported
+
+    parser.add_argument("-m",
+                      dest="modules",
+                      metavar="module",
+                      help="Python module(s) containing symbols which will "
+                      "be imported instead of generated",
+                      action="append",
+                      default=default_modules)
 
     parser.add_argument("-o",
                       dest="output",
@@ -116,18 +131,11 @@ def main(argv=None):
                       default=windows_dlls,
                       help="add all standard windows dlls to the searched dlls list")
 
-    if os.name in ("ce", "nt"):
-        default_modules = ["ctypes.wintypes" ]
-    else:
-        default_modules = [ ] # ctypes is already imported
+    parser.add_argument("-x",
+                      action="store_true",
+                      default=False,
+                      help="Parse object in sources files only. Ignore includes")
 
-    parser.add_argument("-m",
-                      dest="modules",
-                      metavar="module",
-                      help="Python module(s) containing symbols which will "
-                      "be imported instead of generated",
-                      action="append",
-                      default=default_modules)
 
     parser.add_argument("--preload",
                       dest="preload",
@@ -203,12 +211,14 @@ def main(argv=None):
                 known_symbols[name] = mod.__name__
 
     type_table = {"a": [typedesc.Alias],
+           "c": [typedesc.Structure],
            "d": [typedesc.Variable],
            "e": [typedesc.Enumeration],#, typedesc.EnumValue],
            "f": [typedesc.Function],
            "m": [typedesc.Macro],
            "s": [typedesc.Structure],
            "t": [typedesc.Typedef],
+           "u": [typedesc.Union],
            }
     if options.kind:
         types = []

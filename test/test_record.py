@@ -173,6 +173,17 @@ typedef struct _complex {
 } complex, *pcomplex;
         ''',['-target','i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 2)
+
+    def test_forward_decl(self):
+        self.convert('''
+typedef struct entry Entry;
+struct entry {
+  Entry * flink;
+  Entry * blink;
+};
+        ''',['-target','i386-linux'])
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_entry), 8)
+
         
 import logging, sys
 if __name__ == "__main__":

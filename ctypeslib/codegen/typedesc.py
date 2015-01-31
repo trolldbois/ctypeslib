@@ -3,8 +3,8 @@
 class T(object):
     name = None
     location = None
-    comment = None    
-
+    comment = None            
+    
 class Argument(T):
     "a Parameter in the argument list of a callable (Function, Method, ...)"
     def __init__(self, name, _type):
@@ -32,8 +32,9 @@ class _HasArgs(T):
     def fixup_argtypes(self, cb):
         #for a in self.arguments:
         #    getattr(cb, a.a.atype = typemap[a.atype]
-        import code
-        code.interact(local=locals())
+        #import code
+        #code.interact(local=locals())
+        pass
 
 
 ################
@@ -79,11 +80,11 @@ class OperatorFunction(_HasArgs):
         self.returns = returns
 
 class FunctionType(_HasArgs):
-    def __init__(self, returns, attributes):
+    def __init__(self, returns, attributes, name=''):
         _HasArgs.__init__(self)
         self.returns = returns
         self.attributes = attributes
-        self.name = "FP_"
+        self.name = "FP_%s"%(name)
 
 class Method(_HasArgs):
     def __init__(self, name, returns):
@@ -173,13 +174,15 @@ class Union(_Struct_Union_Base):
 
 class Field(T):
     ''' Change bits if its a bitfield'''
-    def __init__(self, name, typ, offset, bits, is_bitfield=False, is_anonymous=False):
+    def __init__(self, name, typ, offset, bits, is_bitfield=False, is_anonymous=False, is_padding=False):
+        raise CheckMyCallersForTheNewTwoFields
         self.name = name
         self.type = typ
         self.offset = offset
         self.bits = bits
         self.is_bitfield = is_bitfield
         self.is_anonymous = is_anonymous
+        self.is_padding = is_padding
 
 class CvQualifiedType(T):
     def __init__(self, typ, const, volatile):

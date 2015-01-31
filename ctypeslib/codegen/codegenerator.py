@@ -56,6 +56,8 @@ class Generator(object):
         If a type is a int128, a long_double_t or a void, some placeholders need
         to be in the generated code to be valid.
         """
+        log.warning('enable_fundamental_type_wrappers deprecated')
+        return # FIXME ignore
         self.enable_fundamental_type_wrappers = lambda : True
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/fundamental_type_name.tpl')
@@ -70,6 +72,8 @@ class Generator(object):
         If a type is a pointer, a platform-independent POINTER_T type needs
         to be in the generated code.
         """
+        log.warning('enable_pointer_type deprecated')
+        return # FIXME ignore
         self.enable_pointer_type = lambda : True
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/pointer_type.tpl')
@@ -93,10 +97,14 @@ class Generator(object):
         headers = pkgutil.get_data('ctypeslib','data/headers.tpl')
         from clang.cindex import TypeKind
         # assuming a LONG also has the same sizeof than a pointer. 
-        word_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
+        word_size = self.parser.get_ctypes_size(TypeKind.LONG)/8
+        pointer_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
+        longdouble_size = self.parser.get_ctypes_size(TypeKind.LONGDOUBLE)/8
         # replacing template values
         headers = headers.replace('__FLAGS__', str(self.parser.flags))
-        headers = headers.replace('__POINTER_SIZE__', str(word_size))
+        headers = headers.replace('__WORD_SIZE__', str(word_size))
+        headers = headers.replace('__POINTER_SIZE__', str(pointer_size))
+        headers = headers.replace('__LONGDOUBLE_SIZE__', str(longdouble_size))
         print >> self.imports, headers
         return
 
@@ -120,8 +128,8 @@ class Generator(object):
         elif isinstance(t, typedesc.ArrayType):
             return "%s * %s" % (self.type_name(t.typ, generate), t.size)
         elif isinstance(t, typedesc.PointerType):
-            self.enable_pointer_type()
-            return "POINTER_T(%s)" %(self.type_name(t.typ, generate))
+            #FIXME DELETE self.enable_pointer_type()
+            return "ctypes.POINTER(%s)" %(self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.FunctionType):
             args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
             if "__stdcall__" in t.attributes:
@@ -198,11 +206,13 @@ class Generator(object):
             self.names.add(tp.name)
             return
         if tp.typ not in self.done:
-            if type(tp.typ) in (typedesc.Structure, typedesc.Union):
-                self.generate(tp.typ.get_head())
-                self.more.add(tp.typ)
-            else:
-                self.generate(tp.typ)
+            # generate only declaration code for records ?
+            #if type(tp.typ) in (typedesc.Structure, typedesc.Union):
+            #    self.generate(tp.typ.get_head())
+            #    self.more.add(tp.typ)
+            #else:
+            #    self.generate(tp.typ)
+            self.generate(tp.typ)
         # generate actual typedef code.
         if tp.name != self.type_name(tp.typ):
             print >> self.stream, "%s = %s" % \
@@ -377,13 +387,16 @@ class Generator(object):
             log.error('Error while parsing members for: %s'%(struct.name))
             return
         # look in bases class for dependencies
-        # FIXME
+        # FIXME - need a real dependency graph maker
         
+        # remove myself, just in case.
+        self.done.remove(struct)
         # checks members dependencies in bases
         for b in struct.bases:
             depends.update([self.get_undeclared_type(m.type) for m in b.members])
         # checks members dependencies
         depends.update([self.get_undeclared_type(m.type) for m in struct.members])
+        self.done.add(struct)
         depends.discard(None)
         if len(depends) > 0:
             log.debug('Generate %s DEPENDS %s'%(struct.name, depends ))
@@ -393,15 +406,19 @@ class Generator(object):
                 self.generate(dep)
             self.generate(struct.get_body(), False)
         else:
-            log.debug('No depends fo %s'%(struct.name))
-            self.generate(struct.get_head(), True)
-            self.generate(struct.get_body(), True)
+            log.debug('No depends for %s'%(struct.name))
+            if struct.name in self.names:
+                # headers already produced
+                self.generate(struct.get_body(), False)
+            else:
+                self.generate(struct.get_head(), True)
+                self.generate(struct.get_body(), True)
         return
 
     Union = Structure
 
     def StructureHead(self, head, inline=False):
-        log.debug('Head start for %s'%(head.name))
+        log.debug('Head start for %s inline:%s'%(head.name, inline))
         for struct in head.struct.bases:
             self.generate(struct.get_head())
             # add dependencies
@@ -499,9 +516,11 @@ class Generator(object):
                 else:
                     # FIXME: Python bitfield is int32 only.
                     from clang.cindex import TypeKind                
-                    print >> self.stream, "    ('%s', ctypes.%s, %s)," % \
-                        (fieldname, self.parser.get_ctypes_name(TypeKind.LONG), 
-                        f.bits ) # self.type_name(f.type), f.bits)
+                    print >> self.stream, "    ('%s', %s, %s)," % \
+                                    (fieldname, 
+                                     #self.parser.get_ctypes_name(TypeKind.LONG), 
+                                     self.type_name(f.type),
+                                     f.bits )
             if inline:
                 print >> self.stream, prefix,
             print >> self.stream, "]\n"        
@@ -633,8 +652,9 @@ class Generator(object):
         2) return appropriate name for type
         """
         log.debug('HERE in FundamentalType for %s %s'%(_type, _type.name))
-        if _type.name in ["void","c_long_double_t","c_uint128","c_int128"]:
-            self.enable_fundamental_type_wrappers()
+        #if _type.name in ["void","c_long_double_t","c_uint128","c_int128"]:
+        if _type.name in ["None","c_uint128","c_int128"]:
+            #FIXME DELETE self.enable_fundamental_type_wrappers()
             return _type.name
         return "ctypes.%s"%(_type.name)
 
@@ -757,6 +777,7 @@ def generate_code(srcfiles,
                   generate_docstrings=False,
                   generate_locations=False,
                   generate_includes=False,
+                  filter_location=True,
                   flags=[]
                   ): 
 
@@ -768,6 +789,9 @@ def generate_code(srcfiles,
         parser.activate_macros_parsing()
     if generate_comments is True:
         parser.activate_comment_parsing()
+
+    if filter_location is True:
+        parser.filter_location(srcfiles)
     #
     items = []
     for srcfile in srcfiles:
@@ -777,7 +801,7 @@ def generate_code(srcfiles,
         parser.parse(srcfile)
         items += parser.get_result()
     log.debug('Input was parsed')
-    code.interact(local=locals())
+    #code.interact(local=locals())
     # filter symbols to generate
     todo = []
 
@@ -820,7 +844,7 @@ def generate_code(srcfiles,
                     searched_dlls=searched_dlls,
                     preloaded_dlls=preloaded_dlls)
 
-    # change ctypes for arch dependent definition
+    # add some headers and ctypes import 
     gen.generate_headers(parser)
     # make the structures
     loops = gen.generate_code(items)
