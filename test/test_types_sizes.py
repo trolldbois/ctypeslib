@@ -7,14 +7,20 @@ from util import ClangTest
 
 
 class BasicTypes(ClangTest):
-    """Tests the basic types for size."""
+    """Tests the basic types for size.
+Because we might (*) generate Fundamental types variable as python variable, 
+we can't ctypes.sizeof a python object. So we used typedef to verify types sizes
+because we can ctypes.sizeof a type name. Just not a variable.    
+
+(*) Decision pending review
+    """
     code = '''
-char a;
-unsigned int b;
-unsigned long c;
-double d;
-long double e;
-float f;
+typedef char a;
+typedef unsigned int b;
+typedef unsigned long c;
+typedef double d;
+typedef long double e;
+typedef float f;
         '''
 
     def test_x32(self):

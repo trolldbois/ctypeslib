@@ -56,7 +56,7 @@ class Generator(object):
         If a type is a int128, a long_double_t or a void, some placeholders need
         to be in the generated code to be valid.
         """
-        log.warning('enable_fundamental_type_wrappers deprecated')
+        log.warning('enable_fundamental_type_wrappers deprecated - replaced by generate_headers')
         return # FIXME ignore
         self.enable_fundamental_type_wrappers = lambda : True
         import pkgutil
@@ -72,7 +72,7 @@ class Generator(object):
         If a type is a pointer, a platform-independent POINTER_T type needs
         to be in the generated code.
         """
-        log.warning('enable_pointer_type deprecated')
+        log.warning('enable_pointer_type deprecated - replaced by generate_headers')
         return # FIXME ignore
         self.enable_pointer_type = lambda : True
         import pkgutil
@@ -96,7 +96,7 @@ class Generator(object):
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/headers.tpl')
         from clang.cindex import TypeKind
-        # assuming a LONG also has the same sizeof than a pointer. 
+        # get sizes from clang library
         word_size = self.parser.get_ctypes_size(TypeKind.LONG)/8
         pointer_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
         longdouble_size = self.parser.get_ctypes_size(TypeKind.LONGDOUBLE)/8
@@ -319,9 +319,9 @@ class Generator(object):
             # Partial --
             # now we do want to have FundamentalType variable use the actual 
             # type, and not be a python object
-            if init_value is None:
-                init_value = ''; # use default ctypes object constructor
-            init_value = "%s(%s)"%(self.type_name(tp.typ, False), init_value)
+            #if init_value is None:
+            #    init_value = ''; # use default ctypes object constructor
+            #init_value = "%s(%s)"%(self.type_name(tp.typ, False), init_value)
             #
             # print it out
             print >> self.stream, "%s = %s # Variable %s" % (tp.name,
