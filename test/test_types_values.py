@@ -317,6 +317,8 @@ class ConstantsTest(ClangTest):
             void * pad[4];
         };
         ''', flags)
+        #import code
+        #code.interact(local=locals())
         self.assertEqual(ctypes.sizeof(self.namespace.struct_X), 304)
 
     #@unittest.skip('')

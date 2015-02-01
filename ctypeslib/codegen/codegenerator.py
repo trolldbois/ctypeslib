@@ -131,7 +131,7 @@ class Generator(object):
             return "%s * %s" % (self.type_name(t.typ, generate), t.size)
         elif isinstance(t, typedesc.PointerType):
             self.enable_pointer_type()
-            return "ctypes.POINTER(%s)" %(self.type_name(t.typ, generate))
+            return "POINTER_T(%s)" %(self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.FunctionType):
             args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
             if "__stdcall__" in t.attributes:
@@ -654,15 +654,15 @@ class Generator(object):
         return
 
     def FundamentalType(self, _type):
-        """
+        """Returns the proper ctypes class name for a fundamental type
+        
         1) activates generation of appropriate headers for
         ## int128_t
         ## c_long_double_t
         2) return appropriate name for type
         """
         log.debug('HERE in FundamentalType for %s %s'%(_type, _type.name))
-        if _type.name in ["void","c_long_double_t","c_uint128","c_int128"]:
-        #if _type.name in ["None","c_uint128","c_int128"]:
+        if _type.name in ["None","c_long_double_t","c_uint128","c_int128"]:
             self.enable_fundamental_type_wrappers()
             return _type.name
         return "ctypes.%s"%(_type.name)
