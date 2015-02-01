@@ -4,7 +4,32 @@ import ctypes
 from util import get_cursor
 from util import get_tu
 from util import ClangTest
-    
+
+
+class BasicTypes(ClangTest):
+    """Tests the basic types for size."""
+    code = '''
+char a;
+unsigned int b;
+unsigned long c;
+double d;
+long double e;
+float f;
+        '''
+
+    def test_x32(self):
+        flags = ['-target','i386-linux']
+        self.convert(self.code, flags)
+        import code
+        code.interact(local=locals())
+        self.assertEqual(ctypes.sizeof(self.namespace.a), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.b), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.c), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.d), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.e), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.f), 4)
+
+
 class Types(ClangTest):
     """Tests if the codegeneration return the proper types."""
 
