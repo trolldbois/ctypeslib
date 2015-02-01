@@ -15,25 +15,53 @@ because we can ctypes.sizeof a type name. Just not a variable.
 (*) Decision pending review
     """
     code = '''
-typedef char a;
-typedef unsigned int b;
-typedef unsigned long c;
-typedef double d;
-typedef long double e;
-typedef float f;
+typedef char _char;
+typedef unsigned int _uint;
+typedef unsigned long _ulong;
+typedef double _double;
+typedef long double _longdouble;
+typedef float _float;
         '''
 
     def test_x32(self):
         flags = ['-target','i386-linux']
         self.convert(self.code, flags)
-        import code
-        code.interact(local=locals())
-        self.assertEqual(ctypes.sizeof(self.namespace.a), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.b), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.c), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.d), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.e), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.f), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace._char), 1)
+        self.assertEqual(ctypes.sizeof(self.namespace._uint), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace._ulong), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace._double), 8)
+        self.assertEqual(ctypes.sizeof(self.namespace._longdouble), 12)
+        self.assertEqual(ctypes.sizeof(self.namespace._float), 4)
+
+    def test_x64(self):
+        flags = ['-target','x86_64-linux']
+        self.convert(self.code, flags)
+        self.assertEqual(ctypes.sizeof(self.namespace._char), 1)
+        self.assertEqual(ctypes.sizeof(self.namespace._uint), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace._ulong), 8)
+        self.assertEqual(ctypes.sizeof(self.namespace._double), 8)
+        self.assertEqual(ctypes.sizeof(self.namespace._longdouble), 16)
+        self.assertEqual(ctypes.sizeof(self.namespace._float), 4)
+
+    def test_win32(self):
+        flags = ['-target','i386-win32']
+        self.convert(self.code, flags)
+        self.assertEqual(ctypes.sizeof(self.namespace._char), 1)
+        self.assertEqual(ctypes.sizeof(self.namespace._uint), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace._ulong), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace._double), 8)
+        self.assertEqual(ctypes.sizeof(self.namespace._longdouble), 8)
+        self.assertEqual(ctypes.sizeof(self.namespace._float), 4)
+
+    def test_win64(self):
+        flags = ['-target','x86_64-win64']
+        self.convert(self.code, flags)
+        self.assertEqual(ctypes.sizeof(self.namespace._char), 1)
+        self.assertEqual(ctypes.sizeof(self.namespace._uint), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace._ulong), 8)
+        self.assertEqual(ctypes.sizeof(self.namespace._double), 8)
+        self.assertEqual(ctypes.sizeof(self.namespace._longdouble), 16)
+        self.assertEqual(ctypes.sizeof(self.namespace._float), 4)
 
 
 class Types(ClangTest):
@@ -56,6 +84,7 @@ class Types(ClangTest):
     @unittest.expectedFailure 
     def test_double_underscore_field(self):
         # cant load in namespace with exec and expect to work.
+        # Double underscore is a special private field in python
         flags = ['-target','i386-linux']
         self.convert(
         '''
@@ -86,7 +115,10 @@ class Types(ClangTest):
         typedef PB* PC;
         typedef PC PD;
         ''', flags)
-        #self.assertEquals('A','B')
+        self.assertEquals(self.namespace.A,self.namespace.B)
+        self.assertEquals(self.namespace.A,self.namespace.C)
+        self.assertEquals(self.namespace.PA,self.namespace.PB)
+        self.assertEquals(self.namespace.PC,self.namespace.PD)
         
        
         

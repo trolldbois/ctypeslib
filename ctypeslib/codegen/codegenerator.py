@@ -56,8 +56,9 @@ class Generator(object):
         If a type is a int128, a long_double_t or a void, some placeholders need
         to be in the generated code to be valid.
         """
-        log.warning('enable_fundamental_type_wrappers deprecated - replaced by generate_headers')
-        return # FIXME ignore
+        # 2015-01 reactivating header templates
+        #log.warning('enable_fundamental_type_wrappers deprecated - replaced by generate_headers')
+        #return # FIXME ignore
         self.enable_fundamental_type_wrappers = lambda : True
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/fundamental_type_name.tpl')
@@ -72,8 +73,9 @@ class Generator(object):
         If a type is a pointer, a platform-independent POINTER_T type needs
         to be in the generated code.
         """
-        log.warning('enable_pointer_type deprecated - replaced by generate_headers')
-        return # FIXME ignore
+        # 2015-01 reactivating header templates
+        #log.warning('enable_pointer_type deprecated - replaced by generate_headers')
+        #return # FIXME ignore
         self.enable_pointer_type = lambda : True
         import pkgutil
         headers = pkgutil.get_data('ctypeslib','data/pointer_type.tpl')
@@ -128,7 +130,7 @@ class Generator(object):
         elif isinstance(t, typedesc.ArrayType):
             return "%s * %s" % (self.type_name(t.typ, generate), t.size)
         elif isinstance(t, typedesc.PointerType):
-            #FIXME DELETE self.enable_pointer_type()
+            self.enable_pointer_type()
             return "ctypes.POINTER(%s)" %(self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.FunctionType):
             args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
@@ -659,9 +661,9 @@ class Generator(object):
         2) return appropriate name for type
         """
         log.debug('HERE in FundamentalType for %s %s'%(_type, _type.name))
-        #if _type.name in ["void","c_long_double_t","c_uint128","c_int128"]:
-        if _type.name in ["None","c_uint128","c_int128"]:
-            #FIXME DELETE self.enable_fundamental_type_wrappers()
+        if _type.name in ["void","c_long_double_t","c_uint128","c_int128"]:
+        #if _type.name in ["None","c_uint128","c_int128"]:
+            self.enable_fundamental_type_wrappers()
             return _type.name
         return "ctypes.%s"%(_type.name)
 
