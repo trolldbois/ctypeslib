@@ -7,6 +7,9 @@ else:
     # Emulate a pointer class using the approriate c_int32/c_int64 type
     # The new class should have :
     # ['__module__', 'from_param', '_type_', '__dict__', '__weakref__', '__doc__']
+    # but the class should be submitted to a unique instance for each base type
+    # to that if A == B, POINTER_T(A) == POINTER_T(B)
+    ctypes._pointer_t_type_cache = {}
     def POINTER_T(pointee):
         # a pointer should have the same length as LONG
         fake_ptr_base_type = ctypes.__REPLACEMENT_TYPE__ 
@@ -16,6 +19,8 @@ else:
             clsname = 'c_void'
         else:
             clsname = pointee.__name__
+        if clsname in ctypes._pointer_t_type_cache:
+            return ctypes._pointer_t_type_cache[clsname]
         # make template
         class _T(_ctypes._SimpleCData,):
             _type_ = '__REPLACEMENT_TYPE_CHAR__'
@@ -29,4 +34,5 @@ else:
             def __init__(self, **args):
                 raise TypeError('This is not a ctypes pointer. It is not instanciable.')
         _class = type('LP_%d_%s'%(__POINTER_SIZE__, clsname), (_T,),{}) 
+        ctypes._pointer_t_type_cache[clsname] = _class
         return _class
