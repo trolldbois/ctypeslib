@@ -316,7 +316,14 @@ class Generator(object):
                 ### DEBUG int() float() 
                 init_value = tp.init
                 #init_value = repr(tp.init)
-            
+            # Partial --
+            # now we do want to have FundamentalType variable use the actual 
+            # type, and not be a python object
+            if init_value is None:
+                init_value = ''; # use default ctypes object constructor
+            init_value = "%s(%s)"%(self.type_name(tp.typ, False), init_value)
+            #
+            # print it out
             print >> self.stream, "%s = %s # Variable %s" % (tp.name,
                                              init_value,
                                              self.type_name(tp.typ, False))
