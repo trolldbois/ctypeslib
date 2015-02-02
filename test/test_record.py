@@ -31,7 +31,7 @@ class RecordTest(ClangTest):
         """Test padding for simple records on i386.
         """
         flags = ['-target','i386-linux']
-        self.gen('test/data/test-clang5.c', flags)        
+        self.gen('test/data/test-padding.c', flags)        
         self.assertEquals(self.namespace.struct_Name2.PADDING_0.offset, 2)
         self.assertEquals(self.namespace.struct_Name2.PADDING_0.size, 2)
         self.assertEquals(self.namespace.struct_Name4.PADDING_0.offset, 2)
@@ -57,7 +57,7 @@ class RecordTest(ClangTest):
         """Test padding for simple records on x64.
         """
         flags = ['-target','x86_64-linux']
-        self.gen('test/data/test-clang5.c', flags)        
+        self.gen('test/data/test-padding.c', flags)        
         self.assertEquals(self.namespace.struct_Name2.PADDING_0.offset, 2)
         self.assertEquals(self.namespace.struct_Name2.PADDING_0.size, 2)
         self.assertEquals(self.namespace.struct_Name4.PADDING_0.offset, 2)

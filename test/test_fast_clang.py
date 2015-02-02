@@ -25,7 +25,8 @@ class CompareSizes(ClangTest):
     def test_records(self):
         """Test sizes of records."""
         targets = ['struct_Name', 'struct_Name2','struct_Node','struct_Node2','myEnum',
-            'my__quad_t','my_bitfield','mystruct']
+                   'struct_Node3', 'struct_Node4', 'my__quad_t','my_bitfield',
+                   'mystruct']
         for flags in [ ['-target','i386-linux'], ['-target','x86_64-linux'] ]:
             self.gen('test/data/test-records.c', flags)
             for name in targets:
@@ -34,7 +35,8 @@ class CompareSizes(ClangTest):
     def test_records_fields_offset(self):
         """Test offset of records fields."""
         targets = ['struct_Name', 'struct_Name2','struct_Node','struct_Node2',
-            'my__quad_t','my_bitfield','mystruct']
+                   'struct_Node3', 'struct_Node4', 'my__quad_t','my_bitfield',
+                   'mystruct']
         for flags in [ ['-target','i386-linux'], ['-target','x86_64-linux'] ]:
             self.gen('test/data/test-records.c', flags)
             for name in targets:
