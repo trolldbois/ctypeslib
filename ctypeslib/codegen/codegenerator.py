@@ -39,17 +39,6 @@ class Generator(object):
 
         self.done = set() # type descriptions that have been generated
         self.names = set() # names that have been generated
-
-    def enable_pythonic_types(self):
-        """
-        If a type name starts with '__', some wrapper needs to be used for
-        the generated code to be valid.
-        """
-        self.enable_pythonic_types = lambda : True
-        import pkgutil
-        headers = pkgutil.get_data('ctypeslib','data/pythonic_type_name.tpl')
-        print >> self.imports, headers
-        return
     
     def enable_fundamental_type_wrappers(self):
         """
@@ -516,8 +505,7 @@ class Generator(object):
                 type_name = self.type_name(f.type)
                 # handle "__" prefixed names by using a wrapper
                 if type_name.startswith("__"):
-                    self.enable_pythonic_types()
-                    type_name = "_p_type('%s')"%type_name
+                    type_name = "globals()['%s']"%type_name
                 # a bitfield needs a triplet
                 if f.is_bitfield is False:
                     print >> self.stream, "    ('%s', %s)," % \
