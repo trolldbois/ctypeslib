@@ -294,18 +294,26 @@ class Generator(object):
                                              self.type_name(tp.init), 
                                              [x for x in tp.typ.iterArgNames()])
         else:
-            if ( isinstance(tp.typ, typedesc.PointerType) and 
-                 isinstance(tp.typ.typ, typedesc.FundamentalType) and
+            init_value = tp.init
+            if isinstance(tp.typ, typedesc.PointerType):
+                if (isinstance(tp.typ.typ, typedesc.FundamentalType) and
                  (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
-                # char *
-                init_value = repr(tp.init)
+                    # char *
+                    init_value = repr(tp.init)
+                else:
+                    init_value = self.type_name(tp.typ, False)
             elif ( isinstance(tp.typ, typedesc.FundamentalType) and
                  (tp.typ.name == "c_char" or tp.typ.name == "c_wchar")):
                 # char
                 init_value = repr(tp.init)
+            elif isinstance(tp.typ, typedesc.Structure):
+                init_value = self.type_name(tp.typ, False)
             else:
                 ### DEBUG int() float() 
                 init_value = tp.init
+                print init_value
+                import code
+                code.interact(local=locals())
                 #init_value = repr(tp.init)
             # Partial --
             # now we do want to have FundamentalType variable use the actual 
