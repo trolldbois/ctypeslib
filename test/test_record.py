@@ -8,42 +8,13 @@ from util import ClangTest
 class RecordTest(ClangTest):
     """Test if records are correctly generated for different target archictecture.
     """
-    #@unittest.skip('')
-    def test_simple_x32(self):
-        """Test sizes for simple POD types on i386.
-        """
-        flags = ['-target','i386-linux']
-        self.gen('test/data/test-clang0.c', flags)
-        self.assertEquals(ctypes.sizeof(self.namespace.badaboum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.you_badaboum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.big_badaboum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.you_big_badaboum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.double_badaboum), 8)
-        self.assertEquals(ctypes.sizeof(self.namespace.long_double_badaboum), 12)
-        self.assertEquals(ctypes.sizeof(self.namespace.float_badaboum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.ptr), 4)
-
-    #@unittest.skip('')
-    def test_simple_x64(self):
-        """Test sizes for simple POD types on x64.
-        """
-        flags = ['-target','x86_64-linux']
-        self.gen('test/data/test-clang0.c', flags)
-        self.assertEquals(ctypes.sizeof(self.namespace.badaboum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.you_badaboum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.big_badaboum), 8)
-        self.assertEquals(ctypes.sizeof(self.namespace.you_big_badaboum), 8)
-        self.assertEquals(ctypes.sizeof(self.namespace.double_badaboum), 8)
-        self.assertEquals(ctypes.sizeof(self.namespace.long_double_badaboum), 16)
-        self.assertEquals(ctypes.sizeof(self.namespace.float_badaboum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.ptr), 8)
 
     #@unittest.skip('')
     def test_records_x32(self):
         """Test sizes for simple records on i386.
         """
         flags = ['-target','i386-linux']
-        self.gen('test/data/test-clang1.c', flags)
+        self.gen('test/data/test-records.c', flags)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_Name), 18)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_Name2), 20)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_Node), 16)

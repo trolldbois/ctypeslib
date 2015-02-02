@@ -55,7 +55,7 @@ class RecordTest(ClangTest):
         self._check_sizes()
         self._check_offsets()
 
-    @unittest.expectedFailure #('TODO, fix the codegen') 
+    @unittest.expectedFailure #('TODO, fix the codegen because python doesnt like that') 
     def test_char_bitfield(self):
         ''' "bit fields not allowed for type c_char" '''
         flags = ['-target','x86_64-linux']

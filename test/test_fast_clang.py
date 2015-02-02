@@ -11,13 +11,12 @@ class CompareSizes(ClangTest):
 
 
     #@unittest.skip('')
-    def test_simple(self):
+    def test_clang0(self):
         """Test sizes of pod."""
-        targets = ['badaboum', 'you_badaboum', 'big_badaboum', 
-            'you_big_badaboum', 'double_badaboum', 'long_double_badaboum',
-            'float_badaboum', 'ptr']
+        targets = ['_char', '_short', '_int', '_uint', '_long', '_ulong', 
+                   '_double', '_longdouble', '_float', '_ptr']
         for flags in [ ['-target','i386-linux'], ['-target','x86_64-linux'] ]:
-            self.gen('test/data/test-clang0.c', flags)
+            self.gen('test/data/test-basic-types.c', flags)
             for name in targets:
                 self.assertSizes(name)
 
@@ -28,7 +27,7 @@ class CompareSizes(ClangTest):
         targets = ['struct_Name', 'struct_Name2','struct_Node','struct_Node2','myEnum',
             'my__quad_t','my_bitfield','mystruct']
         for flags in [ ['-target','i386-linux'], ['-target','x86_64-linux'] ]:
-            self.gen('test/data/test-clang1.c', flags)
+            self.gen('test/data/test-records.c', flags)
             for name in targets:
                 self.assertSizes(name)
 
@@ -37,7 +36,7 @@ class CompareSizes(ClangTest):
         targets = ['struct_Name', 'struct_Name2','struct_Node','struct_Node2',
             'my__quad_t','my_bitfield','mystruct']
         for flags in [ ['-target','i386-linux'], ['-target','x86_64-linux'] ]:
-            self.gen('test/data/test-clang1.c', flags)
+            self.gen('test/data/test-records.c', flags)
             for name in targets:
                 self.assertOffsets(name)
 
