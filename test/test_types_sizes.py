@@ -23,62 +23,54 @@ typedef long double _longdouble;
 typedef float _float;
         '''
 
+    def _check(self):
+        """assertSizes compares the python sizeof with the clang sizeof
+        This _check is reusable for every arch."""
+        self.assertSizes("_char")
+        self.assertSizes("_uint")
+        self.assertSizes("_ulong")
+        self.assertSizes("_double")
+        self.assertSizes("_longdouble")
+        self.assertSizes("_float")
+
     def test_x32(self):
         flags = ['-target','i386-linux']
         self.convert(self.code, flags)
-        self.assertEqual(ctypes.sizeof(self.namespace._char), 1)
-        self.assertEqual(ctypes.sizeof(self.namespace._uint), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace._ulong), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace._double), 8)
-        self.assertEqual(ctypes.sizeof(self.namespace._longdouble), 12)
-        self.assertEqual(ctypes.sizeof(self.namespace._float), 4)
+        self._check()
 
     def test_x64(self):
         flags = ['-target','x86_64-linux']
         self.convert(self.code, flags)
-        self.assertEqual(ctypes.sizeof(self.namespace._char), 1)
-        self.assertEqual(ctypes.sizeof(self.namespace._uint), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace._ulong), 8)
-        self.assertEqual(ctypes.sizeof(self.namespace._double), 8)
-        self.assertEqual(ctypes.sizeof(self.namespace._longdouble), 16)
-        self.assertEqual(ctypes.sizeof(self.namespace._float), 4)
+        self._check()
 
     def test_win32(self):
         flags = ['-target','i386-win32']
         self.convert(self.code, flags)
-        self.assertEqual(ctypes.sizeof(self.namespace._char), 1)
-        self.assertEqual(ctypes.sizeof(self.namespace._uint), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace._ulong), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace._double), 8)
-        self.assertEqual(ctypes.sizeof(self.namespace._longdouble), 8)
-        self.assertEqual(ctypes.sizeof(self.namespace._float), 4)
+        self._check()
 
     def test_win64(self):
         flags = ['-target','x86_64-win64']
         self.convert(self.code, flags)
-        self.assertEqual(ctypes.sizeof(self.namespace._char), 1)
-        self.assertEqual(ctypes.sizeof(self.namespace._uint), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace._ulong), 8)
-        self.assertEqual(ctypes.sizeof(self.namespace._double), 8)
-        self.assertEqual(ctypes.sizeof(self.namespace._longdouble), 16)
-        self.assertEqual(ctypes.sizeof(self.namespace._float), 4)
+        self._check()
 
 
 class Types(ClangTest):
     """Tests if the codegeneration return the proper types."""
-
-    def test_double_underscore(self):
-        flags = ['-target','i386-linux']
-        self.convert(
-        '''
+    code = '''
         struct __X {
             int a;
         };
         typedef struct __X __Y;
         __Y v1;
-        ''', flags)
-        self.assertEqual(ctypes.sizeof(self.namespace.struct___X), 4)
-        self.assertEqual(ctypes.sizeof(getattr(self.namespace, '__Y')), 4)
+        '''
+
+    def test_double_underscore(self):
+        flags = ['-target','i386-linux']
+        self.convert(self.code, flags)
+        self.assertSizes("struct___X")
+        # works here, but doesnt work below
+        self.assertSizes("__Y")
+        # That is not a supported test self.assertSizes("struct___X.a")
         self.assertEqual(self.namespace.v1, None)
 
     @unittest.expectedFailure 
@@ -97,12 +89,10 @@ class Types(ClangTest):
             __Y b;
             };
         ''', flags)
-        self.assertEqual(ctypes.sizeof(self.namespace.struct___X), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.struct_Z), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.struct_Z.b), 4)
-        self.assertEqual(ctypes.sizeof(getattr(self.namespace, '__Y')), 4)
-        self.assertEqual(self.namespace.v1, None)
+        self.assertSizes("__Y")
 
+
+class CompareTypes(ClangTest):
     def test_typedef(self):
         flags = ['-target','i386-linux']
         self.convert(

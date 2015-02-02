@@ -159,7 +159,7 @@ class ClangTest(unittest.TestCase):
         return
 
     def _get_target_with_struct_hack(self, name):
-        """ # HACK FIXME: because we rename "struct x" to struct_x, we have to hack
+        """ because we rename "struct x" to struct_x, we have to reverse that
         """
         target = get_cursor(self.parser.tu, name)
         if target is None:
