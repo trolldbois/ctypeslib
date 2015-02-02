@@ -80,7 +80,7 @@ class ConstantsTest(ClangTest):
 
     def test_unicode(self):
         ''' unicode conversion test from unittest in clang'''
-        self.gen('test/data/test-ctypes7.cpp',  ['-x','c++'])        
+        self.gen('test/data/test-strings.cpp',  ['-x','c++'])        
         # force c++ lang for wchar
         self.assertEqual(self.namespace.aa, '\xc0\xe9\xee\xf5\xfc') #"Àéîõü")
         self.assertEqual(self.namespace.a, "Кошка")
@@ -90,7 +90,7 @@ class ConstantsTest(ClangTest):
     @unittest.expectedFailure
     def test_unicode_wchar(self):
         ''' unicode conversion test from unittest in clang'''
-        self.gen('test/data/test-ctypes7.cpp',  ['-x','c++'])
+        self.gen('test/data/test-strings.cpp',  ['-x','c++'])
         # should be 10 or 20  
         self.assertEqual(len(self.namespace.b.encode("utf-8")), 10)
         # utf-32, not supported. Should be 6 or 12
@@ -99,7 +99,7 @@ class ConstantsTest(ClangTest):
     #@unittest.expectedFailure
     def test_unicode_cpp11(self):
         ''' unicode conversion test from unittest in clang'''
-        self.gen('test/data/test-ctypes7.cpp',  ['-x','c++','--std=c++11'])        
+        self.gen('test/data/test-strings.cpp',  ['-x','c++','--std=c++11'])        
         # force c++ lang for wchar
         # source code failures , wchar_16_t, u8 and u8R not recognised
         self.assertEqual(len(self.namespace.c.encode('utf-8')), 12*8/8 -1) # 

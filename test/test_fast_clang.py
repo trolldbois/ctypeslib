@@ -46,7 +46,7 @@ class CompareSizes(ClangTest):
         targets = ['int8_t', 'intptr_t', 'intmax_t' ] 
         #no size here ['a','b','c','d','e','f','g','h']
         for flags in [ ['-target','i386-linux'], ['-target','x86_64-linux'] ]:
-            self.gen('test/data/test-clang2.cpp', flags)
+            self.gen('test/data/test-stdint.cpp', flags)
             for name in targets:
                 self.assertSizes(name)
 
