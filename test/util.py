@@ -188,9 +188,7 @@ class ClangTest(unittest.TestCase):
         target = self._get_target_with_struct_hack(name)
         target = target.type.get_declaration()
         self.assertTrue(target is not None, '%s was not found in source'%name )
-        # TODO use get_fields
-        members = [c.displayname for c in target.get_children() 
-                   if c.kind.name == 'FIELD_DECL']
+        members = [c.displayname for c in target.type.get_fields()]
         _clang_type = target.type
         _python_type = getattr(self.namespace,name)
         # let'shandle bitfield - precalculate offsets
