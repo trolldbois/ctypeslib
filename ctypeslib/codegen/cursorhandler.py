@@ -804,7 +804,7 @@ class CursorHandler(ClangHandler):
         bits = None
         if cursor.is_bitfield():
             bits = cursor.get_bitfield_width()
-            name = "anonymous_bitfield"
+            name = self.get_unique_name(cursor)
         else:
             #code.interact(local=locals())
             bits = cursor.type.get_size() * 8
