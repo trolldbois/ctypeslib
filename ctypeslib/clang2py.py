@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import sys
+import pkg_resources
 
 from ctypeslib.codegen.codegenerator import generate_code
 from ctypeslib.codegen import typedesc
@@ -49,8 +50,12 @@ def main(argv=None):
     def windows_dlls(option, opt, value, parser):
         parser.values.dlls.extend(windows_dll_names)
 
+    version = pkg_resources.require("ctypeslib2")[0].version
+
     parser = argparse.ArgumentParser(prog='clang2py', 
-                 description='generate python ABI code from C code')
+                 description='Version %s. Generate python ABI code from C code'%(version))
+    parser.add_argument('-V', '--version', action='version',                    
+                        version="clang2py version %s"%(version))
     parser.add_argument("--debug", dest="debug", action="store_const", 
                  const=True, help='setLevel to DEBUG')
     parser.add_argument("-a", dest="generate_includes", action="store_true", 
