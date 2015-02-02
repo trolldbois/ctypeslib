@@ -1,7 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Unit test module."""
+"""Unit test module.
+
+Unit Tests in this module will often compare size and offset between the 
+libclang version and the ctypeslib-processed python version the types.
+
+Because the objective of this framework is not to verify if libclang or the 
+python bindings work, there will be no testing of specific results of libclang.
+E.g., ig libclang says a long is 4 bytes, we trust libclang.
+
+"""
 
 __author__ = "Loic Jaquemet"
 __copyright__ = "Copyright (C) 2013 Loic Jaquemet"

@@ -181,10 +181,14 @@ class ClangTest(unittest.TestCase):
     
     def assertOffsets(self, name):
         """ Compare offset of records' fields using clang offsets versus 
-        python offsets."""
+        python offsets.
+        name: the name of the structure.
+        The findings and offset comparaison of members fields is automatic.
+        """
         target = self._get_target_with_struct_hack(name)
         target = target.type.get_declaration()
         self.assertTrue(target is not None, '%s was not found in source'%name )
+        # TODO use get_fields
         members = [c.displayname for c in target.get_children() 
                    if c.kind.name == 'FIELD_DECL']
         _clang_type = target.type

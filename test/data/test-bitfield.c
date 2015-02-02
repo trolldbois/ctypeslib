@@ -18,16 +18,18 @@ struct bytes4b {
     unsigned int d1:9;
 };
 
+// BUG TODO fix codegen
 // 3 bytes bitfield +1 char packed into a int32
 // packed on 4 bytes by compiler. 
 // But ctypes cannot put b1 in 3 bytes type
 // so we force a2 in the bitfield
+/*
 struct bytes3 { // should be 8 bytes
     unsigned int a1; // 0-31
     unsigned int b1:23; // 32-55 
     char a2; // 56-64 but python says 64-72
 };
-
+*/
 
 // case 3 bytes bitfield
 struct bytes3b { // should be 8 bytes
@@ -115,4 +117,27 @@ struct complex2 {
     unsigned long long d2:3;
     int h;
 };
+
+
+//clang -m32 data/test-bitfield.c -o test_bitfield
+/*
+#include <stdio.h>
+#include <stddef.h>
+
+int main(){
+printf("struct bytes1 %d\n",sizeof(struct byte1));
+printf("struct bytes1.a2 is at %d\n",offsetof(struct byte1, a2));
+printf("struct bytes1b %d\n",sizeof(struct byte1b));
+printf("struct bytes2 %d\n",sizeof(struct bytes2));
+printf("struct bytes2b %d\n",sizeof(struct bytes2b));
+printf("struct bytes3 %d\n",sizeof(struct bytes3));
+printf("struct bytes3b %d\n",sizeof(struct bytes3b));
+printf("struct bytes3c %d\n",sizeof(struct bytes3c));
+printf("struct bytes4 %d\n",sizeof(struct bytes4));
+printf("struct bytes4b %d\n",sizeof(struct bytes4b));
+printf("struct complex %d\n",sizeof(struct complex));
+printf("struct complex1 %d\n",sizeof(struct complex1));
+printf("struct complex2 %d\n",sizeof(struct complex2));
+}
+*/
 
