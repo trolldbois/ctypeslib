@@ -193,10 +193,23 @@ class ClangTest(unittest.TestCase):
                    if c.kind.name == 'FIELD_DECL']
         _clang_type = target.type
         _python_type = getattr(self.namespace,name)
-        # Does not handle bitfield
+        # let'shandle bitfield - precalculate offsets
+        fields_offsets = dict()
+        for field_desc in _python_type._fields_:
+            _n = field_desc[0]
+            _f = getattr(_python_type, _n)
+            bfield_bits = _f.size >> 16
+            if bfield_bits:
+                ofs = 8 * _f.offset + _f.size & 0xFFFF
+            else:
+                ofs = 8 * _f.offset
+            # base offset
+            fields_offsets[_n] = ofs
+        # now use that
         for member in members:
             _c_offset = _clang_type.get_offset(member)
-            _p_offset = 8*getattr(_python_type, member).offset
+            #_p_offset = 8*getattr(_python_type, member).offset
+            _p_offset = fields_offsets[member]
             self.assertEquals( _c_offset, _p_offset, 
                 'Offsets for target: %s.%s Clang:%d Python:%d flags:%s'%(
                     name, member, _c_offset, _p_offset, self.parser.flags))
