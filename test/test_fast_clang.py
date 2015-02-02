@@ -11,7 +11,7 @@ class CompareSizes(ClangTest):
 
 
     #@unittest.skip('')
-    def test_clang0(self):
+    def test_basic_types_size(self):
         """Test sizes of pod."""
         targets = ['_char', '_short', '_int', '_uint', '_long', '_ulong', 
                    '_double', '_longdouble', '_float', '_ptr']
@@ -22,7 +22,7 @@ class CompareSizes(ClangTest):
 
     #@unittest.skip('')
     #@unittest.expectedFailure # packed attribute
-    def test_records(self):
+    def test_records_size(self):
         """Test sizes of records."""
         targets = ['struct_Name', 'struct_Name2','struct_Node','struct_Node2','myEnum',
                    'struct_Node3', 'struct_Node4', 'my__quad_t','my_bitfield',
@@ -52,14 +52,15 @@ class CompareSizes(ClangTest):
             for name in targets:
                 self.assertSizes(name)
 
-    def test_record_anonymous(self):
-        """Test sizes of anonymous record fields."""
-        targets = ['complex4']#, 'complex2', 'complex3', 'complex4'] 
-        for flags in [ ['-target','i386-linux']]:#:, ['-target','x86_64-linux'] ]:
-            self.gen('test/data/test-clang6.c', flags)
+    def test_record_complex(self):
+        """Test sizes of complex record fields."""
+        targets = ['complex1', 'complex2', 'complex3', 'complex4', 'complex5',
+                   'complex6'] 
+        for flags in [ ['-target','i386-linux'], ['-target','x86_64-linux'] ]:
+            self.gen('test/data/test-records-complex.c', flags)
             for name in targets:
                 self.assertSizes(name)
-        
+                self.assertOffsets(name)
 
 
 import logging, sys
