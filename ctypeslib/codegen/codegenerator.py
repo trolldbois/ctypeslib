@@ -311,9 +311,9 @@ class Generator(object):
             else:
                 ### DEBUG int() float() 
                 init_value = tp.init
-                print init_value
-                import code
-                code.interact(local=locals())
+                #print init_value
+                #import code
+                #code.interact(local=locals())
                 #init_value = repr(tp.init)
             # Partial --
             # now we do want to have FundamentalType variable use the actual 

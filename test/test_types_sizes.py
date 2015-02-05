@@ -70,10 +70,8 @@ class Types(ClangTest):
         self.assertSizes("struct___X")
         # works here, but doesnt work below
         self.assertSizes("__Y")
-        # That is not a supported test self.assertSizes("struct___X.a")
-        self.assertEqual(self.namespace.v1, None)
+        self.assertSizes("v1")
 
-    @unittest.expectedFailure 
     def test_double_underscore_field(self):
         # cant load in namespace with exec and expect to work.
         # Double underscore is a special private field in python
