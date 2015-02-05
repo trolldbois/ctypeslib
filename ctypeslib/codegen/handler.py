@@ -66,7 +66,8 @@ class ClangHandler(object):
         """Transforms an USR into a valid python name."""
         # FIXME see cindex.SpellingCache
         for k, v in [('<','_'), ('>','_'), ('::','__'), (',',''), (' ',''),
-                     ("$", "DOLLAR"), (".", "DOT"), ("@", "_"), (":", "_")]:
+                     ("$", "DOLLAR"), (".", "DOT"), ("@", "_"), (":", "_"),
+                     ('-','_')]:
             if k in name: # template
                 name = name.replace(k,v)
             #FIXME: test case ? I want this func to be neutral on C valid names.
