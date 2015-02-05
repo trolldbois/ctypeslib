@@ -28,7 +28,6 @@ setup(
                ],
     package_data={'ctypeslib': ['data/fundamental_type_name.tpl',
                                 'data/pointer_type.tpl',
-                                'data/pythonic_type_name.tpl',
                                 'data/headers.tpl',]},
     scripts = ['scripts/clang2py'],
     install_requires = ["clang>=3.7.dev227525"],

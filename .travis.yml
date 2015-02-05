@@ -12,12 +12,12 @@ python:
 install:
 # travis-ci use Ubuntu 12.04.5 LTS (Precise Pangolin) 64bit
 # install snapshot version of libclang1 libclang-common-3.X-dev
-  - sudo apt-add-repository "deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.5 main" --yes
+  - sudo apt-add-repository "deb http://llvm.org/apt/precise/ llvm-toolchain-precise main" --yes
   - sudo apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main"  --yes
   - sudo apt-get update 
-  - sudo apt-get install libclang1-3.5 libclang-common-3.5-dev  --yes --force-yes
+  - sudo apt-get install libclang1-3.7 libclang-common-3.7-dev  --yes --force-yes
 #permission denied  - sudo echo `echo "/usr/lib/llvm-3.7/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
-  - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang-3.5.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
+  - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang-3.7.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
   - sudo ldconfig  
 # tests dependencies
 #  - pip install nose
