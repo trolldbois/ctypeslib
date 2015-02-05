@@ -9,6 +9,7 @@ import logging
 
 log = logging.getLogger('utils')
 
+
 def get_tu(source, lang='c', all_warnings=False, flags=[]):
     """Obtain a translation unit from source and language.
 
@@ -34,7 +35,8 @@ def get_tu(source, lang='c', all_warnings=False, flags=[]):
         args += ['-Wall', '-Wextra']
 
     return TranslationUnit.from_source(name, args, unsaved_files=[(name,
-                                       source)])
+                                                                   source)])
+
 
 def get_cursor(source, spelling):
     """Obtain a cursor from a source object.
@@ -62,7 +64,8 @@ def get_cursor(source, spelling):
             return result
 
     return None
- 
+
+
 def get_cursors(source, spelling):
     """Obtain all cursors from a source object with a specific spelling.
 
@@ -89,6 +92,7 @@ def get_cursors(source, spelling):
 
     return cursors
 
+
 def decorator(dec):
     def new_decorator(f):
         g = dec(f)
@@ -101,6 +105,7 @@ def decorator(dec):
     new_decorator.__dict__.update(dec.__dict__)
     return new_decorator
 
+
 @decorator
 def log_entity(func):
     def fn(*args, **kwargs):
@@ -108,13 +113,12 @@ def log_entity(func):
         if name == '':
             parent = args[1].semantic_parent
             if parent:
-                name = 'child of %s'%parent.displayname
-        log.debug("%s: displayname:'%s'"%(func.__name__, name))
-        #print 'calling {}'.format(func.__name__)
+                name = 'child of %s' % parent.displayname
+        log.debug("%s: displayname:'%s'" % (func.__name__, name))
+        # print 'calling {}'.format(func.__name__)
         return func(*args, **kwargs)
     return fn
 
-    
 
 __all__ = [
     'get_cursor',

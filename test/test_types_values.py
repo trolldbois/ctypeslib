@@ -6,7 +6,9 @@ import ctypes
 
 from util import ClangTest
 
+
 class ConstantsTest(ClangTest):
+
     """Tests from the original ctypeslib.
     """
 
@@ -27,7 +29,7 @@ class ConstantsTest(ClangTest):
         unsigned long long ui3 = 0xFFFFFFFFFFFFFFFFULL;
         unsigned long long ui2 = 0x8000000000000000ULL;
         unsigned long long ui1 = 0x7FFFFFFFFFFFFFFFULL;
-        """, flags=['-target','x86_64'])
+        """, flags=['-target', 'x86_64'])
         self.assertEquals(self.namespace.i1, 0x7FFFFFFFFFFFFFFF)
         self.assertEquals(self.namespace.i2, -1)
         self.assertEquals(self.namespace.ui1, 0x7FFFFFFFFFFFFFFF)
@@ -69,9 +71,9 @@ class ConstantsTest(ClangTest):
 
     def test_wchar(self):
         self.convert("""
-        wchar_t X = L'X'; 
+        wchar_t X = L'X';
         wchar_t w_zero = 0;
-        """, ['-x','c++']) # force c++ lang for wchar
+        """, ['-x', 'c++'])  # force c++ lang for wchar
         self.assertEqual(self.namespace.X, 'X')
         self.assertEqual(type(self.namespace.X), unicode)
         self.assertEqual(self.namespace.w_zero, 0)
@@ -80,55 +82,61 @@ class ConstantsTest(ClangTest):
 
     def test_unicode(self):
         ''' unicode conversion test from unittest in clang'''
-        self.gen('test/data/test-strings.cpp',  ['-x','c++'])        
+        self.gen('test/data/test-strings.cpp', ['-x', 'c++'])
         # force c++ lang for wchar
-        self.assertEqual(self.namespace.aa, '\xc0\xe9\xee\xf5\xfc') #"Àéîõü")
+        self.assertEqual(self.namespace.aa, '\xc0\xe9\xee\xf5\xfc')  # "Àéîõü")
         self.assertEqual(self.namespace.a, "Кошка")
-        self.assertEqual(len(self.namespace.aa), 6*8/8 -1) # NULL terminated 
-        self.assertEqual(len(self.namespace.a), 11*8/8 -1) # 
+        # NULL terminated
+        self.assertEqual(len(self.namespace.aa), 6 * 8 / 8 - 1)
+        self.assertEqual(len(self.namespace.a), 11 * 8 / 8 - 1)
 
     @unittest.expectedFailure
     def test_unicode_wchar(self):
         ''' unicode conversion test from unittest in clang'''
-        self.gen('test/data/test-strings.cpp',  ['-x','c++'])
-        # should be 10 or 20  
+        self.gen('test/data/test-strings.cpp', ['-x', 'c++'])
+        # should be 10 or 20
         self.assertEqual(len(self.namespace.b.encode("utf-8")), 10)
         # utf-32, not supported. Should be 6 or 12
-        self.assertEqual(len(self.namespace.b2.encode("utf-8")), 6) 
-         
+        self.assertEqual(len(self.namespace.b2.encode("utf-8")), 6)
+
     #@unittest.expectedFailure
     def test_unicode_cpp11(self):
         ''' unicode conversion test from unittest in clang'''
-        self.gen('test/data/test-strings.cpp',  ['-x','c++','--std=c++11'])        
+        self.gen('test/data/test-strings.cpp', ['-x', 'c++', '--std=c++11'])
         # force c++ lang for wchar
         # source code failures , wchar_16_t, u8 and u8R not recognised
-        self.assertEqual(len(self.namespace.c.encode('utf-8')), 12*8/8 -1) # 
-        self.assertEqual(len(self.namespace.d.encode('utf-8')), 12*8/8 -1) # 
-        self.assertEqual(len(self.namespace.e.encode('utf-8')), 11) # should be 6*16/8
-        self.assertEqual(len(self.namespace.f.encode('utf-8')), 11) # should be 6*32/8
-        self.assertEqual(len(self.namespace.g.encode('utf-8')), 11) # should be 6*16/8 
-        self.assertEqual(len(self.namespace.h.encode('utf-8')), 11) # should be 6*32/8
-        self.assertEqual(len(self.namespace.i.encode('utf-8')), 11) # # should be 6*16/8
+        self.assertEqual(len(self.namespace.c.encode('utf-8')), 12 * 8 / 8 - 1)
+        self.assertEqual(len(self.namespace.d.encode('utf-8')), 12 * 8 / 8 - 1)
+        # should be 6*16/8
+        self.assertEqual(len(self.namespace.e.encode('utf-8')), 11)
+        # should be 6*32/8
+        self.assertEqual(len(self.namespace.f.encode('utf-8')), 11)
+        # should be 6*16/8
+        self.assertEqual(len(self.namespace.g.encode('utf-8')), 11)
+        # should be 6*32/8
+        self.assertEqual(len(self.namespace.h.encode('utf-8')), 11)
+        # should be 6*16/8
+        self.assertEqual(len(self.namespace.i.encode('utf-8')), 11)
 
     def test_char(self):
         self.convert("""
         char x = 'x';
         char zero = 0;
-        """) 
+        """)
         self.assertEqual(self.namespace.x, 'x')
         self.assertEqual(type(self.namespace.x), str)
-        self.assertEqual(self.namespace.zero, 0) # 
+        self.assertEqual(self.namespace.zero, 0)
         # type casting will not work in ctypes anyway
-        #self.assertEqual(type(self.namespace.zero), str) 
+        #self.assertEqual(type(self.namespace.zero), str)
 
     def test_char_p(self):
         self.convert("""
         char x[10];
         char s[] = {'1',']'};
         char *p = "abcde";
-        """) 
+        """)
         self.assertEqual(self.namespace.x, [])
-        self.assertEqual(self.namespace.s, ['1',']'])
+        self.assertEqual(self.namespace.s, ['1', ']'])
         self.assertEqual(self.namespace.p, "abcde")
 
     def test_typedef(self):
@@ -153,11 +161,11 @@ class ConstantsTest(ClangTest):
         int tab3[] = {1,2,3};
         ''')
         self.assertEqual(self.namespace.c1, [])
-        self.assertEqual(self.namespace.c2, ['a','b','c'])
-        self.assertEqual(self.namespace.c3, ['a','b','c'])
+        self.assertEqual(self.namespace.c2, ['a', 'b', 'c'])
+        self.assertEqual(self.namespace.c3, ['a', 'b', 'c'])
         self.assertEqual(self.namespace.tab1, [])
-        self.assertEqual(self.namespace.tab2, [1,2,3])
-        self.assertEqual(self.namespace.tab3, [1,2,3])
+        self.assertEqual(self.namespace.tab2, [1, 2, 3])
+        self.assertEqual(self.namespace.tab3, [1, 2, 3])
 
     def test_incomplete_array(self):
         self.convert("""
@@ -198,7 +206,7 @@ class ConstantsTest(ClangTest):
         typedef struct p {
             x_n_t g[1];
         } *p_t;
-        ''', flags=['-target','x86_64'])
+        ''', flags=['-target', 'x86_64'])
         self.assertEqual(ctypes.sizeof(self.namespace.struct_x), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.x_n_t), 8)
         self.assertEqual(ctypes.sizeof(self.namespace.struct_p), 8)
@@ -215,10 +223,10 @@ class ConstantsTest(ClangTest):
         typedef struct {
             foo_t baz;
         } somestruct;
-        ''', flags=['-target','i386-linux'])
+        ''', flags=['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.struct_foo), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.foo_t), 4*256)
-        self.assertEqual(ctypes.sizeof(self.namespace.somestruct), 4*256)
+        self.assertEqual(ctypes.sizeof(self.namespace.foo_t), 4 * 256)
+        self.assertEqual(ctypes.sizeof(self.namespace.somestruct), 4 * 256)
 
     def test_struct_with_struct_array_member(self):
         self.convert('''
@@ -228,10 +236,10 @@ class ConstantsTest(ClangTest):
         struct B {
             structA_t x[8];
         };
-        ''', flags=['-target','i386-linux'])
+        ''', flags=['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.struct_A), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.structA_t), 4)
-        self.assertEqual(ctypes.sizeof(self.namespace.struct_B), 4*8)
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_B), 4 * 8)
 
     def test_var_decl_and_scope(self):
         self.convert('''
@@ -250,15 +258,21 @@ class ConstantsTest(ClangTest):
         extern int (*func_ptr)(const char *arg);
         ''')
         self.assertEqual(self.namespace.func_ptr._restype_, ctypes.c_int)
-        self.assertEqual(self.namespace.func_ptr._argtypes_[0].__name__, 'LP_c_char')
+        self.assertEqual(
+            self.namespace.func_ptr._argtypes_[0].__name__,
+            'LP_c_char')
 
     def test_extern_function_pointer_multiarg(self):
         self.convert('''
         extern int (*func_ptr)(const char *arg, int c);
         ''')
         self.assertEqual(self.namespace.func_ptr._restype_, ctypes.c_int)
-        self.assertEqual(self.namespace.func_ptr._argtypes_[0].__name__, 'LP_c_char')
-        self.assertEqual(self.namespace.func_ptr._argtypes_[1].__name__, 'c_int')
+        self.assertEqual(
+            self.namespace.func_ptr._argtypes_[0].__name__,
+            'LP_c_char')
+        self.assertEqual(
+            self.namespace.func_ptr._argtypes_[1].__name__,
+            'c_int')
 
     def test_operation(self):
         self.convert('''
@@ -267,10 +281,10 @@ class ConstantsTest(ClangTest):
         int i3 = -((1-2)*(1-2));
         int j = -i;
         ''')
-        self.assertEqual(self.namespace.i, -1 )
-        self.assertEqual(self.namespace.i2, -1 )
-        self.assertEqual(self.namespace.i3, -1 )
-        self.assertEqual(self.namespace.j, 1 )
+        self.assertEqual(self.namespace.i, -1)
+        self.assertEqual(self.namespace.i2, -1)
+        self.assertEqual(self.namespace.i3, -1)
+        self.assertEqual(self.namespace.j, 1)
 
     @unittest.expectedFailure
     def test_array_operation(self):
@@ -280,10 +294,10 @@ class ConstantsTest(ClangTest):
         int b[2] = {+1,-2-2+2};
         int c[2] = {+i,-i*2};
         ''')
-        self.assertEqual(self.namespace.a, [1,-2] )
-        self.assertEqual(self.namespace.b, [1,-2] )
-        self.assertEqual(self.namespace.c, [1,-2] ) # unsuported ref_expr
-  
+        self.assertEqual(self.namespace.a, [1, -2])
+        self.assertEqual(self.namespace.b, [1, -2])
+        self.assertEqual(self.namespace.c, [1, -2])  # unsuported ref_expr
+
     # we are not actually looking at signed/unsigned types...
     @unittest.expectedFailure
     def test_uint_minus_one(self):
@@ -294,7 +308,7 @@ class ConstantsTest(ClangTest):
 
     # no macro support yet
     #@unittest.expectedFailure
-        self.full_parsing_options = True 
+        self.full_parsing_options = True
         self.convert("""
     def test_macro(self):
         #define A  0.9642
@@ -306,9 +320,9 @@ class ConstantsTest(ClangTest):
         self.failUnlessAlmostEqual(self.namespace.C, 0.8249)
 
     def test_anonymous_struct(self):
-        flags = ['-target','i386-linux']
+        flags = ['-target', 'i386-linux']
         self.convert(
-        '''
+            '''
         struct X {
             struct {
                 long cancel_jmp_buf[8];
@@ -318,7 +332,7 @@ class ConstantsTest(ClangTest):
         };
         ''', flags)
         #import code
-        #code.interact(local=locals())
+        # code.interact(local=locals())
         self.assertEqual(ctypes.sizeof(self.namespace.struct_X), 304)
 
     #@unittest.skip('')
@@ -366,16 +380,17 @@ class ConstantsTest(ClangTest):
         self.convert("""
         #include <malloc.h>
         """,
-           #               generate_docstrings=True,
-           #               searched_dlls=[libc]
-        )
+                     #               generate_docstrings=True,
+                     #               searched_dlls=[libc]
+                     )
         prototype = "void * malloc(size_t".replace(" ", "")
         docstring = self.namespace.malloc.__doc__.replace(" ", "")
         self.assertEqual(docstring[:len(prototype)], prototype)
         self.failUnless("malloc.h" in self.namespace.malloc.__doc__)
 
-    
-import logging, sys
+
+import logging
+import sys
 if __name__ == "__main__":
     #logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
     unittest.main()
