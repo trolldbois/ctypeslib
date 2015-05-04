@@ -23,6 +23,7 @@ struct tagPyCArgObject {
 };
 """
 
+
 class value(Union):
     _fields_ = [("c", c_char),
                 ("h", c_short),
@@ -35,6 +36,7 @@ class value(Union):
 
 # Thanks to Lenard Lindstrom for this tip: The sizeof(PyObject_HEAD)
 # is the same as object.__basicsize__.
+
 
 class PyCArgObject(Structure):
     _fields_ = [("PyObject_HEAD", c_byte * object.__basicsize__),

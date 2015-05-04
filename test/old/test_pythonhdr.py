@@ -8,7 +8,8 @@
 
 from ctypes import *
 from ctypeslib.contrib.pythonhdr import *
-import unittest, sys
+import unittest
+import sys
 from ctypeslib.test import is_resource_enabled
 from thread import start_new_thread, allocate_lock
 from array import array
@@ -19,13 +20,14 @@ from sys import getrefcount as grc
 class Pythonhdr_TestCase(unittest.TestCase):
 
     def test_Py_ssize_t(self):
-        if sys.version_info < (2,5,0):
+        if sys.version_info < (2, 5, 0):
             self.failUnless(Py_ssize_t is c_int)
         else:
             self.failUnlessEqual(sizeof(Py_ssize_t), sizeof(c_size_t))
-    
+
     def test_PyObject(self):
         self.failUnlessRaises(NotImplementedError, PyObject, None)
+
         class PyFloatObject(PyObject):
             _fields_ = [("ob_fval", c_double)]
         self.failUnlessEqual(sizeof(PyFloatObject), float.__basicsize__,
@@ -99,6 +101,7 @@ class Pythonhdr_TestCase(unittest.TestCase):
 
     def test_file(self):
         closefn = CFUNCTYPE(c_int, FILE_ptr)
+
         def close(f):
             return 1
         close_callback = closefn(close)

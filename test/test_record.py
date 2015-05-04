@@ -4,8 +4,10 @@ import ctypes
 from util import get_cursor
 from util import get_tu
 from util import ClangTest
-    
+
+
 class RecordTest(ClangTest):
+
     """Test if records are correctly generated for different target archictecture.
     """
 
@@ -13,7 +15,7 @@ class RecordTest(ClangTest):
     def test_records_x32(self):
         """Test sizes for simple records on i386.
         """
-        flags = ['-target','i386-linux']
+        flags = ['-target', 'i386-linux']
         self.gen('test/data/test-records.c', flags)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_Name), 18)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_Name2), 20)
@@ -23,15 +25,15 @@ class RecordTest(ClangTest):
         self.assertEquals(ctypes.sizeof(self.namespace.my__quad_t), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.mystruct), 5)
-    
+
     # others size tests are in test_fast_clang
-    
+
     #@unittest.skip('')
     def test_padding_x32(self):
         """Test padding for simple records on i386.
         """
-        flags = ['-target','i386-linux']
-        self.gen('test/data/test-padding.c', flags)        
+        flags = ['-target', 'i386-linux']
+        self.gen('test/data/test-padding.c', flags)
         self.assertEquals(self.namespace.struct_Name2.PADDING_0.offset, 2)
         self.assertEquals(self.namespace.struct_Name2.PADDING_0.size, 2)
         self.assertEquals(self.namespace.struct_Name4.PADDING_0.offset, 2)
@@ -56,8 +58,8 @@ class RecordTest(ClangTest):
     def test_padding_x64(self):
         """Test padding for simple records on x64.
         """
-        flags = ['-target','x86_64-linux']
-        self.gen('test/data/test-padding.c', flags)        
+        flags = ['-target', 'x86_64-linux']
+        self.gen('test/data/test-padding.c', flags)
         self.assertEquals(self.namespace.struct_Name2.PADDING_0.offset, 2)
         self.assertEquals(self.namespace.struct_Name2.PADDING_0.size, 2)
         self.assertEquals(self.namespace.struct_Name4.PADDING_0.offset, 2)
@@ -90,7 +92,7 @@ typedef struct _complex {
 		int a;
 	};
 } complex, *pcomplex;
-        ''',['-target','i386-linux'])
+        ''', ['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 4)
 
     def test_record_in_record_2(self):
@@ -103,7 +105,7 @@ typedef struct _complex {
         long b;
 	};
 } complex, *pcomplex;
-        ''',['-target','i386-linux'])
+        ''', ['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 8)
 
     def test_record_in_record_3(self):
@@ -129,7 +131,7 @@ typedef struct _complex {
 	    int g;
     };
 } complex, *pcomplex;
-        ''',['-target','i386-linux'])
+        ''', ['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 16)
 
     def test_record_in_record_packed(self):
@@ -142,7 +144,7 @@ typedef struct _complex {
 		char b;
 	};
 } complex, *pcomplex;
-        ''',['-target','i386-linux'])
+        ''', ['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 2)
 
     def test_forward_decl(self):
@@ -152,12 +154,13 @@ struct entry {
   Entry * flink;
   Entry * blink;
 };
-        ''',['-target','i386-linux'])
+        ''', ['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.struct_entry), 8)
 
-        
-import logging, sys
+
+import logging
+import sys
 if __name__ == "__main__":
-    logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
-    #logging.getLogger('codegen').setLevel(logging.INFO)
+    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+    # logging.getLogger('codegen').setLevel(logging.INFO)
     unittest.main()

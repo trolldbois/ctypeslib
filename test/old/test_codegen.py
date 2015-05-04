@@ -12,19 +12,24 @@ from ctypes.util import find_library
 from ctypeslib import clang2py
 from ctypeslib.codegen.codegenerator import generate_code
 
+
 def mktemp(suffix):
     handle, fnm = tempfile.mkstemp(suffix)
     os.close(handle)
     return fnm
 
+
 class ADict(dict):
+
     def __getattr__(self, name):
         try:
             return self[name]
         except KeyError:
             raise AttributeError(name)
 
+
 class ConstantsTest(unittest.TestCase):
+
     def convert(self, defs, flags=None, dump=False, **kw):
         hfile = mktemp(".h")
         open(hfile, "w").write(defs)
@@ -36,12 +41,12 @@ class ConstantsTest(unittest.TestCase):
                 h2xml.main(["h2xml", "-q", "-I.", hfile, "-o", xmlfile, flags])
             else:
                 h2xml.main(["h2xml", "-q", "-I.", hfile, "-o", xmlfile])
-            
+
             ofi = StringIO()
             generate_code(xmlfile, ofi, **kw)
             namespace = {}
             exec ofi.getvalue() in namespace
-##            print ofi.getvalue()
+# print ofi.getvalue()
             return ADict(namespace)
 
         finally:
@@ -182,7 +187,7 @@ class ConstantsTest(unittest.TestCase):
         """,
                           generate_docstrings=True,
                           searched_dlls=[libc]
-        )
+                          )
         prototype = "void * malloc(size_t".replace(" ", "")
         docstring = ns.malloc.__doc__.replace(" ", "")
         self.failUnlessEqual(docstring[:len(prototype)], prototype)

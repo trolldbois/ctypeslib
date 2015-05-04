@@ -3,7 +3,7 @@ Type descriptions are collections of typedesc instances.
 '''
 
 import textwrap
-import StringIO # need unicode support, no cStringIO
+import StringIO  # need unicode support, no cStringIO
 import sys
 
 from ctypeslib.codegen import clangparser
@@ -16,7 +16,9 @@ import code
 
 ################################################################
 
+
 class Generator(object):
+
     def __init__(self, output,
                  generate_comments=False,
                  known_symbols=None,
@@ -37,9 +39,9 @@ class Generator(object):
         else:
             self.searched_dlls = searched_dlls
 
-        self.done = set() # type descriptions that have been generated
-        self.names = set() # names that have been generated
-    
+        self.done = set()  # type descriptions that have been generated
+        self.names = set()  # names that have been generated
+
     def enable_fundamental_type_wrappers(self):
         """
         If a type is a int128, a long_double_t or a void, some placeholders need
@@ -47,16 +49,18 @@ class Generator(object):
         """
         # 2015-01 reactivating header templates
         #log.warning('enable_fundamental_type_wrappers deprecated - replaced by generate_headers')
-        #return # FIXME ignore
-        self.enable_fundamental_type_wrappers = lambda : True
+        # return # FIXME ignore
+        self.enable_fundamental_type_wrappers = lambda: True
         import pkgutil
-        headers = pkgutil.get_data('ctypeslib','data/fundamental_type_name.tpl')
+        headers = pkgutil.get_data(
+            'ctypeslib',
+            'data/fundamental_type_name.tpl')
         from clang.cindex import TypeKind
-        size = str(self.parser.get_ctypes_size(TypeKind.LONGDOUBLE)/8)
+        size = str(self.parser.get_ctypes_size(TypeKind.LONGDOUBLE) / 8)
         headers = headers.replace('__LONG_DOUBLE_SIZE__', size)
         print >> self.imports, headers
-        return 
-            
+        return
+
     def enable_pointer_type(self):
         """
         If a type is a pointer, a platform-independent POINTER_T type needs
@@ -64,33 +68,33 @@ class Generator(object):
         """
         # 2015-01 reactivating header templates
         #log.warning('enable_pointer_type deprecated - replaced by generate_headers')
-        #return # FIXME ignore
-        self.enable_pointer_type = lambda : True
+        # return # FIXME ignore
+        self.enable_pointer_type = lambda: True
         import pkgutil
-        headers = pkgutil.get_data('ctypeslib','data/pointer_type.tpl')
+        headers = pkgutil.get_data('ctypeslib', 'data/pointer_type.tpl')
         import ctypes
         from clang.cindex import TypeKind
-        # assuming a LONG also has the same sizeof than a pointer. 
-        word_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
+        # assuming a LONG also has the same sizeof than a pointer.
+        word_size = self.parser.get_ctypes_size(TypeKind.POINTER) / 8
         word_type = self.parser.get_ctypes_name(TypeKind.ULONG)
-        word_char = getattr(ctypes,word_type)._type_
+        word_char = getattr(ctypes, word_type)._type_
         # replacing template values
         headers = headers.replace('__POINTER_SIZE__', str(word_size))
-        headers = headers.replace('__REPLACEMENT_TYPE__' , word_type)
+        headers = headers.replace('__REPLACEMENT_TYPE__', word_type)
         headers = headers.replace('__REPLACEMENT_TYPE_CHAR__', word_char)
         print >> self.imports, headers
-        return 
+        return
 
     def generate_headers(self, parser):
         # fix parser in self for later use
-        self.parser = parser 
+        self.parser = parser
         import pkgutil
-        headers = pkgutil.get_data('ctypeslib','data/headers.tpl')
+        headers = pkgutil.get_data('ctypeslib', 'data/headers.tpl')
         from clang.cindex import TypeKind
         # get sizes from clang library
-        word_size = self.parser.get_ctypes_size(TypeKind.LONG)/8
-        pointer_size = self.parser.get_ctypes_size(TypeKind.POINTER)/8
-        longdouble_size = self.parser.get_ctypes_size(TypeKind.LONGDOUBLE)/8
+        word_size = self.parser.get_ctypes_size(TypeKind.LONG) / 8
+        pointer_size = self.parser.get_ctypes_size(TypeKind.POINTER) / 8
+        longdouble_size = self.parser.get_ctypes_size(TypeKind.LONGDOUBLE) / 8
         # replacing template values
         headers = headers.replace('__FLAGS__', str(self.parser.flags))
         headers = headers.replace('__WORD_SIZE__', str(word_size))
@@ -99,7 +103,6 @@ class Generator(object):
         print >> self.imports, headers
         return
 
-            
     def type_name(self, t, generate=True):
         """
         Returns a string containing an expression that can be used to
@@ -107,29 +110,35 @@ class Generator(object):
         namespace is available.
         """
         # no Test case for these
-        #elif isinstance(t, typedesc.Argument):
-        #elif isinstance(t, typedesc.CvQualifiedType):
-        #elif isinstance(t, typedesc.Variable):
+        # elif isinstance(t, typedesc.Argument):
+        # elif isinstance(t, typedesc.CvQualifiedType):
+        # elif isinstance(t, typedesc.Variable):
         #   return "%s" % self.type_name(t.typ, generate)
-        #elif isinstance(t, typedesc.Enumeration):
+        # elif isinstance(t, typedesc.Enumeration):
         #   return t.name
-        
+
         if isinstance(t, typedesc.FundamentalType):
-            return self.FundamentalType(t) 
+            return self.FundamentalType(t)
         elif isinstance(t, typedesc.ArrayType):
             return "%s * %s" % (self.type_name(t.typ, generate), t.size)
         elif isinstance(t, typedesc.PointerType):
             self.enable_pointer_type()
-            return "POINTER_T(%s)" %(self.type_name(t.typ, generate))
+            return "POINTER_T(%s)" % (self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.FunctionType):
-            args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
+            args = [
+                self.type_name(
+                    x,
+                    generate) for x in [
+                    t.returns] +
+                list(
+                    t.iterArgTypes())]
             if "__stdcall__" in t.attributes:
                 return "ctypes.WINFUNCTYPE(%s)" % ", ".join(args)
             else:
                 return "ctypes.CFUNCTYPE(%s)" % ", ".join(args)
-        #elif isinstance(t, typedesc.Structure):
-        #elif isinstance(t, typedesc.Typedef):
-        #elif isinstance(t, typedesc.Union):
+        # elif isinstance(t, typedesc.Structure):
+        # elif isinstance(t, typedesc.Typedef):
+        # elif isinstance(t, typedesc.Union):
         return t.name
         # All typedesc typedefs should be handled
         #raise TypeError('This typedesc should be handled %s'%(t))
@@ -137,6 +146,7 @@ class Generator(object):
     ################################################################
 
     _aliases = 0
+
     def Alias(self, alias):
         """Handles Aliases. No test cases yet"""
         # FIXME
@@ -144,13 +154,14 @@ class Generator(object):
             self.print_comment(alias)
         print >> self.stream, "%s = %s # alias" % (alias.name, alias.alias)
         self._aliases += 1
-        return            
-    
+        return
+
     _macros = 0
+
     def Macro(self, macro):
         """Handles macro. No test cases else that #defines."""
         if macro.location is None:
-            log.info('Ignoring %s with no location'%(macro.name))
+            log.info('Ignoring %s with no location' % (macro.name))
             return
         if self.generate_locations:
             print >> self.stream, "# %s:%s" % (macro.location)
@@ -158,7 +169,7 @@ class Generator(object):
             self.print_comment(macro)
         print >> self.stream, "%s = %s # macro" % (macro.name, macro.body)
         self.macros += 1
-        return            
+        return
         # We don't know if we can generate valid, error free Python
         # code. All we can do is to try to compile the code.  If the
         # compile fails, we know it cannot work, so we comment out the
@@ -166,7 +177,8 @@ class Generator(object):
         #
         # If the compilation succeeds, it may still fail at runtime
         # when the macro is called.
-        #mcode = "def %s%s: return %s # macro" % (macro.name, macro.args, macro.body)
+        # mcode = "def %s%s: return %s # macro" % (macro.name, macro.args,
+        # macro.body)
         try:
             compile(mcode, "<string>", "exec")
         except SyntaxError:
@@ -174,55 +186,57 @@ class Generator(object):
         else:
             print >> self.stream, mcode, '# Macro'
             self.names.add(macro.name)
-        
+
     _typedefs = 0
+
     def Typedef(self, tp):
         if self.generate_comments:
             self.print_comment(tp)
         sized_types = {
-            "uint8_t":  "c_uint8",
+            "uint8_t": "c_uint8",
             "uint16_t": "c_uint16",
             "uint32_t": "c_uint32",
             "uint64_t": "c_uint64",
-            "int8_t":  "c_int8",
+            "int8_t": "c_int8",
             "int16_t": "c_int16",
             "int32_t": "c_int32",
             "int64_t": "c_int64",
-            }
-        name = self.type_name(tp) # tp.name
-        if (type(tp.typ) == typedesc.FundamentalType and 
-           tp.name in sized_types):
+        }
+        name = self.type_name(tp)  # tp.name
+        if (isinstance(tp.typ, typedesc.FundamentalType) and
+                tp.name in sized_types):
             print >> self.stream, "%s = ctypes.%s" % \
-                  (name, sized_types[tp.name])
+                (name, sized_types[tp.name])
             self.names.add(tp.name)
             return
         if tp.typ not in self.done:
             # generate only declaration code for records ?
-            #if type(tp.typ) in (typedesc.Structure, typedesc.Union):
+            # if type(tp.typ) in (typedesc.Structure, typedesc.Union):
             #    self.generate(tp.typ.get_head())
             #    self.more.add(tp.typ)
-            #else:
+            # else:
             #    self.generate(tp.typ)
             self.generate(tp.typ)
         # generate actual typedef code.
         if tp.name != self.type_name(tp.typ):
             print >> self.stream, "%s = %s" % \
-                  (name, self.type_name(tp.typ))
+                (name, self.type_name(tp.typ))
         self.names.add(tp.name)
         self._typedefs += 1
         return
 
     def _get_real_type(self, tp):
         # FIXME, kinda useless really.
-        if type(tp) is typedesc.Typedef:
-            if type(tp.typ) is typedesc.Typedef:
-                raise TypeError('Nested loop in Typedef %s'%(tp.name))
+        if isinstance(tp, typedesc.Typedef):
+            if isinstance(tp.typ, typedesc.Typedef):
+                raise TypeError('Nested loop in Typedef %s' % (tp.name))
             return self._get_real_type(tp.typ)
         elif isinstance(tp, typedesc.CvQualifiedType):
             return self._get_real_type(tp.typ)
         return tp
 
     _arraytypes = 0
+
     def ArrayType(self, tp):
         self.generate(self._get_real_type(tp.typ))
         self.generate(tp.typ)
@@ -230,31 +244,33 @@ class Generator(object):
         return
 
     _functiontypes = 0
+
     def FunctionType(self, tp):
         self.generate(tp.returns)
         self.generate_all(tp.arguments)
-        #print >> self.stream, "%s = %s # Functiontype " % (
-        #          self.type_name(tp), [self.type_name(a) for a in tp.arguments])
+        # print >> self.stream, "%s = %s # Functiontype " % (
+        # self.type_name(tp), [self.type_name(a) for a in tp.arguments])
         self._functiontypes += 1
         return
 
     def Argument(self, tp):
         self.generate(tp.typ)
-        
+
     _pointertypes = 0
+
     def PointerType(self, tp):
-        #print 'generate', tp.typ
-        if type(tp.typ) is typedesc.PointerType:
+        # print 'generate', tp.typ
+        if isinstance(tp.typ, typedesc.PointerType):
             self.generate(tp.typ)
         elif type(tp.typ) in (typedesc.Union, typedesc.Structure):
             self.generate(tp.typ.get_head())
             self.more.add(tp.typ)
-        elif type(tp.typ) is typedesc.Typedef:
+        elif isinstance(tp.typ, typedesc.Typedef):
             self.generate(tp.typ)
         else:
             self.generate(tp.typ)
         self._pointertypes += 1
-        return 
+        return
 
     def CvQualifiedType(self, tp):
         self.generate(tp.typ)
@@ -262,6 +278,7 @@ class Generator(object):
 
     _variables = 0
     _notfound_variables = 0
+
     def Variable(self, tp):
         self._variables += 1
         if self.generate_comments:
@@ -272,10 +289,10 @@ class Generator(object):
             # calling convention does not matter for in_dll...
             libname = self.get_sharedlib(dllname, "cdecl")
             print >> self.stream, \
-                  "%s = (%s).in_dll(%s, '%s')" % (tp.name,
-                                                  self.type_name(tp.typ),
-                                                  libname,
-                                                  tp.name)
+                "%s = (%s).in_dll(%s, '%s')" % (tp.name,
+                                                self.type_name(tp.typ),
+                                                libname,
+                                                tp.name)
             self.names.add(tp.name)
             # wtypes.h contains IID_IProcessInitControl, for example
             return
@@ -285,62 +302,73 @@ class Generator(object):
         # is not in the libraries that we search.  Anyway, if it has
         # no tp.init value we can't generate code for it anyway, so we
         # drop it.
-        #if tp.init is None:
+        # if tp.init is None:
         #    self._notfound_variables += 1
         #    return
-        #el
+        # el
         if isinstance(tp.init, typedesc.FunctionType):
             print >> self.stream, "%s = %s # args: %s" % (tp.name,
-                                             self.type_name(tp.init), 
-                                             [x for x in tp.typ.iterArgNames()])
+                                                          self.type_name(
+                                                              tp.init),
+                                                          [x for x in tp.typ.iterArgNames()])
         else:
-            if ( isinstance(tp.typ, typedesc.PointerType) and 
-                 isinstance(tp.typ.typ, typedesc.FundamentalType) and
-                 (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
-                # char *
-                init_value = repr(tp.init)
-            elif ( isinstance(tp.typ, typedesc.FundamentalType) and
-                 (tp.typ.name == "c_char" or tp.typ.name == "c_wchar")):
+            init_value = tp.init
+            if isinstance(tp.typ, typedesc.PointerType):
+                if (isinstance(tp.typ.typ, typedesc.FundamentalType) and
+                        (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
+                    # char *
+                    init_value = repr(tp.init)
+                else:
+                    init_value = self.type_name(tp.typ, False)
+            elif (isinstance(tp.typ, typedesc.FundamentalType) and
+                  (tp.typ.name == "c_char" or tp.typ.name == "c_wchar")):
                 # char
                 init_value = repr(tp.init)
+            elif isinstance(tp.typ, typedesc.Structure):
+                init_value = self.type_name(tp.typ, False)
             else:
-                ### DEBUG int() float() 
+                # DEBUG int() float()
                 init_value = tp.init
+                # print init_value
+                #import code
+                # code.interact(local=locals())
                 #init_value = repr(tp.init)
             # Partial --
-            # now we do want to have FundamentalType variable use the actual 
+            # now we do want to have FundamentalType variable use the actual
             # type, and not be a python object
-            #if init_value is None:
+            # if init_value is None:
             #    init_value = ''; # use default ctypes object constructor
             #init_value = "%s(%s)"%(self.type_name(tp.typ, False), init_value)
             #
             # print it out
             print >> self.stream, "%s = %s # Variable %s" % (tp.name,
-                                             init_value,
-                                             self.type_name(tp.typ, False))
+                                                             init_value,
+                                                             self.type_name(tp.typ, False))
         #
         self.names.add(tp.name)
-        #try:
+        # try:
         #    value = self.initialize(tp.typ, tp.init)
-        #except (TypeError, ValueError, SyntaxError, NameError), detail:
+        # except (TypeError, ValueError, SyntaxError, NameError), detail:
         #    log.error("Could not init %s %s %s"% (tp.name, tp.init, detail))
         #    import code
         #    code.interact(local=locals())
         #    return
         #import code
-        #code.interact(local=locals())
+        # code.interact(local=locals())
 
     _enumvalues = 0
+
     def EnumValue(self, tp):
         # FIXME should be in parser
         value = int(tp.value)
         print >> self.stream, \
-              "%s = %d" % (tp.name, value)
+            "%s = %d" % (tp.name, value)
         self.names.add(tp.name)
         self._enumvalues += 1
         return
 
     _enumtypes = 0
+
     def Enumeration(self, tp):
         if self.generate_comments:
             self.print_comment(tp)
@@ -376,35 +404,38 @@ class Generator(object):
             return self.get_undeclared_type(item.typ)
         # else its an undeclared structure.
         return item
-    
+
     _structures = 0
+
     def Structure(self, struct):
         self._structures += 1
         depends = set()
         if struct.members is None:
-            log.error('Error while parsing members for: %s'%(struct.name))
+            log.error('Error while parsing members for: %s' % (struct.name))
             return
         # look in bases class for dependencies
         # FIXME - need a real dependency graph maker
-        
+
         # remove myself, just in case.
         self.done.remove(struct)
         # checks members dependencies in bases
         for b in struct.bases:
-            depends.update([self.get_undeclared_type(m.type) for m in b.members])
+            depends.update([self.get_undeclared_type(m.type)
+                            for m in b.members])
         # checks members dependencies
-        depends.update([self.get_undeclared_type(m.type) for m in struct.members])
+        depends.update([self.get_undeclared_type(m.type)
+                        for m in struct.members])
         self.done.add(struct)
         depends.discard(None)
         if len(depends) > 0:
-            log.debug('Generate %s DEPENDS %s'%(struct.name, depends ))
+            log.debug('Generate %s DEPENDS %s' % (struct.name, depends))
             self.generate(struct.get_head(), False)
             # generate dependencies
             for dep in depends:
                 self.generate(dep)
             self.generate(struct.get_body(), False)
         else:
-            log.debug('No depends for %s'%(struct.name))
+            log.debug('No depends for %s' % (struct.name))
             if struct.name in self.names:
                 # headers already produced
                 self.generate(struct.get_body(), False)
@@ -416,7 +447,7 @@ class Generator(object):
     Union = Structure
 
     def StructureHead(self, head, inline=False):
-        log.debug('Head start for %s inline:%s'%(head.name, inline))
+        log.debug('Head start for %s inline:%s' % (head.name, inline))
         for struct in head.struct.bases:
             self.generate(struct.get_head())
             # add dependencies
@@ -424,12 +455,13 @@ class Generator(object):
         basenames = [self.type_name(b) for b in head.struct.bases]
         if basenames:
             ### method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
-            print >> self.stream, "class %s(%s):" % (head.struct.name, ", ".join(basenames))
+            print >> self.stream, "class %s(%s):" % (
+                head.struct.name, ", ".join(basenames))
         else:
             ### methods = [m for m in head.struct.members if type(m) is typedesc.Method]
-            if type(head.struct) == typedesc.Structure:
+            if isinstance(head.struct, typedesc.Structure):
                 print >> self.stream, "class %s(ctypes.Structure):" % head.struct.name
-            elif type(head.struct) == typedesc.Union:
+            elif isinstance(head.struct, typedesc.Union):
                 print >> self.stream, "class %s(ctypes.Union):" % head.struct.name
         if not inline:
             print >> self.stream, "    pass\n"
@@ -437,47 +469,48 @@ class Generator(object):
         if inline and not head.struct.members:
             print >> self.stream, "    pass\n"
         self.names.add(head.struct.name)
-        log.debug('Head finished for %s'%(head.name))
-
+        log.debug('Head finished for %s' % (head.name))
 
     def StructureBody(self, body, inline=False):
-        log.debug('Body start for %s'%(body.name))
+        log.debug('Body start for %s' % (body.name))
         fields = []
         methods = []
         for m in body.struct.members:
-            if type(m) is typedesc.Field:
+            if isinstance(m, typedesc.Field):
                 fields.append(m)
-                #if type(m.type) is typedesc.Typedef:
+                # if type(m.type) is typedesc.Typedef:
                 #    self.generate(get_real_type(m.type))
-                #self.generate(m.type)
-            elif type(m) is typedesc.Method:
+                # self.generate(m.type)
+            elif isinstance(m, typedesc.Method):
                 methods.append(m)
-                #self.generate(m.returns)
-                #self.generate_all(m.iterArgTypes())
-            elif type(m) is typedesc.Ignored:
+                # self.generate(m.returns)
+                # self.generate_all(m.iterArgTypes())
+            elif isinstance(m, typedesc.Ignored):
                 pass
         # handled inline Vs dependent
-        log.debug("body inline:%s for structure %s"%(inline, body.struct.name))
+        log.debug(
+            "body inline:%s for structure %s" %
+            (inline, body.struct.name))
         if not inline:
-            prefix = "%s."%(body.struct.name)
+            prefix = "%s." % (body.struct.name)
         else:
             prefix = "    "
         if methods:
             # XXX we have parsed the COM interface methods but should
             # we emit any code for them?
             pass
-        # LXJ: we pack all the time, because clang gives a precise field offset 
+        # LXJ: we pack all the time, because clang gives a precise field offset
         # per target architecture. No need to defer to ctypes logic for that.
         if fields:
             print >> self.stream, "%s_pack_ = True # source:%s" % (
-                        prefix, body.struct.packed)
+                prefix, body.struct.packed)
 
         if body.struct.bases:
-            if len(body.struct.bases) == 1: # its a Struct or a simple Class
-              self.generate(body.struct.bases[0].get_body(), inline)
-            else: # we have a multi-parent inheritance
-              for b in body.struct.bases:
-                self.generate(b.get_body(), inline)              
+            if len(body.struct.bases) == 1:  # its a Struct or a simple Class
+                self.generate(body.struct.bases[0].get_body(), inline)
+            else:  # we have a multi-parent inheritance
+                for b in body.struct.bases:
+                    self.generate(b.get_body(), inline)
         # field definition normally span several lines.
         # Before we generate them, we need to 'import' everything they need.
         # So, call type_name for each field once,
@@ -489,13 +522,14 @@ class Generator(object):
         for f in fields:
             # _anonymous_ fields are fields of type Structure or Union,
             # that have no name.
-            if not f.name and isinstance(f.type, (typedesc.Structure, typedesc.Union)):
+            if not f.name and isinstance(
+                    f.type, (typedesc.Structure, typedesc.Union)):
                 unnamed_fields[f] = "_%d" % len(unnamed_fields)
         if unnamed_fields:
             print >> self.stream, "%s_anonymous_ = %r" % \
-                  (prefix, unnamed_fields.values())
+                (prefix, unnamed_fields.values())
         if len(fields) > 0:
-            print >> self.stream, "%s_fields_ = [" %(prefix)
+            print >> self.stream, "%s_fields_ = [" % (prefix)
 
             if self.generate_locations and body.struct.location:
                 print >> self.stream, "    # %s %s" % body.struct.location
@@ -505,25 +539,24 @@ class Generator(object):
                 type_name = self.type_name(f.type)
                 # handle "__" prefixed names by using a wrapper
                 if type_name.startswith("__"):
-                    type_name = "globals()['%s']"%type_name
+                    type_name = "globals()['%s']" % type_name
                 # a bitfield needs a triplet
                 if f.is_bitfield is False:
                     print >> self.stream, "    ('%s', %s)," % \
-                     (fieldname, type_name)
+                        (fieldname, type_name)
                 else:
                     # FIXME: Python bitfield is int32 only.
-                    from clang.cindex import TypeKind                
+                    from clang.cindex import TypeKind
                     print >> self.stream, "    ('%s', %s, %s)," % \
-                                    (fieldname, 
-                                     #self.parser.get_ctypes_name(TypeKind.LONG), 
-                                     self.type_name(f.type),
-                                     f.bits )
+                        (fieldname,
+                         # self.parser.get_ctypes_name(TypeKind.LONG),
+                         self.type_name(f.type),
+                         f.bits)
             if inline:
                 print >> self.stream, prefix,
-            print >> self.stream, "]\n"        
-        log.debug('Body finished for %s'%(body.name))
+            print >> self.stream, "]\n"
+        log.debug('Body finished for %s' % (body.name))
         return
-
 
     def find_dllname(self, func):
         if hasattr(func, "dllname"):
@@ -539,6 +572,7 @@ class Generator(object):
         return None
 
     _c_libraries = None
+
     def need_CLibraries(self):
         # Create a '_libraries' doctionary in the generated code, if
         # it not yet exists. Will map library pathnames to loaded libs.
@@ -546,8 +580,9 @@ class Generator(object):
             self._c_libraries = {}
             print >> self.imports, "_libraries = {}"
         return
-    
+
     _stdcall_libraries = None
+
     def need_WinLibraries(self):
         # Create a '_stdcall_libraries' doctionary in the generated code, if
         # it not yet exists. Will map library pathnames to loaded libs.
@@ -555,25 +590,28 @@ class Generator(object):
             self._stdcall_libraries = {}
             print >> self.imports, "_stdcall_libraries = {}"
         return
-    
+
     def get_sharedlib(self, dllname, cc):
         if cc == "stdcall":
             self.need_WinLibraries()
             if not dllname in self._stdcall_libraries:
-                print >> self.imports, "_stdcall_libraries[%r] = WinDLL(%r)" % (dllname, dllname)
+                print >> self.imports, "_stdcall_libraries[%r] = WinDLL(%r)" % (
+                    dllname, dllname)
                 self._stdcall_libraries[dllname] = None
             return "_stdcall_libraries[%r]" % dllname
         self.need_CLibraries()
         if self.preloaded_dlls != []:
-          global_flag = ", mode=RTLD_GLOBAL"
+            global_flag = ", mode=RTLD_GLOBAL"
         else:
-          global_flag = ""
+            global_flag = ""
         if not dllname in self._c_libraries:
-            print >> self.imports, "_libraries[%r] = CDLL(%r%s)" % (dllname, dllname, global_flag)
+            print >> self.imports, "_libraries[%r] = CDLL(%r%s)" % (
+                dllname, dllname, global_flag)
             self._c_libraries[dllname] = None
         return "_libraries[%r]" % dllname
 
     _STRING_defined = False
+
     def need_STRING(self):
         if self._STRING_defined:
             return
@@ -582,6 +620,7 @@ class Generator(object):
         return
 
     _WSTRING_defined = False
+
     def need_WSTRING(self):
         if self._WSTRING_defined:
             return
@@ -591,6 +630,7 @@ class Generator(object):
 
     _functiontypes = 0
     _notfound_functiontypes = 0
+
     def Function(self, func):
         dllname = self.find_dllname(func)
         if dllname:
@@ -606,34 +646,44 @@ class Generator(object):
 
             libname = self.get_sharedlib(dllname, cc)
 
-            argnames = [a or "p%d" % (i+1) for i, a in enumerate(func.iterArgNames())]
+            argnames = [
+                a or "p%d" %
+                (i +
+                 1) for i,
+                a in enumerate(
+                    func.iterArgNames())]
 
             if self.generate_locations and func.location:
                 print >> self.stream, "# %s %s" % func.location
-            print >> self.stream, "%s = %s.%s" % (func.name, libname, func.name)
-            print >> self.stream, "%s.restype = %s" % (func.name, self.type_name(func.returns))
+            print >> self.stream, "%s = %s.%s" % (
+                func.name, libname, func.name)
+            print >> self.stream, "%s.restype = %s" % (
+                func.name, self.type_name(func.returns))
             if self.generate_comments:
-                print >> self.stream, "# %s(%s)" % (func.name, ", ".join(argnames))
-            print >> self.stream, "%s.argtypes = [%s]" % (func.name, ", ".join(args))
-            
+                print >> self.stream, "# %s(%s)" % (
+                    func.name, ", ".join(argnames))
+            print >> self.stream, "%s.argtypes = [%s]" % (
+                func.name, ", ".join(args))
+
             if self.generate_docstrings:
                 def typeString(typ):
                     if hasattr(typ, 'name'):
                         return typ.name
-                    elif hasattr(typ, 'typ') and type(typ) == typedesc.PointerType:
+                    elif hasattr(typ, 'typ') and isinstance(typ, typedesc.PointerType):
                         return typeString(typ.typ) + " *"
                     else:
                         return "unknown"
-                argsAndTypes = zip([typeString(t) for t in func.iterArgTypes()], argnames)
+                argsAndTypes = zip([typeString(t)
+                                    for t in func.iterArgTypes()], argnames)
                 print >> self.stream, """%(funcname)s.__doc__ = \\
     \"\"\"%(ret)s %(funcname)s(%(args)s)
     %(file)s:%(line)s\"\"\"""" % \
-                    {'funcname': func.name, 
-                    'args': ", ".join(["%s %s" % i for i in argsAndTypes]),
-                    'file': func.location[0],
-                    'line': func.location[1],
-                    'ret': typeString(func.returns),
-                    }
+                    {'funcname': func.name,
+                     'args': ", ".join(["%s %s" % i for i in argsAndTypes]),
+                     'file': func.location[0],
+                     'line': func.location[1],
+                     'ret': typeString(func.returns),
+                     }
 
             self.names.add(func.name)
             self._functiontypes += 1
@@ -643,17 +693,17 @@ class Generator(object):
 
     def FundamentalType(self, _type):
         """Returns the proper ctypes class name for a fundamental type
-        
+
         1) activates generation of appropriate headers for
         ## int128_t
         ## c_long_double_t
         2) return appropriate name for type
         """
-        log.debug('HERE in FundamentalType for %s %s'%(_type, _type.name))
-        if _type.name in ["None","c_long_double_t","c_uint128","c_int128"]:
+        log.debug('HERE in FundamentalType for %s %s' % (_type, _type.name))
+        if _type.name in ["None", "c_long_double_t", "c_uint128", "c_int128"]:
             self.enable_fundamental_type_wrappers()
             return _type.name
-        return "ctypes.%s"%(_type.name)
+        return "ctypes.%s" % (_type.name)
 
     ########
 
@@ -666,7 +716,7 @@ class Generator(object):
             print >> self.stream, "# %s:%d" % item.location
         if self.generate_comments:
             self.print_comment(item)
-        log.debug("generate %s, %s"%(item.__class__.__name__, item.name))
+        log.debug("generate %s, %s" % (item.__class__.__name__, item.name))
         '''
         log.debug('generate: %s( %s )'%( type(item).__name__, name))
         if name in self.known_symbols:
@@ -686,7 +736,7 @@ class Generator(object):
         mth = getattr(self, type(item).__name__)
         mth(item, *args)
         return
-    
+
     def print_comment(self, item):
         if item.comment is None:
             return
@@ -702,9 +752,11 @@ class Generator(object):
     def cmpitems(a, b):
         loc_a = getattr(a, "location", None)
         loc_b = getattr(b, "location", None)
-        if loc_a is None: return -1
-        if loc_b is None: return 1
-        return cmp(loc_a[0],loc_b[0]) or cmp(int(loc_a[1]),int(loc_b[1]))
+        if loc_a is None:
+            return -1
+        if loc_b is None:
+            return 1
+        return cmp(loc_a[0], loc_b[0]) or cmp(int(loc_a[1]), int(loc_b[1]))
     cmpitems = staticmethod(cmpitems)
 
     def generate_items(self, items):
@@ -722,9 +774,9 @@ class Generator(object):
     def generate_code(self, items):
         print >> self.imports, "\n".join(["CDLL('%s', RTLD_GLOBAL)" % preloaded_dll
                                           for preloaded_dll
-                                          in  self.preloaded_dlls])
+                                          in self.preloaded_dlls])
         loops = self.generate_items(items)
-        
+
         self.output.write(self.imports.getvalue())
         self.output.write("\n\n")
         self.output.write(self.stream.getvalue())
@@ -740,7 +792,7 @@ class Generator(object):
 
     def print_stats(self, stream):
         total = self._structures + self._functiontypes + self._enumtypes + self._typedefs +\
-                self._pointertypes + self._arraytypes
+            self._pointertypes + self._arraytypes
         print >> stream, "###########################"
         print >> stream, "# Symbols defined:"
         print >> stream, "#"
@@ -761,6 +813,7 @@ class Generator(object):
 
 ################################################################
 
+
 def generate_code(srcfiles,
                   outfile,
                   expressions=None,
@@ -776,7 +829,7 @@ def generate_code(srcfiles,
                   generate_includes=False,
                   filter_location=True,
                   flags=[]
-                  ): 
+                  ):
 
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
@@ -792,23 +845,23 @@ def generate_code(srcfiles,
     #
     items = []
     for srcfile in srcfiles:
-        
+
         with open(srcfile):
             pass
         parser.parse(srcfile)
         items += parser.get_result()
     log.debug('Input was parsed')
-    #code.interact(local=locals())
+    # code.interact(local=locals())
     # filter symbols to generate
     todo = []
 
     if types:
         items = [i for i in items if isinstance(i, types)]
-    
+
     if not generate_includes:
         # limit generation to definitions in srcfiles only
         items = [i for i in items if i.location[0] in srcfiles]
-    
+
     if symbols:
         syms = set(symbols)
         for i in items:
@@ -817,7 +870,8 @@ def generate_code(srcfiles,
                 syms.remove(i.name)
 
         if syms:
-           log.warning( "symbols not found %s"%( [str(x) for x in list(syms)]))
+            log.warning("symbols not found %s" %
+                        ([str(x) for x in list(syms)]))
 
     if expressions:
         for i in items:
@@ -841,11 +895,10 @@ def generate_code(srcfiles,
                     searched_dlls=searched_dlls,
                     preloaded_dlls=preloaded_dlls)
 
-    # add some headers and ctypes import 
+    # add some headers and ctypes import
     gen.generate_headers(parser)
     # make the structures
     loops = gen.generate_code(items)
     if verbose:
         gen.print_stats(sys.stderr)
         print >> sys.stderr, "needed %d loop(s)" % loops
-

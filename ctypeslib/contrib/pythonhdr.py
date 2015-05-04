@@ -77,8 +77,11 @@ else:
 # Python identifiers. Only valid identifier characters are used in the
 # unlikely event a future Python has a dictionary optimised for identifiers.
 #
+
+
 def make_PyObject(with_trace_refs=False):
     global PyObject
+
     class PyObject(ctypes.Structure):
 
         """This root object structure defines PyObject_HEAD.
@@ -126,8 +129,8 @@ if object.__basicsize__ > ctypes.sizeof(PyObject):
     make_PyObject(True)
 
 assert ctypes.sizeof(PyObject) == object.__basicsize__, (
-       "%s.%s declaration is inconsistent with actual PyObject size" %
-       (__name__, PyObject.__name__))
+    "%s.%s declaration is inconsistent with actual PyObject size" %
+    (__name__, PyObject.__name__))
 
 # Buffer Protocol API.
 #

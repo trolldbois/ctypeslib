@@ -2,7 +2,12 @@
 
 See the 'include' function for usage information.
 """
-import sys, os, time, bz2, cPickle, tempfile
+import sys
+import os
+import time
+import bz2
+import cPickle
+import tempfile
 try:
     # md5 is deprecated in Python 2.5, so use hashlib if available
     from hashlib import md5
@@ -21,6 +26,7 @@ if not os.path.exists(gen_dir):
 #
 # Clean up the names Generator and CodeGenerator.
 #
+
 
 def include(code, persist=True, compilerflags=["-c"]):
     """This function replaces the *calling module* with a dynamic
@@ -64,14 +70,15 @@ def include(code, persist=True, compilerflags=["-c"]):
             decls = gccxmlparser.parse(xml_file)
             ofi = bz2.BZ2File(tdesc_file, "w")
             data = cPickle.dump(decls, ofi, -1)
-            os.remove(xml_file) # not needed any longer.
-        
+            os.remove(xml_file)  # not needed any longer.
+
     frame = sys._getframe(1)
     glob = frame.f_globals
     name = glob["__name__"]
     mod = sys.modules[name]
     sys.modules[name] = DynamicModule(mod, tdesc_file, persist=persist)
-        
+
+
 def is_newer(source, target):
     """Return true if 'source' exists and is more recently modified than
     'target', or if 'source' exists and 'target' doesn't.  Return false if
@@ -91,7 +98,9 @@ def is_newer(source, target):
 
 ################################################################
 
+
 class DynamicModule(object):
+
     def __init__(self, mod, tdesc_file, persist):
         # We need to keep 'mod' alive, otherwise it would set the
         # values of it's __dict__ to None when it's deleted.
@@ -113,22 +122,26 @@ class DynamicModule(object):
         return self.__code_generator
 
     def __repr__(self):
-        return "<DynamicModule(%r) %r from %r>" % (self.__tdesc_file, self.__name__, self.__file__)
+        return "<DynamicModule(%r) %r from %r>" % (
+            self.__tdesc_file, self.__name__, self.__file__)
 
     def __getattr__(self, name):
         if not name.startswith("__") and not name.endswith("__"):
             val = self._code_generator.generate(name)
-##            print "# Generating", name
+# print "# Generating", name
             self.__dict__[name] = val
             return val
         raise AttributeError(name)
 
 ################
 
+
 class UnknownSymbol(Exception):
     pass
 
+
 class Generator(codegenerator.Generator):
+
     """A subclass of codegenerator, specialized for our requirements:
 
     - libraries are already loaded in the module, won't be loaded by
@@ -138,7 +151,8 @@ class Generator(codegenerator.Generator):
     self.namespace
     """
 
-    def need_CLibraries(self): pass
+    def need_CLibraries(self):
+        pass
     # Libraries are already loaded in the module, no code needed
     need_WinLibraries = need_CLibraries
 
@@ -150,7 +164,6 @@ class Generator(codegenerator.Generator):
         if name in self.namespace:
             return
         super(Generator, self).generate(item)
-        
 
     def get_sharedlib(self, dllname, cc):
         # XXX This should assert that the correct calling convention
@@ -158,9 +171,11 @@ class Generator(codegenerator.Generator):
         dll = self.searched_dlls[dllname]
         if os.name == "nt":
             if cc == "stdcall":
-                assert isinstance(dll, ctypes.WinDLL), "wrong calling convention"
+                assert isinstance(
+                    dll, ctypes.WinDLL), "wrong calling convention"
             else:
-                assert not isinstance(dll, ctypes.WinDLL), "wrong calling convention"
+                assert not isinstance(
+                    dll, ctypes.WinDLL), "wrong calling convention"
         return dllname
 
     def find_dllname(self, func):
@@ -176,20 +191,23 @@ class Generator(codegenerator.Generator):
                 return dllname
         return None
 
-
     def Function(self, func):
         # XXX Not sure this is approach makes sense.
         super(Generator, self).Function(func)
         restype = self.type_name(func.returns)
         errcheck = self.namespace.get("%s_errcheck" % restype, None)
         if errcheck is not None:
-            print >> self.stream, "%s.errcheck = %s_errcheck" % (func.name, restype)
+            print >> self.stream, "%s.errcheck = %s_errcheck" % (
+                func.name, restype)
+
 
 class CodeGenerator(object):
+
     """Dynamic, incremental code generation.  The generated code is
     executed in the dictionary <ns>, and appended to the file
     specified by <src_path>, if <persist> is True."""
     output = None
+
     def __init__(self, src_path, tdesc_file, ns, persist):
         # We should do lazy initialization, so that all this stuff is
         # only done when really needed because we have to generate

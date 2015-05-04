@@ -1,9 +1,11 @@
 from ctypes import *
 
+
 def _calc_offset():
     # The definition of PyCArgObject (that is the type of object that
     # byref returns):
     class PyCArgObject(Structure):
+
         class value(Union):
             _fields_ = [("c", c_char),
                         ("h", c_short),
@@ -39,9 +41,10 @@ def _calc_offset():
        argobj.tag != 'P':
         raise RuntimeError("PyCArgObject field definitions incorrect")
 
-    return PyCArgObject.p.offset # offset of the pointer field
+    return PyCArgObject.p.offset  # offset of the pointer field
 
 _byref_pointer_offset = _calc_offset()
+
 
 def byref_at(obj, offset):
     """byref_at(cobj, offset) behaves similar this C code:

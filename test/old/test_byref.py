@@ -1,5 +1,5 @@
 import unittest
-#FIXME from ctypeslib.util import byref_at
+# FIXME from ctypeslib.util import byref_at
 
 from ctypes import *
 
@@ -13,7 +13,9 @@ testfunc = dll._testfunc_p_p
 testfunc.argtypes = [c_void_p]
 testfunc.restype = c_void_p
 
+
 class ByrefTest(unittest.TestCase):
+
     def test_byref_array(self):
         self.skipTest("wtf")
         array = (c_int * 8)()

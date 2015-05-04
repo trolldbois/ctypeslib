@@ -1,6 +1,7 @@
 # Basic test of dynamic code generation
 import unittest
-import os, glob
+import os
+import glob
 
 import stdio
 from ctypes import POINTER, c_int
@@ -10,8 +11,10 @@ if os.name == "nt":
     import winapi
     import winapi_without_defines
 
-    #define'd constants are available in winapi, but not in winapi_without_defines
+    # define'd constants are available in winapi, but not in
+    # winapi_without_defines
     class winapiTest(unittest.TestCase):
+
         def test_constants(self):
             self.failUnlessEqual(winapi.MB_OK, 0)
 
@@ -20,11 +23,14 @@ if os.name == "nt":
             self.failUnlessRaises((UnknownSymbol, AttributeError),
                                   lambda: winapi_without_defines.MB_OK)
 
+
 class DynModTest(unittest.TestCase):
 
     def test_fopen(self):
         self.failUnlessEqual(stdio.fopen.restype, POINTER(stdio.FILE))
-        self.failUnlessEqual(stdio.fopen.argtypes, [stdio.STRING, stdio.STRING])
+        self.failUnlessEqual(
+            stdio.fopen.argtypes, [
+                stdio.STRING, stdio.STRING])
 
     def test_constants(self):
         self.failUnlessEqual(stdio.O_RDONLY, 0)

@@ -7,10 +7,11 @@ from util import ClangTest
 
 
 class BasicTypes(ClangTest):
+
     """Tests the basic types for size.
-Because we might (*) generate Fundamental types variable as python variable, 
+Because we might (*) generate Fundamental types variable as python variable,
 we can't ctypes.sizeof a python object. So we used typedef to verify types sizes
-because we can ctypes.sizeof a type name. Just not a variable.    
+because we can ctypes.sizeof a type name. Just not a variable.
 
 (*) Decision pending review
     """
@@ -34,27 +35,28 @@ typedef float _float;
         self.assertSizes("_float")
 
     def test_x32(self):
-        flags = ['-target','i386-linux']
+        flags = ['-target', 'i386-linux']
         self.convert(self.code, flags)
         self._check()
 
     def test_x64(self):
-        flags = ['-target','x86_64-linux']
+        flags = ['-target', 'x86_64-linux']
         self.convert(self.code, flags)
         self._check()
 
     def test_win32(self):
-        flags = ['-target','i386-win32']
+        flags = ['-target', 'i386-win32']
         self.convert(self.code, flags)
         self._check()
 
     def test_win64(self):
-        flags = ['-target','x86_64-win64']
+        flags = ['-target', 'x86_64-win64']
         self.convert(self.code, flags)
         self._check()
 
 
 class Types(ClangTest):
+
     """Tests if the codegeneration return the proper types."""
     code = '''
         struct __X {
@@ -65,21 +67,19 @@ class Types(ClangTest):
         '''
 
     def test_double_underscore(self):
-        flags = ['-target','i386-linux']
+        flags = ['-target', 'i386-linux']
         self.convert(self.code, flags)
         self.assertSizes("struct___X")
         # works here, but doesnt work below
         self.assertSizes("__Y")
-        # That is not a supported test self.assertSizes("struct___X.a")
-        self.assertEqual(self.namespace.v1, None)
+        self.assertSizes("v1")
 
-    @unittest.expectedFailure 
     def test_double_underscore_field(self):
         # cant load in namespace with exec and expect to work.
         # Double underscore is a special private field in python
-        flags = ['-target','i386-linux']
+        flags = ['-target', 'i386-linux']
         self.convert(
-        '''
+            '''
         struct __X {
             int a;
         };
@@ -93,10 +93,11 @@ class Types(ClangTest):
 
 
 class CompareTypes(ClangTest):
+
     def test_typedef(self):
-        flags = ['-target','i386-linux']
+        flags = ['-target', 'i386-linux']
         self.convert(
-        '''
+            '''
         typedef int A;
         typedef A B;
         typedef B C;
@@ -105,12 +106,11 @@ class CompareTypes(ClangTest):
         typedef PB* PC;
         typedef PC PD;
         ''', flags)
-        self.assertEquals(self.namespace.A,self.namespace.B)
-        self.assertEquals(self.namespace.A,self.namespace.C)
-        self.assertEquals(self.namespace.PA,self.namespace.PB)
-        self.assertEquals(self.namespace.PC,self.namespace.PD)
-        
-       
-        
+        self.assertEquals(self.namespace.A, self.namespace.B)
+        self.assertEquals(self.namespace.A, self.namespace.C)
+        self.assertEquals(self.namespace.PA, self.namespace.PB)
+        self.assertEquals(self.namespace.PC, self.namespace.PD)
+
+
 if __name__ == "__main__":
     unittest.main()
