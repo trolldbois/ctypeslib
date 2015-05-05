@@ -3,6 +3,10 @@ ctypeslibTODO list
 
 2015-05-04 - patches have been integrated in clang.
 
+use virtualenv
+$ source bin/activate
+$ deactivate
+
 2015-01-29
 based on a patched libclang
 

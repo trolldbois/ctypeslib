@@ -30,6 +30,5 @@ setup(
                                 'data/pointer_type.tpl',
                                 'data/headers.tpl', ]},
     scripts=['scripts/clang2py'],
-    install_requires=["clang>=3.7.dev227525"],
     test_suite="test.alltests",
 )
