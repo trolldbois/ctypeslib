@@ -14,6 +14,7 @@ install:
 # install snapshot version of libclang1 libclang-common-3.X-dev
   - sudo apt-add-repository "deb http://llvm.org/apt/precise/ llvm-toolchain-precise main" --yes
   - sudo apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main"  --yes
+  - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
   - sudo apt-get update 
   - sudo apt-get install libclang1-3.7 python-clang-3.7  --yes --force-yes
 #permission denied  - sudo echo `echo "/usr/lib/llvm-3.7/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
