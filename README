@@ -1,9 +1,20 @@
 ctypeslib with libclang
 -----------------------
 
-2015-01-29:
- master works with libclang-3.7 @227409 + my visit-fields-201501 patch on clang / see python-clang branch visit-fields-201501
- locality doesn't work. (need to find why)
+Status update
+-------------
+
+2015-05-01:
+ master branch works with libclang-3.7 HEAD
+
+
+
+Installation
+------------
+ The requirement on python-clang-3.7 means that you either need:
+ a) to install libclang1-dev to get libclang.so
+ b) create a link to libclang-3.7.so.1 named libclang.so
+ c) hardcode the required clang.cindex.Config.load_library_file in your code
 
 
 

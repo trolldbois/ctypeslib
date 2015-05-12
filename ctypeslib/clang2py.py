@@ -190,6 +190,7 @@ def main(argv=None):
     from ctypes import CDLL, RTLD_LOCAL, RTLD_GLOBAL
     from ctypes.util import find_library
 
+    # local library finding
     def load_library(name, mode=RTLD_LOCAL):
         if os.name == "nt":
             from ctypes import WinDLL
