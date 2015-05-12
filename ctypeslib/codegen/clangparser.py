@@ -57,7 +57,8 @@ class Clang_Parser(object):
         TypeKind.FLOAT: 'c_float',
         TypeKind.DOUBLE: 'c_double',
         TypeKind.LONGDOUBLE: 'c_longdouble',
-        TypeKind.POINTER: 'POINTER_T'
+        TypeKind.POINTER: 'POINTER_T',
+        TypeKind.NULLPTR: 'c_void_p'
     }
 
     def __init__(self, flags):
@@ -237,6 +238,7 @@ typedef void* pointer_t;''', flags=_flags)
         # save the target pointer size.
         size = util.get_cursor(tu, 'pointer_t').type.get_size() * 8
         self.ctypes_sizes[TypeKind.POINTER] = size
+        self.ctypes_sizes[TypeKind.NULLPTR] = size
 
         log.debug('ARCH sizes: long:%s longdouble:%s' % (
             self.ctypes_typename[TypeKind.LONG],

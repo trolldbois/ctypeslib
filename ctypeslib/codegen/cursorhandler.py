@@ -240,8 +240,8 @@ class CursorHandler(ClangHandler):
             log.error(
                 'Bad TYPEREF parsing in TYPEDEF_DECL: %s' %
                 (_type.spelling))
-            import code
-            code.interact(local=locals())
+            #import code
+            #code.interact(local=locals())
             raise TypeError(
                 'Bad TYPEREF parsing in TYPEDEF_DECL: %s' %
                 (_type.spelling))

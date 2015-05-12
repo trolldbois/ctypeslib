@@ -33,7 +33,7 @@ class TypeHandler(ClangHandler):
 
     def init_fundamental_types(self):
         """Registers all fundamental typekind handlers"""
-        for _id in range(2, 24):
+        for _id in range(2, 25):
             setattr(self, TypeKind.from_id(_id).name,
                     self._handle_fundamental_types)
 
@@ -52,7 +52,6 @@ class TypeHandler(ClangHandler):
 
     """
     INVALID
-    NULLPTR
     OVERLOAD
     DEPENDENT
     OBJCID
