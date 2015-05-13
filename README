@@ -1,51 +1,41 @@
-ctypeslib with libclang
------------------------
+# ctypeslib with libclang
 
 Quick usage guide in [docs/ctypeslib 2.0 Introduction.ipynb]
 
 
-Status update
--------------
+## Status update
 
 2015-05-01:
  master branch works with libclang-3.7 HEAD
 
 
 
-Installation
-------------
+## Installation
+
  The requirement on python-clang-3.7 means that you either need:
  a) to install libclang1-dev to get libclang.so
  b) create a link to libclang-3.7.so.1 named libclang.so
  c) hardcode the required clang.cindex.Config.load_library_file in your code
 
 
-
-This fork of ctypeslib is mainly about using the libclang1>=3.4 python bindings
-to generate python code from C source code.
-
-ctypeslib contains these packages:
- - ``ctypeslib.codegen``       - a code generator
- - ``ctypeslib.contrib``       - various contributed modules
- - ``ctypeslib.util``          - assorted small helper functions
- - ``ctypeslib.test``          - unittests
-
-This fork of ctypeslib is heavily patched for clang.
-https://github.com/trolldbois/ctypeslib is based on 
- rev77594 of the original ctypeslib.
-git-svn-id: http://svn.python.org/projects/ctypes/trunk/ctypeslib@77594 
- 6015fed2-1504-0410-9fe1-9d1591cc4771
-
-The original ctypeslib is written by
-author="Thomas Heller",
-author_email="theller@ctypes.org",
+### Pypi
 
 Stable Distribution is available through pypi:
   https://pypi.python.org/pypi/ctypeslib2/
   sudo easy_install ctypeslib2 
-  
-Usage
------
+
+### Setting up clang >= 3.7 dependency
+
+see http://llvm.org/apt/
+
+  sudo apt-add-repository "deb http://llvm.org/apt/raring/ llvm-toolchain-raring main"
+  sudo apt-get install libclang1-3.7 libclang-common-3.7-dev python-clang-3.7
+  sudo echo `echo "/usr/lib/llvm-3.7/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
+  sudo ldconfig -n
+
+
+## Usage
+```
 usage: clang2py [-h] [--debug] [-c] [-d] [-k TYPEKIND] [-l DLLS] [-o OUTPUT]
                 [-r EXPRESSION] [-s SYMBOL] [-v] [-w W] [-m module]
                 [--preload DLL] [--show-ids SHOWIDS] [--max-depth N]
@@ -84,10 +74,10 @@ optional arguments:
 About clang-args: You can pass modifier to clang after your file name. For
 example, try "-target x86_64" or "-target i386-linux" as the last argument to
 change the target CPU arch.
+```
 
+## Inner workings for memo
 
-Inner workings for memo
------------------------
 clang2py is a script that calls ctypeslib/ctypeslib/clang2py.py
 clang2py.py is mostly the old xml2py.py module forked to use libclang.
 clang2py.py calls ctypeslib/ctypeslib/codegen/codegenerator.py
@@ -103,24 +93,28 @@ Because clang is capable to handle different target architecture, this fork
  {is/should be} able to produce cross-platform memory representation if needed.
 
 
-Setting up clang>=3.4
----------------------
-see http://llvm.org/apt/
-
-  sudo apt-add-repository "deb http://llvm.org/apt/raring/ llvm-toolchain-raring main"
-  sudo apt-get install libclang1-3.4 libclang-common-3.4-dev
-  sudo echo `echo "/usr/lib/llvm-3.4/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
-  sudo ldconfig -n
-
-Setting up python-clang>=3.4
-----------------------------
-This are the python bindings, not distributed by llvm as far as I know. 
-I made a python package for them.
-
-  sudo easy_install clang
 
 
+## Credits
 
+This fork of ctypeslib is mainly about using the libclang1>=3.4 python bindings
+to generate python code from C source code.
+
+ctypeslib contains these packages:
+ - ``ctypeslib.codegen``       - a code generator
+ - ``ctypeslib.contrib``       - various contributed modules
+ - ``ctypeslib.util``          - assorted small helper functions
+ - ``ctypeslib.test``          - unittests
+
+This fork of ctypeslib is heavily patched for clang.
+https://github.com/trolldbois/ctypeslib is based on 
+ rev77594 of the original ctypeslib.
+git-svn-id: http://svn.python.org/projects/ctypes/trunk/ctypeslib@77594 
+ 6015fed2-1504-0410-9fe1-9d1591cc4771
+
+The original ctypeslib is written by
+author="Thomas Heller",
+author_email="theller@ctypes.org",
 
 
 
