@@ -22,7 +22,7 @@ install:
   - sudo ldconfig  
 # tests dependencies
 #  - pip install nose
-#  - pip install clang #its a .deb now.
+  - pip install clang #from the host
   - pip install coveralls
 
 script:
