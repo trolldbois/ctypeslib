@@ -1,8 +1,9 @@
 # ctypeslib with libclang
 
 [![Build Status](https://travis-ci.org/trolldbois/ctypeslib.svg?branch=master)](https://travis-ci.org/trolldbois/ctypeslib)
-[![pypi](https://img.shields.io/pypi/dm/ctypeslib.svg)](https://pypi.python.org/pypi/ctypeslib2)
 [![Coverage Status](https://coveralls.io/repos/trolldbois/ctypeslib/badge.svg)](https://coveralls.io/r/trolldbois/ctypeslib)
+[![Code Health](https://landscape.io/github/trolldbois/ctypeslib/master/landscape.svg?style=flat)](https://landscape.io/github/trolldbois/ctypeslib/master)
+[![pypi](https://img.shields.io/pypi/dm/ctypeslib.svg)](https://pypi.python.org/pypi/ctypeslib2)
 
 [Quick usage guide](docs/ctypeslib 2.0 Introduction.ipynb) in the docs/ folder.
 
