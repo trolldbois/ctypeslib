@@ -2,36 +2,33 @@
 
 [Quick usage guide](docs/ctypeslib 2.0 Introduction.ipynb) in the docs/ folder.
 
-
 ## Status update
 
 2015-05-01:
  master branch works with libclang-3.7 HEAD
 
-
-
 ## Installation
 
- The requirement on python-clang-3.7 means that you either need:
- a) to install libclang1-dev to get libclang.so
- b) create a link to libclang-3.7.so.1 named libclang.so
- c) hardcode the required clang.cindex.Config.load_library_file in your code
+The requirement on python-clang-3.7 means that you either need:
+1. to install libclang1-dev to get libclang.so
+2. create a link to libclang-3.7.so.1 named libclang.so
+3. hardcode the required clang.cindex.Config.load_library_file in your code
 
 
 ### Pypi
 
 Stable Distribution is available through pypi:
-  https://pypi.python.org/pypi/ctypeslib2/
-  sudo easy_install ctypeslib2 
+https://pypi.python.org/pypi/ctypeslib2/
+    sudo easy_install ctypeslib2 
 
 ### Setting up clang >= 3.7 dependency
 
 see http://llvm.org/apt/
 
-  sudo apt-add-repository "deb http://llvm.org/apt/raring/ llvm-toolchain-raring main"
-  sudo apt-get install libclang1-3.7 libclang-common-3.7-dev python-clang-3.7
-  sudo echo `echo "/usr/lib/llvm-3.7/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
-  sudo ldconfig -n
+    sudo apt-add-repository "deb http://llvm.org/apt/raring/ llvm-toolchain-raring main"
+    sudo apt-get install libclang1-3.7 libclang-common-3.7-dev python-clang-3.7
+    sudo echo `echo "/usr/lib/llvm-3.7/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
+    sudo ldconfig -n
 
 
 ## Usage
@@ -78,15 +75,15 @@ change the target CPU arch.
 
 ## Inner workings for memo
 
-clang2py is a script that calls ctypeslib/ctypeslib/clang2py.py
-clang2py.py is mostly the old xml2py.py module forked to use libclang.
-clang2py.py calls ctypeslib/ctypeslib/codegen/codegenerator.py
-codegenerator.py calls ctypeslib/ctypeslib/codegen/clangparser.py
-clangparser.py uses libclang's python binding to access the clang internal 
+- clang2py is a script that calls ctypeslib/ctypeslib/clang2py.py
+- clang2py.py is mostly the old xml2py.py module forked to use libclang.
+- clang2py.py calls ctypeslib/ctypeslib/codegen/codegenerator.py
+- codegenerator.py calls ctypeslib/ctypeslib/codegen/clangparser.py
+- clangparser.py uses libclang's python binding to access the clang internal 
  representation of the C source code. 
  It then translate each child of the AST tree to python objects as listed in 
  typedesc.
-codegenerator.py then uses these python object to generate ctypes-based python
+- codegenerator.py then uses these python object to generate ctypes-based python
  source code.
  
 Because clang is capable to handle different target architecture, this fork 
@@ -100,21 +97,21 @@ Because clang is capable to handle different target architecture, this fork
 This fork of ctypeslib is mainly about using the libclang1>=3.4 python bindings
 to generate python code from C source code.
 
-ctypeslib contains these packages:
+the original ctypeslib contains these packages:
  - ``ctypeslib.codegen``       - a code generator
  - ``ctypeslib.contrib``       - various contributed modules
  - ``ctypeslib.util``          - assorted small helper functions
  - ``ctypeslib.test``          - unittests
 
 This fork of ctypeslib is heavily patched for clang.
-https://github.com/trolldbois/ctypeslib is based on 
+- https://github.com/trolldbois/ctypeslib is based on 
  rev77594 of the original ctypeslib.
-git-svn-id: http://svn.python.org/projects/ctypes/trunk/ctypeslib@77594 
+- git-svn-id: http://svn.python.org/projects/ctypes/trunk/ctypeslib@77594 
  6015fed2-1504-0410-9fe1-9d1591cc4771
 
 The original ctypeslib is written by
-author="Thomas Heller",
-author_email="theller@ctypes.org",
+- author="Thomas Heller",
+- author_email="theller@ctypes.org",
 
 
 
