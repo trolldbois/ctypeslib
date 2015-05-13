@@ -26,10 +26,9 @@ Stable Distribution is available through pypi at https://pypi.python.org/pypi/ct
 See the LLVM Clang instructions for dev branch 3.7 at http://llvm.org/apt/
 
     sudo apt-add-repository "deb http://llvm.org/apt/raring/ llvm-toolchain-raring main"
-    sudo apt-get install libclang1-3.7 libclang-common-3.7-dev python-clang-3.7
+    sudo apt-get install libclang1-3.7 python-clang-3.7
     sudo echo `echo "/usr/lib/llvm-3.7/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
     sudo ldconfig -n
-
 
 ## Usage
 ```
