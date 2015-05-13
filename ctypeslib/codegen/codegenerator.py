@@ -325,9 +325,12 @@ class Generator(object):
                       ('int' in tp.typ.typ.name) or 'long' in tp.typ.typ.name):
                     # array of number
                     # CARE: size of elements must match size of array
-                    init_value_type = self.type_name(tp.typ, False)
-                    init_value = ','.join([str(x) for x in tp.init])
-                    init_value = "(%s)(%s)"%(init_value_type,init_value)
+                    init_value = repr(tp.init)
+                    # we do NOT want Variable to be described as ctypes object
+                    # when we can have a python abstraction for them.
+                    #init_value_type = self.type_name(tp.typ, False)
+                    #init_value = ','.join([str(x) for x in tp.init])
+                    #init_value = "(%s)(%s)"%(init_value_type,init_value)
                 else:
                     init_value = self.type_name(tp.typ, False)
             elif (isinstance(tp.typ, typedesc.FundamentalType) and

@@ -314,6 +314,7 @@ class CursorHandler(ClangHandler):
         elif self.is_array_type(_ctype):
             # an integer litteral will be the size
             # an string litteral will be the value
+            # any list member will be children of a init_list_expr
             # FIXME Move that code into typedesc
             def countof(k,l):
                 return [_ck for _ck,_cv in l].count(k)
@@ -322,6 +323,9 @@ class CursorHandler(ClangHandler):
             elif (countof(CursorKind.STRING_LITERAL, init_value) == 1):
                 # we have a initialised c_array
                 init_value = dict(init_value)[CursorKind.STRING_LITERAL]
+            else:
+                # ignore size alone
+                init_value = []
             # check the array size versus elements.
             if _type.size < len(init_value):
                 _type.size = len(init_value)
