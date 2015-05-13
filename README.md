@@ -1,6 +1,6 @@
 # ctypeslib with libclang
 
-Quick usage guide in [docs/ctypeslib 2.0 Introduction.ipynb]
+[Quick usage guide](docs/ctypeslib 2.0 Introduction.ipynb) in the docs/ folder.
 
 
 ## Status update
