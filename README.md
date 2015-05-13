@@ -4,12 +4,12 @@
 
 ## Status update
 
-2015-05-01:
- master branch works with libclang-3.7 HEAD
+2015-05-01: master branch works with libclang-3.7 HEAD
 
 ## Installation
 
 The requirement on python-clang-3.7 means that you either need:
+
 1. to install libclang1-dev to get libclang.so
 2. create a link to libclang-3.7.so.1 named libclang.so
 3. hardcode the required clang.cindex.Config.load_library_file in your code
@@ -17,13 +17,13 @@ The requirement on python-clang-3.7 means that you either need:
 
 ### Pypi
 
-Stable Distribution is available through pypi:
-https://pypi.python.org/pypi/ctypeslib2/
-    sudo easy_install ctypeslib2 
+Stable Distribution is available through pypi at https://pypi.python.org/pypi/ctypeslib2/
+
+`sudo easy_install ctypeslib2`
 
 ### Setting up clang >= 3.7 dependency
 
-see http://llvm.org/apt/
+See the LLVM Clang instructions for dev branch 3.7 at http://llvm.org/apt/
 
     sudo apt-add-repository "deb http://llvm.org/apt/raring/ llvm-toolchain-raring main"
     sudo apt-get install libclang1-3.7 libclang-common-3.7-dev python-clang-3.7
@@ -94,8 +94,8 @@ Because clang is capable to handle different target architecture, this fork
 
 ## Credits
 
-This fork of ctypeslib is mainly about using the libclang1>=3.4 python bindings
-to generate python code from C source code.
+This fork of ctypeslib is mainly about using the libclang1>=3.7 python bindings
+to generate python code from C source code, instead of gccxml.
 
 the original ctypeslib contains these packages:
  - ``ctypeslib.codegen``       - a code generator
