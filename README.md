@@ -19,7 +19,7 @@ The requirement on python-clang-3.7 means that you either need:
 
 Stable Distribution is available through pypi at https://pypi.python.org/pypi/ctypeslib2/
 
-`sudo easy_install ctypeslib2`
+`sudo pip install ctypeslib2`
 
 ### Setting up clang >= 3.7 dependency
 
