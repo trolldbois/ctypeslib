@@ -314,32 +314,24 @@ class CursorHandler(ClangHandler):
         elif self.is_array_type(_ctype):
             # an integer litteral will be the size
             # an string litteral will be the value
+            # FIXME Move that code into typedesc
             def countof(k,l):
                 return [_ck for _ck,_cv in l].count(k)
-                
-            log.debug('is_array_type: \t\t%s'% self.is_array_type(_ctype))
-            log.debug('init_value is list: \t %s'% isinstance(init_value, list))
-            log.debug('kind: \t\t%s'% _ctype.kind)
-            log.debug('_type.typ.name: \t%s'% _type.typ.name)
-
-            import code
-            code.interact(local=locals())
-            
-            if isinstance(init_value, list) and \
-                (countof(CursorKind.STRING_LITERAL, init_value) == 1):
-                # FIXME: we dont really care about details.
-                #_ctype.kind == TypeKind.CONSTANTARRAY:
-                #(countof(CursorKind.INTEGER_LITERAL, init_value) == 1) and \
-                #_type.typ.name == 'c_char' and \                
+            if (countof(CursorKind.INIT_LIST_EXPR, init_value) == 1):
+                init_value = dict(init_value)[CursorKind.INIT_LIST_EXPR]
+            elif (countof(CursorKind.STRING_LITERAL, init_value) == 1):
                 # we have a initialised c_array
                 init_value = dict(init_value)[CursorKind.STRING_LITERAL]
-        
+            # check the array size versus elements.
+            if _type.size < len(init_value):
+                _type.size = len(init_value)
         elif init_value == []:
             # catch case.
             init_value = None
         else:
-            log.debug('VAR_DECL: init_value: %s'%(init_value))
-            init_value = init_value[0][0]
+            log.debug('VAR_DECL: default init_value: %s'%(init_value))
+            if len(init_value) > 0:
+                init_value = init_value[0][1]
         # finished
         log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s' % (name,
                                                                             _ctype.kind.name, _type.name, init_value,
@@ -349,39 +341,27 @@ class CursorHandler(ClangHandler):
         self.set_comment(obj, cursor)
         return True  # dont parse literals again
 
-    def _get_var_decl_init_value(self, _ctype, children_iter):
+    def _get_var_decl_init_value(self, _ctype, children):
         """
         Gathers initialisation values by parsing children nodes of a VAR_DECL.
         """
         
+        # FIXME TU for INIT_LIST_EXPR
         # FIXME: always return [(child.kind,child.value),...]
         # FIXME: simplify this redondant code.
         init_value = []
-        children = list(children_iter)
-        # get the value of this variable
-        if len(children) == 0:
-            log.debug('0 children in a var_decl')
-            return []
-        # seen in function pointer with args,
-        elif len(children) > 1:
-            log.debug('Multiple children in a var_decl')
-        else: # len(children) == 1
-            log.debug('Unique children in a var_decl')
-        init_value = []
+        children = list(children) # weird requirement, list iterator error.
+        log.debug('_get_var_decl_init_value: children #: %d'%(len(children)))
         for child in children:
             # early stop cases.
             _tmp = None
             try:
-                _tmp = self._get_var_decl_init_value_single(_ctype, child)                    
+                _tmp = self._get_var_decl_init_value_single(_ctype, child)
             except CursorKindException as e:
-                log.debug('children init value skip on %s' % (child.kind))
+                log.debug('_get_var_decl_init_value: children init value skip on %s' % (child.kind))
                 continue
-            # FIXME TU for INIT_LIST_EXPR
-            #if self.is_array_type(_ctype):
-            #    # the only working child is an INIT_LIST_EXPR
-            #    init_value = _tmp
-            init_value.append(_tmp)
-
+            if _tmp is not None:
+                init_value.append(_tmp)
         return init_value
 
     def _get_var_decl_init_value_single(self, _ctype, child):
@@ -389,9 +369,9 @@ class CursorHandler(ClangHandler):
         Handling of a single child for initialization value.
         Accepted types are expressions and declarations
         """
-        
+        init_value = None
         # FIXME: always return (child.kind, child.value)
-        log.debug('_ctype: %s Child.kind: %s' % (_ctype.kind, child.kind))
+        log.debug('_get_var_decl_init_value_single: _ctype: %s Child.kind: %s' % (_ctype.kind, child.kind))
         # shorcuts.
         if not child.kind.is_expression() and not child.kind.is_declaration():
             raise CursorKindException(child.kind)
@@ -401,29 +381,24 @@ class CursorHandler(ClangHandler):
         # As of clang 3.3, int, double literals are exposed.
         # float, long double, char , char* are not exposed directly in level1.
         # but really it depends...
-        #if self.is_array_type(_ctype):
-        #    #if child.kind == CursorKind.INIT_LIST_EXPR:
-        #    #    # init value will use INIT_LIST_EXPR
-        #    #    # FIXME should return 
-        #    #    init_value = self.parse_cursor(child)
-        #    #else:
-        #   #    # probably the literal that indicates the size of the array
-        #    #    # UT: test_char_p, with "char x[10];"
-        #    #    init_value = (child.kind, self.parse_cursor(child))
-        #    return init_value
-        #el
         if child.kind.is_unexposed():
             # recurse until we find a literal kind
             init_value = self._get_var_decl_init_value( _ctype, 
                                                         child.get_children())
+            if len(init_value) == 0:
+                init_value = None
+            elif len(init_value) == 1:
+                init_value = init_value[0]
+            else:
+                log.error('_get_var_decl_init_value_single: Unhandled case')
+                assert len(init_value) <= 1
         else:  # literal or others
-            ##init_value = self.parse_cursor(child)
             _v = self.parse_cursor(child)
-            if isinstance(_v,list):
-                log.debug('VAR_DECL: TOKENIZATION BUG CHECK: %s'% _v)
+            if isinstance(_v,list) and child.kind != CursorKind.INIT_LIST_EXPR:
+                log.debug('_get_var_decl_init_value_single: TOKENIZATION BUG CHECK: %s'% _v)
                 _v = _v[0]
             init_value = (child.kind, _v)
-        log.debug('VAR_DECL get_value: returns %s , %s'% init_value)
+        log.debug('_get_var_decl_init_value_single: returns %s'%str(init_value))
         return init_value
 
     @log_entity

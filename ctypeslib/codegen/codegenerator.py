@@ -212,11 +212,11 @@ class Generator(object):
         if tp.typ not in self.done:
             # generate only declaration code for records ?
             # if type(tp.typ) in (typedesc.Structure, typedesc.Union):
-            #    self.generate(tp.typ.get_head())
+            #    self._generate(tp.typ.get_head())
             #    self.more.add(tp.typ)
             # else:
-            #    self.generate(tp.typ)
-            self.generate(tp.typ)
+            #    self._generate(tp.typ)
+            self._generate(tp.typ)
         # generate actual typedef code.
         if tp.name != self.type_name(tp.typ):
             print >> self.stream, "%s = %s" % \
@@ -238,15 +238,15 @@ class Generator(object):
     _arraytypes = 0
 
     def ArrayType(self, tp):
-        self.generate(self._get_real_type(tp.typ))
-        self.generate(tp.typ)
+        self._generate(self._get_real_type(tp.typ))
+        self._generate(tp.typ)
         self._arraytypes += 1
         return
 
     _functiontypes = 0
 
     def FunctionType(self, tp):
-        self.generate(tp.returns)
+        self._generate(tp.returns)
         self.generate_all(tp.arguments)
         # print >> self.stream, "%s = %s # Functiontype " % (
         # self.type_name(tp), [self.type_name(a) for a in tp.arguments])
@@ -254,26 +254,26 @@ class Generator(object):
         return
 
     def Argument(self, tp):
-        self.generate(tp.typ)
+        self._generate(tp.typ)
 
     _pointertypes = 0
 
     def PointerType(self, tp):
         # print 'generate', tp.typ
         if isinstance(tp.typ, typedesc.PointerType):
-            self.generate(tp.typ)
+            self._generate(tp.typ)
         elif type(tp.typ) in (typedesc.Union, typedesc.Structure):
-            self.generate(tp.typ.get_head())
+            self._generate(tp.typ.get_head())
             self.more.add(tp.typ)
         elif isinstance(tp.typ, typedesc.Typedef):
-            self.generate(tp.typ)
+            self._generate(tp.typ)
         else:
-            self.generate(tp.typ)
+            self._generate(tp.typ)
         self._pointertypes += 1
         return
 
     def CvQualifiedType(self, tp):
-        self.generate(tp.typ)
+        self._generate(tp.typ)
         return
 
     _variables = 0
@@ -285,7 +285,7 @@ class Generator(object):
             self.print_comment(tp)
         dllname = self.find_dllname(tp)
         if dllname:
-            self.generate(tp.typ)
+            self._generate(tp.typ)
             # calling convention does not matter for in_dll...
             libname = self.get_sharedlib(dllname, "cdecl")
             print >> self.stream, \
@@ -315,10 +315,19 @@ class Generator(object):
             init_value = tp.init
             if isinstance(tp.typ, typedesc.PointerType) or \
                 isinstance(tp.typ, typedesc.ArrayType):
-                if (isinstance(tp.typ.typ, typedesc.FundamentalType) and
-                        (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
-                    # char *
+                if (isinstance(tp.typ.typ, typedesc.FundamentalType) and \
+                     (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
+                    # string
+                    # FIXME a char * is not a python string.
+                    # we should output a cstring() construct.
                     init_value = repr(tp.init)
+                elif (isinstance(tp.typ.typ, typedesc.FundamentalType) and \
+                      ('int' in tp.typ.typ.name) or 'long' in tp.typ.typ.name):
+                    # array of number
+                    # CARE: size of elements must match size of array
+                    init_value_type = self.type_name(tp.typ, False)
+                    init_value = ','.join([str(x) for x in tp.init])
+                    init_value = "(%s)(%s)"%(init_value_type,init_value)
                 else:
                     init_value = self.type_name(tp.typ, False)
             elif (isinstance(tp.typ, typedesc.FundamentalType) and
@@ -331,11 +340,6 @@ class Generator(object):
                 # DEBUG int() float()
                 init_value = tp.init
                 # print init_value
-                # FIXME: DEBUG
-                if tp.name == 'text':
-                    print '\ntp.init', tp.init, '\n'
-                    import code
-                    code.interact(local=locals())
                 #init_value = repr(tp.init)
             # Partial --
             # now we do want to have FundamentalType variable use the actual
@@ -386,7 +390,7 @@ class Generator(object):
         # Since we don't have separate namespaces for the type and the values,
         # we generate the TYPE last, overwriting the value. XXX
         for item in tp.values:
-            self.generate(item)
+            self._generate(item)
         if tp.name:
             print >> self.stream, "%s = ctypes.c_int # enum" % tp.name
             self.names.add(tp.name)
@@ -433,19 +437,19 @@ class Generator(object):
         depends.discard(None)
         if len(depends) > 0:
             log.debug('Generate %s DEPENDS %s' % (struct.name, depends))
-            self.generate(struct.get_head(), False)
+            self._generate(struct.get_head(), False)
             # generate dependencies
             for dep in depends:
-                self.generate(dep)
-            self.generate(struct.get_body(), False)
+                self._generate(dep)
+            self._generate(struct.get_body(), False)
         else:
             log.debug('No depends for %s' % (struct.name))
             if struct.name in self.names:
                 # headers already produced
-                self.generate(struct.get_body(), False)
+                self._generate(struct.get_body(), False)
             else:
-                self.generate(struct.get_head(), True)
-                self.generate(struct.get_body(), True)
+                self._generate(struct.get_head(), True)
+                self._generate(struct.get_body(), True)
         return
 
     Union = Structure
@@ -453,7 +457,7 @@ class Generator(object):
     def StructureHead(self, head, inline=False):
         log.debug('Head start for %s inline:%s' % (head.name, inline))
         for struct in head.struct.bases:
-            self.generate(struct.get_head())
+            self._generate(struct.get_head())
             # add dependencies
             self.more.add(struct)
         basenames = [self.type_name(b) for b in head.struct.bases]
@@ -483,11 +487,11 @@ class Generator(object):
             if isinstance(m, typedesc.Field):
                 fields.append(m)
                 # if type(m.type) is typedesc.Typedef:
-                #    self.generate(get_real_type(m.type))
-                # self.generate(m.type)
+                #    self._generate(get_real_type(m.type))
+                # self._generate(m.type)
             elif isinstance(m, typedesc.Method):
                 methods.append(m)
-                # self.generate(m.returns)
+                # self._generate(m.returns)
                 # self.generate_all(m.iterArgTypes())
             elif isinstance(m, typedesc.Ignored):
                 pass
@@ -511,10 +515,10 @@ class Generator(object):
 
         if body.struct.bases:
             if len(body.struct.bases) == 1:  # its a Struct or a simple Class
-                self.generate(body.struct.bases[0].get_body(), inline)
+                self._generate(body.struct.bases[0].get_body(), inline)
             else:  # we have a multi-parent inheritance
                 for b in body.struct.bases:
-                    self.generate(b.get_body(), inline)
+                    self._generate(b.get_body(), inline)
         # field definition normally span several lines.
         # Before we generate them, we need to 'import' everything they need.
         # So, call type_name for each field once,
@@ -640,7 +644,7 @@ class Generator(object):
         if dllname:
             if self.generate_comments:
                 self.print_comment(func)
-            self.generate(func.returns)
+            self._generate(func.returns)
             self.generate_all(func.iterArgTypes())
             args = [self.type_name(a) for a in func.iterArgTypes()]
             if "__stdcall__" in func.attributes:
@@ -711,7 +715,7 @@ class Generator(object):
 
     ########
 
-    def generate(self, item, *args):
+    def _generate(self, item, *args):
         """ wraps execution of specific methods."""
         if item in self.done:
             return
@@ -750,7 +754,7 @@ class Generator(object):
 
     def generate_all(self, items):
         for item in items:
-            self.generate(item)
+            self._generate(item)
         return
 
     def cmpitems(a, b):
@@ -774,6 +778,10 @@ class Generator(object):
             items |= self.more
             items -= self.done
         return loops
+
+    def generate(self, parser, items):
+        self.generate_headers(parser)
+        self.generate_code(items)
 
     def generate_code(self, items):
         print >> self.imports, "\n".join(["CDLL('%s', RTLD_GLOBAL)" % preloaded_dll
