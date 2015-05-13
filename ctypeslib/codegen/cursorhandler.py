@@ -296,6 +296,9 @@ class CursorHandler(ClangHandler):
             raise NotImplementedError(
                 'What other type of variable? %s' %
                 (_ctype.kind))
+
+        # FIXME: always expect list [(k,v)] as init value.
+        
         # get the init_value and special cases
         init_value = self._get_var_decl_init_value(cursor.type,
                                                    list(cursor.get_children()))
@@ -305,8 +308,7 @@ class CursorHandler(ClangHandler):
         elif (self.is_pointer_type(_ctype) and
                 _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO):
             # Function pointers argument are handled inside
-            if not isinstance(init_value, list):
-                init_value = [init_value]
+            init_value = [v for k,v in init_value]
             _type.arguments = init_value
             init_value = _type
         elif self.is_array_type(_ctype):
@@ -319,6 +321,9 @@ class CursorHandler(ClangHandler):
             log.debug('init_value is list: \t %s'% isinstance(init_value, list))
             log.debug('kind: \t\t%s'% _ctype.kind)
             log.debug('_type.typ.name: \t%s'% _type.typ.name)
+
+            import code
+            code.interact(local=locals())
             
             if isinstance(init_value, list) and \
                 (countof(CursorKind.STRING_LITERAL, init_value) == 1):
@@ -328,7 +333,13 @@ class CursorHandler(ClangHandler):
                 #_type.typ.name == 'c_char' and \                
                 # we have a initialised c_array
                 init_value = dict(init_value)[CursorKind.STRING_LITERAL]
-                
+        
+        elif init_value == []:
+            # catch case.
+            init_value = None
+        else:
+            log.debug('VAR_DECL: init_value: %s'%(init_value))
+            init_value = init_value[0][0]
         # finished
         log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s' % (name,
                                                                             _ctype.kind.name, _type.name, init_value,
@@ -345,52 +356,32 @@ class CursorHandler(ClangHandler):
         
         # FIXME: always return [(child.kind,child.value),...]
         # FIXME: simplify this redondant code.
-        init_value = None
+        init_value = []
         children = list(children_iter)
         # get the value of this variable
         if len(children) == 0:
             log.debug('0 children in a var_decl')
-            if self.is_array_type(_ctype):
-                return []
-            return None
+            return []
         # seen in function pointer with args,
-        if (len(children) != 1):
-            # test_codegen.py test_extern_function_pointer_multiarg
+        elif len(children) > 1:
             log.debug('Multiple children in a var_decl')
-            init_value = []
-            for child in children:
-                # early stop cases.
-                _tmp = None
-                try:
-                    _tmp = self._get_var_decl_init_value_single(_ctype, child)                    
-                except CursorKindException as e:
-                    log.debug('children init value skip on %s' % (child.kind))
-                    continue
-                # FIXME TU for INIT_LIST_EXPR
-                #if self.is_array_type(_ctype):
-                #    # the only working child is an INIT_LIST_EXPR
-                #    init_value = _tmp
-                if self.is_array_type(_ctype):
-                    init_value.append(_tmp)
-                else:
-                    init_value.append(_tmp)
-            if isinstance(init_value, list) and len(init_value) == 0:
-                init_value = None
-        else:
-            child = children[0]
-            # get the init value if possible
+        else: # len(children) == 1
+            log.debug('Unique children in a var_decl')
+        init_value = []
+        for child in children:
+            # early stop cases.
+            _tmp = None
             try:
-                init_value = self._get_var_decl_init_value_single(
-                    _ctype,
-                    child)
+                _tmp = self._get_var_decl_init_value_single(_ctype, child)                    
             except CursorKindException as e:
-                log.debug('single init value skip on %s' % (child.kind))
-                init_value = None
-            # FIXME: fix methods signature to always return a list
-            if self.is_array_type(_ctype):
-                _tmp = init_value
-                init_value = list()
-                init_value.append(_tmp)
+                log.debug('children init value skip on %s' % (child.kind))
+                continue
+            # FIXME TU for INIT_LIST_EXPR
+            #if self.is_array_type(_ctype):
+            #    # the only working child is an INIT_LIST_EXPR
+            #    init_value = _tmp
+            init_value.append(_tmp)
+
         return init_value
 
     def _get_var_decl_init_value_single(self, _ctype, child):
@@ -410,23 +401,29 @@ class CursorHandler(ClangHandler):
         # As of clang 3.3, int, double literals are exposed.
         # float, long double, char , char* are not exposed directly in level1.
         # but really it depends...
-        if self.is_array_type(_ctype):
-            if child.kind == CursorKind.INIT_LIST_EXPR:
-                # init value will use INIT_LIST_EXPR
-                init_value = self.parse_cursor(child)
-            else:
-                # probably the literal that indicates the size of the array
-                # UT: test_char_p, with "char x[10];"
-                init_value = (child.kind, self.parse_cursor(child))
-            return init_value
-        elif child.kind.is_unexposed():
+        #if self.is_array_type(_ctype):
+        #    #if child.kind == CursorKind.INIT_LIST_EXPR:
+        #    #    # init value will use INIT_LIST_EXPR
+        #    #    # FIXME should return 
+        #    #    init_value = self.parse_cursor(child)
+        #    #else:
+        #   #    # probably the literal that indicates the size of the array
+        #    #    # UT: test_char_p, with "char x[10];"
+        #    #    init_value = (child.kind, self.parse_cursor(child))
+        #    return init_value
+        #el
+        if child.kind.is_unexposed():
             # recurse until we find a literal kind
-            init_value = self._get_var_decl_init_value(
-                _ctype,
-                child.get_children())
+            init_value = self._get_var_decl_init_value( _ctype, 
+                                                        child.get_children())
         else:  # literal or others
-            init_value = self.parse_cursor(child)
-        log.debug('**** %s'% init_value)
+            ##init_value = self.parse_cursor(child)
+            _v = self.parse_cursor(child)
+            if isinstance(_v,list):
+                log.debug('VAR_DECL: TOKENIZATION BUG CHECK: %s'% _v)
+                _v = _v[0]
+            init_value = (child.kind, _v)
+        log.debug('VAR_DECL get_value: returns %s , %s'% init_value)
         return init_value
 
     @log_entity
