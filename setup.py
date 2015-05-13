@@ -5,9 +5,9 @@ from setuptools import setup
 
 setup(
     name="ctypeslib2",
-    version="2.0rc4",
+    version="2.0rc5",
     description="ctypeslib2 - FFI toolkit, relies on clang",
-    long_description=open("README").read(),
+    long_description=open("README.md").read(),
     author="Loic Jaquemet",
     author_email="loic.jaquemet+python@gmail.com",
     classifiers=[
