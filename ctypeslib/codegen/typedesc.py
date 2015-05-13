@@ -5,6 +5,15 @@ class T(object):
     name = None
     location = None
     comment = None
+    def __repr__(self):
+        kv=self.__dict__
+        s = []
+        for k,v in kv.items():
+            if isinstance(v,T):
+                s.append('%s=%s(...)'%(k,v.__class__.__name__))
+            else:
+                s.append('%s=%s'%(k,v))
+        return "%s(%s)"%(self.__class__.__name__,','.join(s) )
 
 
 class Argument(T):

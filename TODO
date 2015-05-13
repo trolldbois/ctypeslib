@@ -1,16 +1,7 @@
-ctypeslibTODO list
+ctypeslib TODO list
 ==================
 
-2015-05-04 - patches have been integrated in clang.
 
-use virtualenv
-$ source bin/activate
-$ deactivate
 
-2015-01-29
-based on a patched libclang
 
-master passes TU.
-dev does not. probably because of changes around long_double or other basic type.
-have a good flight
 

@@ -313,7 +313,8 @@ class Generator(object):
                                                           [x for x in tp.typ.iterArgNames()])
         else:
             init_value = tp.init
-            if isinstance(tp.typ, typedesc.PointerType):
+            if isinstance(tp.typ, typedesc.PointerType) or \
+                isinstance(tp.typ, typedesc.ArrayType):
                 if (isinstance(tp.typ.typ, typedesc.FundamentalType) and
                         (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
                     # char *
@@ -330,8 +331,11 @@ class Generator(object):
                 # DEBUG int() float()
                 init_value = tp.init
                 # print init_value
-                #import code
-                # code.interact(local=locals())
+                # FIXME: DEBUG
+                if tp.name == 'text':
+                    print '\ntp.init', tp.init, '\n'
+                    import code
+                    code.interact(local=locals())
                 #init_value = repr(tp.init)
             # Partial --
             # now we do want to have FundamentalType variable use the actual

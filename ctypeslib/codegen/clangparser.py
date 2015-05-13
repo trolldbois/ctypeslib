@@ -120,6 +120,19 @@ class Clang_Parser(object):
             self.startElement(node)
         return
 
+    def parse_string(self, inputdata):
+        # store inputdata in temp file
+        import tempfile, os
+        handle, filename = tempfile.mkstemp(".h")
+        os.close(handle)
+        open(filename, "w").write(inputdata)
+        try:
+            with open(filename):
+                self.parse(filename)
+        finally:
+            os.unlink(filename)
+        return
+
     def startElement(self, node):
         """Recurses in children of this node"""
         if node is None:

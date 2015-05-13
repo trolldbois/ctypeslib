@@ -120,6 +120,14 @@ def log_entity(func):
     return fn
 
 
+class ADict(dict):
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(name)
+
+
 __all__ = [
     'get_cursor',
     'get_cursors',
