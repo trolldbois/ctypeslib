@@ -23,7 +23,6 @@ setup(
     license="License :: OSI Approved :: MIT License",
     packages=['ctypeslib',
               'ctypeslib.codegen',
-              'ctypeslib.contrib',
               ],
     package_data={'ctypeslib': ['data/fundamental_type_name.tpl',
                                 'data/pointer_type.tpl',
