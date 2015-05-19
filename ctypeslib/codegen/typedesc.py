@@ -141,12 +141,7 @@ class PointerType(T):
         self.typ = typ
         self.size = int(size)
         self.align = int(align)
-        # USELESS FIXME
-        if isinstance(typ, str):
-            self.name = "LP_%s" % (self.typ)
-            log.warning('FIXME Pointertype subtype name should not be str')
-        else:
-            self.name = "LP_%s" % (self.typ.name)
+        self.name = "LP_%s" % (self.typ.name)
 
 
 class Typedef(T):
