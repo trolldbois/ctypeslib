@@ -24,7 +24,6 @@ setup(
     packages=['ctypeslib',
               'ctypeslib.codegen',
               'ctypeslib.contrib',
-              'ctypeslib.util'
               ],
     package_data={'ctypeslib': ['data/fundamental_type_name.tpl',
                                 'data/pointer_type.tpl',
