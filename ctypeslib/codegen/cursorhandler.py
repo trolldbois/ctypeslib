@@ -521,14 +521,14 @@ class CursorHandler(ClangHandler):
         name = self.get_unique_name(cursor)
         # FIXME, handling anonymous field by adding a child id.
         if num is not None:
-            name = "%s_%d" % (name, num)
+            name = "%s_%d",name, num)
         # TODO unittest: try redefinition.
         # check for definition already parsed
         if (self.is_registered(name) and
                 self.get_registered(name).members is not None):
             log.debug(
-                '_record_decl: %s is already registered with members' %
-                (name))
+                '_record_decl: %s is already registered with members',
+                name)
             return self.get_registered(name)
         # FIXME: lets ignore bases for now.
         # bases = attrs.get("bases", "").split() # that for cpp ?
@@ -536,20 +536,20 @@ class CursorHandler(ClangHandler):
         size = cursor.type.get_size()
         align = cursor.type.get_align()
         if size < 0 or align < 0:
-            log.error('invalid structure %s %s align:%d size:%d' % (
-                name, cursor.location, align, size))
-            raise InvalidDefinitionError('invalid structure %s %s align:%d size:%d' % (
-                name, cursor.location, align, size))
-        log.debug('_record_decl: name: %s size:%d' % (name, size))
+            log.error('invalid structure %s %s align:%d size:%d',
+                name, cursor.location, align, size)
+            raise InvalidDefinitionError('invalid structure %s %s align:%d size:%d',
+                name, cursor.location, align, size)
+        log.debug('_record_decl: name: %s size:%d', name, size)
         # Declaration vs Definition point
         # when a struct decl happen before the definition, we have no members
         # in the first declaration instance.
         if not self.is_registered(name) and not cursor.is_definition():
             # juste save the spot, don't look at members == None
-            log.debug('cursor %s is not on a definition' % (name))
+            log.debug('cursor %s is not on a definition', name)
             obj = _output_type(name, align, None, bases, size, packed=False)
             return self.register(name, obj)
-        log.debug('cursor %s is a definition' % (name))
+        log.debug('cursor %s is a definition', name)
         # save the type in the registry. Useful for not looping in case of
         # members with forward references
         obj = None
@@ -565,8 +565,8 @@ class CursorHandler(ClangHandler):
         members = []
         # Go and recurse through fields
         fields = list(cursor.type.get_fields())
-        log.debug('Fields: %s' %
-                  (str(['%s/%s' % (f.kind.name, f.spelling) for f in fields])))
+        log.debug('Fields: %s',
+                  str(['%s/%s' % (f.kind.name, f.spelling) for f in fields]))
         for field in fields:
             members.append(self.FIELD_DECL(field))
         # check for other stuff
@@ -577,10 +577,10 @@ class CursorHandler(ClangHandler):
                 continue  # dont mess with field calculations
             else:  # could be others.... struct_decl, etc...
                 log.debug(
-                    'Unhandled field %s in record %s' %
-                    (child.kind, name))
+                    'Unhandled field %s in record %s',
+                    child.kind, name)
                 continue
-        log.debug('_record_decl: %d members' % (len(members)))
+        log.debug('_record_decl: %d members', len(members))
         # if len(members) == 0:
         #    import code
         #    code.interact(local=locals())
@@ -589,8 +589,8 @@ class CursorHandler(ClangHandler):
             # FIXME: make a test case for that.
             if not declared_instance:
                 log.debug(
-                    '_record_decl: %s was previously registered' %
-                    (name))
+                    '_record_decl: %s was previously registered',
+                    name)
             obj = self.get_registered(name)
             obj.members = members
             obj.packed = packed
@@ -659,7 +659,7 @@ class CursorHandler(ClangHandler):
             else:
                 name = 'c_uint64'  # also the 3 bytes + char thing
             # change the type to harmonise the bitfield
-            log.debug('_fixup_record_bitfield_size: fix type to %s' % (name))
+            log.debug('_fixup_record_bitfield_size: fix type to %s', name)
             # set the whole bitfield to the appropriate type size.
             for m in members:
                 m.type.name = name
@@ -693,7 +693,7 @@ class CursorHandler(ClangHandler):
 
     def _fixup_record(self, s):
         """Fixup padding on a record"""
-        log.debug('FIXUP_STRUCT: %s %d bits' % (s.name, s.size * 8))
+        log.debug('FIXUP_STRUCT: %s %d bits', s.name, s.size * 8)
         if s.members is None:
             log.debug('FIXUP_STRUCT: no members')
             s.members = []
@@ -713,14 +713,14 @@ class CursorHandler(ClangHandler):
             # we need to check total size of bitfield, so to choose the right
             # bitfield type
             member = m
-            log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d' % (
-                member.name, member.offset, member.offset + member.bits, offset))
+            log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d',
+                member.name, member.offset, member.offset + member.bits, offset)
             if member.offset > offset:
                 # create padding
                 length = member.offset - offset
                 log.debug(
-                    'Fixup_struct: create padding for %d bits %d bytes' %
-                    (length, length / 8))
+                    'Fixup_struct: create padding for %d bits %d bytes',
+                    length, length / 8)
                 padding_nb = self._make_padding(
                     members,
                     padding_nb,
@@ -728,7 +728,7 @@ class CursorHandler(ClangHandler):
                     length,
                     prev_member)
             if member.type is None:
-                log.error('FIXUP_STRUCT: %s.type is None' % (member.name))
+                log.error('FIXUP_STRUCT: %s.type is None', member.name)
             members.append(member)
             offset = member.offset + member.bits
             prev_member = member
@@ -736,8 +736,8 @@ class CursorHandler(ClangHandler):
         if s.size * 8 != offset:
             length = s.size * 8 - offset
             log.debug(
-                'Fixup_struct: s:%d create tail padding for %d bits %d bytes' %
-                (s.size, length, length / 8))
+                'Fixup_struct: s:%d create tail padding for %d bits %d bytes',
+                s.size, length, length / 8)
             padding_nb = self._make_padding(
                 members,
                 padding_nb,
@@ -748,7 +748,7 @@ class CursorHandler(ClangHandler):
             offset = members[-1].offset + members[-1].bits
         # go
         s.members = members
-        log.debug("FIXUP_STRUCT: size:%d offset:%d" % (s.size * 8, offset))
+        log.debug("FIXUP_STRUCT: size:%d offset:%d", s.size * 8, offset)
         # if member and not member.is_bitfield:
         self._fixup_record_bitfields_type(s)
         # , assert that the last field stop at the size limit
@@ -763,7 +763,7 @@ class CursorHandler(ClangHandler):
         """Make padding Fields for a specifed size."""
         name = 'PADDING_%d' % padding_nb
         padding_nb += 1
-        log.debug("_make_padding: for %d bits" % (length))
+        log.debug("_make_padding: for %d bits", length)
         if (length % 8) != 0:
             # add a padding to align with the bitfield type
             # then multiple bytes if required.
@@ -827,12 +827,12 @@ class CursorHandler(ClangHandler):
             # make a name
             name = "_%d" % (fieldnum)
             log.warning(
-                "Cursor has no displayname - anonymous field renamed to %s" %
-                (name))
+                "Cursor has no displayname - anonymous field renamed to %s",
+                name)
         else:
             offset = parent.type.get_offset(name)
             if offset < 0:
-                log.error('BAD RECORD, Bad offset: %d for %s' % (offset, name))
+                log.error('BAD RECORD, Bad offset: %d for %s', offset, name)
                 # FIXME if c++ class ?
         # bitfield
         bits = None
@@ -844,8 +844,8 @@ class CursorHandler(ClangHandler):
             bits = cursor.type.get_size() * 8
             if bits < 0:
                 log.warning(
-                    'Bad source code, bitsize == %d <0 on %s' %
-                    (bits, name))
+                    'Bad source code, bitsize == %d <0 on %s',
+                    bits, name)
                 bits = 0
         # after dealing with anon bitfields
         if name == '':
@@ -875,20 +875,20 @@ class CursorHandler(ClangHandler):
                 _decl_name += name
             if self.is_registered(_decl_name):
                 log.debug(
-                    'FIELD_DECL: used type from cache: %s' %
-                    (_decl_name))
+                    'FIELD_DECL: used type from cache: %s',
+                    _decl_name)
                 _type = self.get_registered(_decl_name)
                 # then we shortcut
             else:
                 # is it always the case ?
-                log.debug("FIELD_DECL: name:'%s'" % (_decl_name))
-                log.debug("FIELD_DECL: %s: nb children:%s" % (cursor.type.kind,
-                                                              len(children)))
+                log.debug("FIELD_DECL: name:'%s'",_decl_name)
+                log.debug("FIELD_DECL: %s: nb children:%s", cursor.type.kind,
+                                                              len(children))
                 # recurse into the right function
                 _type = self.parse_cursor_type(_canonical_type)
                 if _type is None:
-                    log.warning("Field %s is an %s type - ignoring field type" % (
-                                name, _canonical_type.kind.name))
+                    log.warning("Field %s is an %s type - ignoring field type",
+                                name, _canonical_type.kind.name)
                     return None
         if cursor.is_anonymous():
             # we have to unregister the _type and register a alternate named
@@ -934,14 +934,14 @@ class CursorHandler(ClangHandler):
         # why not Cursor.kind GNU_NULL_EXPR child instead of a token ?
         if name == 'NULL' or value == '__null':
             value = None
-        log.debug('MACRO: #define %s %s' % (tokens[0], value))
+        log.debug('MACRO: #define %s %s', tokens[0], value)
         obj = typedesc.Macro(name, None, value)
         try:
             self.register(name, obj)
         except DuplicateDefinitionException as e:
             log.info(
-                'Redefinition of %s %s->%s' %
-                (name, self.parser.all[name].args, value))
+                'Redefinition of %s %s->%s',
+                name, self.parser.all[name].args, value))
             # HACK
             self.parser.all[name] = obj
             pass
