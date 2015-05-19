@@ -28,7 +28,7 @@ if not os.path.exists(gen_dir):
 #
 
 
-def include(code, persist=True, compilerflags=["-c"]):
+def include(code, persist=True, compilerflags=None):
     """This function replaces the *calling module* with a dynamic
     module that generates code on demand.  The code is generated from
     type descriptions that are created by gccxml compiling the C code
@@ -45,6 +45,7 @@ def include(code, persist=True, compilerflags=["-c"]):
      - the calling module MUST contain 'from ctypes import *',
        and, on windows, also 'from ctypes.wintypes import *'.
     """
+    compilerflags = compilerflags or ["-c"]
     # create a hash for the code, and use that as basename for the
     # files we have to create
     fullcode = "/* compilerflags: %r */\n%s" % (compilerflags, code)
