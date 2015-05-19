@@ -23,7 +23,7 @@ class Generator(object):
                  generate_comments=False,
                  known_symbols=None,
                  searched_dlls=None,
-                 preloaded_dlls=[],
+                 preloaded_dlls=None,
                  generate_docstrings=False,
                  generate_locations=False):
         self.output = output
@@ -33,7 +33,7 @@ class Generator(object):
         self.generate_comments = generate_comments
         self.generate_docstrings = generate_docstrings
         self.known_symbols = known_symbols or {}
-        self.preloaded_dlls = preloaded_dlls
+        self.preloaded_dlls = preloaded_dlls or []
         if searched_dlls is None:
             self.searched_dlls = []
         else:
@@ -179,13 +179,13 @@ class Generator(object):
         # when the macro is called.
         # mcode = "def %s%s: return %s # macro" % (macro.name, macro.args,
         # macro.body)
-        try:
-            compile(mcode, "<string>", "exec")
-        except SyntaxError:
-            print >> self.stream, "#", mcode
-        else:
-            print >> self.stream, mcode, '# Macro'
-            self.names.add(macro.name)
+        #try:
+        #    compile(mcode, "<string>", "exec")
+        #except SyntaxError:
+        #    print >> self.stream, "#", mcode
+        #else:
+        #    print >> self.stream, mcode, '# Macro'
+        #    self.names.add(macro.name)
 
     _typedefs = 0
 
@@ -838,17 +838,17 @@ def generate_code(srcfiles,
                   known_symbols=None,
                   searched_dlls=None,
                   types=None,
-                  preloaded_dlls=[],
+                  preloaded_dlls=None,
                   generate_docstrings=False,
                   generate_locations=False,
                   generate_includes=False,
                   filter_location=True,
-                  flags=[]
+                  flags=None
                   ):
 
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
-    parser = clangparser.Clang_Parser(flags)
+    parser = clangparser.Clang_Parser(flags or [])
     # if macros are not needed, use a faster TranslationUnit
     if typedesc.Macro in types:
         parser.activate_macros_parsing()
