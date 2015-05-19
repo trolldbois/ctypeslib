@@ -16,7 +16,7 @@ log = logging.getLogger('cursorhandler')
 class CursorHandler(ClangHandler):
 
     """
-    Handles Cursor Kind and transform them into typedesc.
+    Factory objects that handles Cursor Kind and transform them into typedesc.
 
     # clang.cindex.CursorKind
     # Declarations: 1-39
