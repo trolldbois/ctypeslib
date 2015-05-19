@@ -1,6 +1,10 @@
 from ctypes import *
 
-
+# LXJ - 201505 - I have similar code in haystack 
+# FIXME: this is not used anywhere. REMOVE
+#
+#
+#
 def _calc_offset():
     # The definition of PyCArgObject (that is the type of object that
     # byref returns):
