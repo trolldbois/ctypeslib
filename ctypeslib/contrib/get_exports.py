@@ -31,7 +31,7 @@ doesn't work for all valid c/c++ declarations"""
         return '("%s", %s)' % (name, type_)
 
 
-def convert_cdef_to_structure(cdef, name, data_dict=ctypes.__dict__):
+def convert_cdef_to_structure(cdef, name, data_dict=None):
     """\
 convert_cdef_to_structure(struct_definition_from_c_header_file)
   -> python class derived from ctypes.Structure
@@ -44,7 +44,7 @@ limited support for c/c++ syntax"""
             py_str += ' ' * 4 + field + ',\n'
     py_str += ']\n'
 
-    pyarr = eval(py_str, data_dict)
+    pyarr = eval(py_str, data_dict or ctypes.__dict__)
 
     class ret_val(ctypes.Structure):
         _fields_ = pyarr
