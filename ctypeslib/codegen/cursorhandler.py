@@ -12,10 +12,6 @@ from ctypeslib.codegen.handler import DuplicateDefinitionException
 import logging
 log = logging.getLogger('cursorhandler')
 
-# DEBUG
-import code
-
-
 class CursorHandler(ClangHandler):
 
     """
@@ -48,41 +44,28 @@ class CursorHandler(ClangHandler):
 
     @log_entity
     def UNEXPOSED_ATTR(self, cursor):
-        parent = cursor.semantic_parent
+        # FIXME: do we do something with these ?
+        #parent = cursor.semantic_parent
         # print 'parent is',parent.displayname, parent.location, parent.extent
         # TODO until attr is exposed by clang:
         # readlines()[extent] .split(' ') | grep {inline,packed}
-        pass
+        return
 
     @log_entity
     def PACKED_ATTR(self, cursor):
-        parent = cursor.semantic_parent
+        # FIXME: do we do something with these ?
+        #parent = cursor.semantic_parent
         # print 'parent is',parent.displayname, parent.location, parent.extent
         # TODO until attr is exposed by clang:
         # readlines()[extent] .split(' ') | grep {inline,packed}
-        pass
-
-    ################################
-    # real element handlers
-
-    # def File(self, attrs):
-    #    name = attrs["name"]
-    #    if sys.platform == "win32" and " " in name:
-    #        # On windows, convert to short filename if it contains blanks
-    #        from ctypes import windll, create_unicode_buffer, sizeof, WinError
-    #        buf = create_unicode_buffer(512)
-    #        if windll.kernel32.GetShortPathNameW(name, buf, sizeof(buf)):
-    #            name = buf.value
-    #    return typedesc.File(name)
-    #
-    #def _fixup_File(self, f): pass
+        return
 
     ################################
     # EXPRESSIONS handlers
 
-    '''clang does not expose some types for some expression.
-    Example: the type of a token group in a Char_s or char variable.
-    Counter example: The type of an integer literal to a (int) variable.'''
+    #clang does not expose some types for some expression.
+    #Example: the type of a token group in a Char_s or char variable.
+    #Counter example: The type of an integer literal to a (int) variable.
     @log_entity
     def UNEXPOSED_EXPR(self, cursor):
         ret = []
@@ -102,10 +85,6 @@ class CursorHandler(ClangHandler):
         values = [self.parse_cursor(child)
                   for child in list(cursor.get_children())]
         return values
-
-    @log_entity
-    def GNU_NULL_EXPR(self, cursor):
-        return None
 
     ################################
     # STATEMENTS handlers
@@ -232,14 +211,14 @@ class CursorHandler(ClangHandler):
         # use the canonical type directly.
         _type = cursor.type.get_canonical()
         log.debug("TYPEDEF_DECL: name:%s" % (name))
-        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s" % (_type.kind))
+        log.debug("TYPEDEF_DECL: typ.kind.displayname:%s", _type.kind)
 
         # For all types (array, fundament, pointer, others), get the type
         p_type = self.parse_cursor_type(_type)
         if not isinstance(p_type, typedesc.T):
             log.error(
-                'Bad TYPEREF parsing in TYPEDEF_DECL: %s' %
-                (_type.spelling))
+                'Bad TYPEREF parsing in TYPEDEF_DECL: %s',
+                _type.spelling)
             #import code
             #code.interact(local=locals())
             raise TypeError(
@@ -256,11 +235,30 @@ class CursorHandler(ClangHandler):
         """Handles Variable declaration."""
         # get the name
         name = self.get_unique_name(cursor)
-        # double declaration ?
+        log.debug('VAR_DECL: name: %s', name)
+        # Check for a previous declaration in the register
         if self.is_registered(name):
             return self.get_registered(name)
+        # get the typedesc object
+        _type = self._VAR_DECL_type(cursor)
+        # transform the ctypes values into ctypeslib
+        init_value = self._VAR_DECL_value(cursor, _type)
+        # finished
+        log.debug('VAR_DECL: _type:%s _init:%s', _type.name)
+        log.debug('VAR_DECL: _init:%s', init_value)
+        log.debug('VAR_DECL: location:%s',getattr(cursor, 'location'))
+        obj = self.register(name, typedesc.Variable(name, _type, init_value))
+        self.set_location(obj, cursor)
+        self.set_comment(obj, cursor)
+        return True
+
+
+    @log_entity
+    def _VAR_DECL_type(self, cursor):
+        """Handles Variable declaration."""
         # Get the type
         _ctype = cursor.type.get_canonical()
+        log.debug('VAR_DECL: _ctype: %s ', _ctype)        
         # FIXME: Need working int128, long_double, etc...
         if self.is_fundamental_type(_ctype):
             ctypesname = self.get_ctypes_name(_ctype.kind)
@@ -272,7 +270,7 @@ class CursorHandler(ClangHandler):
             ###    init_value = '%s(%s)'%(ctypesname, init_value)
         elif self.is_unexposed_type(_ctype):  # string are not exposed
             # FIXME recurse on child
-            log.error('PATCH NEEDED: %s type is not exposed by clang' % (name))
+            log.error('PATCH NEEDED: %s type is not exposed by clang', name)
             raise RuntimeError('')
             ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
             _type = typedesc.FundamentalType(ctypesname, 0, 0)
@@ -296,12 +294,17 @@ class CursorHandler(ClangHandler):
             raise NotImplementedError(
                 'What other type of variable? %s' %
                 (_ctype.kind))
+        log.debug('VAR_DECL: _type: %s ', _type)
+        return _type
 
-        # FIXME: always expect list [(k,v)] as init value.
-        
+    @log_entity
+    def _VAR_DECL_value(self, cursor, _type):
+        """Handles Variable value initialization."""
+        # always expect list [(k,v)] as init value.
         # get the init_value and special cases
         init_value = self._get_var_decl_init_value(cursor.type,
                                                    list(cursor.get_children()))
+        _ctype = cursor.type.get_canonical()
         if self.is_unexposed_type(_ctype):
             # string are not exposed
             init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.' % (init_value)
@@ -336,14 +339,7 @@ class CursorHandler(ClangHandler):
             log.debug('VAR_DECL: default init_value: %s'%(init_value))
             if len(init_value) > 0:
                 init_value = init_value[0][1]
-        # finished
-        log.debug('VAR_DECL: %s _ctype:%s _type:%s _init:%s location:%s' % (name,
-                                                                            _ctype.kind.name, _type.name, init_value,
-                                                                            getattr(cursor, 'location')))
-        obj = self.register(name, typedesc.Variable(name, _type, init_value))
-        self.set_location(obj, cursor)
-        self.set_comment(obj, cursor)
-        return True  # dont parse literals again
+        return init_value
 
     def _get_var_decl_init_value(self, _ctype, children):
         """
