@@ -244,7 +244,7 @@ class CursorHandler(ClangHandler):
         # transform the ctypes values into ctypeslib
         init_value = self._VAR_DECL_value(cursor, _type)
         # finished
-        log.debug('VAR_DECL: _type:%s _init:%s', _type.name)
+        log.debug('VAR_DECL: _type:%s', _type.name)
         log.debug('VAR_DECL: _init:%s', init_value)
         log.debug('VAR_DECL: location:%s',getattr(cursor, 'location'))
         obj = self.register(name, typedesc.Variable(name, _type, init_value))
@@ -253,41 +253,30 @@ class CursorHandler(ClangHandler):
         return True
 
 
-    @log_entity
     def _VAR_DECL_type(self, cursor):
-        """Handles Variable declaration."""
+        """Generates a typedesc object from a Variable declaration."""
         # Get the type
         _ctype = cursor.type.get_canonical()
-        log.debug('VAR_DECL: _ctype: %s ', _ctype)        
-        # FIXME: Need working int128, long_double, etc...
+        log.debug('VAR_DECL: _ctype: %s ', _ctype.kind)
+        # FIXME: Need working int128, long_double, etc.
         if self.is_fundamental_type(_ctype):
             ctypesname = self.get_ctypes_name(_ctype.kind)
             _type = typedesc.FundamentalType(ctypesname, 0, 0)
-            # FIXME: because c_long_double_t or c_unint128 are not real ctypes
-            # we can make variable with them.
-            # just write the value as-is.
-            # if literal_kind != CursorKind.DECL_REF_EXPR:
-            ###    init_value = '%s(%s)'%(ctypesname, init_value)
-        elif self.is_unexposed_type(_ctype):  # string are not exposed
-            # FIXME recurse on child
+        elif self.is_unexposed_type(_ctype):
             log.error('PATCH NEEDED: %s type is not exposed by clang', name)
             raise RuntimeError('')
-            ctypesname = self.get_ctypes_name(TypeKind.UCHAR)
-            _type = typedesc.FundamentalType(ctypesname, 0, 0)
         elif self.is_array_type(_ctype) or _ctype.kind == TypeKind.RECORD:
             _type = self.parse_cursor_type(_ctype)
         elif self.is_pointer_type(_ctype):
-            # extern Function pointer
+            # for example, extern Function pointer
             if self.is_unexposed_type(_ctype.get_pointee()):
                 _type = self.parse_cursor_type(
                     _ctype.get_canonical().get_pointee())
             elif _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO:
                 # Function pointers
-                # cursor.type.get_pointee().kind == TypeKind.UNEXPOSED BUT
-                # cursor.type.get_canonical().get_pointee().kind == TypeKind.FUNCTIONPROTO
+                # Arguments are handled in here
                 _type = self.parse_cursor_type(_ctype.get_pointee())
-                #_type = mth(_ctype.get_pointee())
-            else:  # Fundamental types, structs....
+            else:  # Pointer to Fundamental types, structs....
                 _type = self.parse_cursor_type(_ctype)
         else:
             # What else ?
@@ -297,10 +286,9 @@ class CursorHandler(ClangHandler):
         log.debug('VAR_DECL: _type: %s ', _type)
         return _type
 
-    @log_entity
     def _VAR_DECL_value(self, cursor, _type):
         """Handles Variable value initialization."""
-        # always expect list [(k,v)] as init value.
+        # always expect list [(k,v)] as init value.from list(cursor.get_children())
         # get the init_value and special cases
         init_value = self._get_var_decl_init_value(cursor.type,
                                                    list(cursor.get_children()))
@@ -310,9 +298,8 @@ class CursorHandler(ClangHandler):
             init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.' % (init_value)
         elif (self.is_pointer_type(_ctype) and
                 _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO):
-            # Function pointers argument are handled inside
-            init_value = [v for k,v in init_value]
-            _type.arguments = init_value
+            # Function pointers argument are handled at type creation time
+            # but we need to put a CFUNCTYPE as a value of the name variable
             init_value = _type
         elif self.is_array_type(_ctype):
             # an integer litteral will be the size
@@ -320,7 +307,7 @@ class CursorHandler(ClangHandler):
             # any list member will be children of a init_list_expr
             # FIXME Move that code into typedesc
             def countof(k,l):
-                return [_ck for _ck,_cv in l].count(k)
+                return [item[0] for item in l].count(k)
             if (countof(CursorKind.INIT_LIST_EXPR, init_value) == 1):
                 init_value = dict(init_value)[CursorKind.INIT_LIST_EXPR]
             elif (countof(CursorKind.STRING_LITERAL, init_value) == 1):
@@ -336,7 +323,7 @@ class CursorHandler(ClangHandler):
             # catch case.
             init_value = None
         else:
-            log.debug('VAR_DECL: default init_value: %s'%(init_value))
+            log.debug('VAR_DECL: default init_value: %s',init_value)
             if len(init_value) > 0:
                 init_value = init_value[0][1]
         return init_value
@@ -351,14 +338,14 @@ class CursorHandler(ClangHandler):
         # FIXME: simplify this redondant code.
         init_value = []
         children = list(children) # weird requirement, list iterator error.
-        log.debug('_get_var_decl_init_value: children #: %d'%(len(children)))
+        log.debug('_get_var_decl_init_value: children #: %d', len(children))
         for child in children:
             # early stop cases.
             _tmp = None
             try:
                 _tmp = self._get_var_decl_init_value_single(_ctype, child)
             except CursorKindException as e:
-                log.debug('_get_var_decl_init_value: children init value skip on %s' % (child.kind))
+                log.debug('_get_var_decl_init_value: children init value skip on %s', child.kind)
                 continue
             if _tmp is not None:
                 init_value.append(_tmp)
@@ -371,7 +358,7 @@ class CursorHandler(ClangHandler):
         """
         init_value = None
         # FIXME: always return (child.kind, child.value)
-        log.debug('_get_var_decl_init_value_single: _ctype: %s Child.kind: %s' % (_ctype.kind, child.kind))
+        log.debug('_get_var_decl_init_value_single: _ctype: %s Child.kind: %s', _ctype.kind, child.kind)
         # shorcuts.
         if not child.kind.is_expression() and not child.kind.is_declaration():
             raise CursorKindException(child.kind)
@@ -395,10 +382,10 @@ class CursorHandler(ClangHandler):
         else:  # literal or others
             _v = self.parse_cursor(child)
             if isinstance(_v,list) and child.kind != CursorKind.INIT_LIST_EXPR:
-                log.debug('_get_var_decl_init_value_single: TOKENIZATION BUG CHECK: %s'% _v)
+                log.debug('_get_var_decl_init_value_single: TOKENIZATION BUG CHECK: %s', _v)
                 _v = _v[0]
             init_value = (child.kind, _v)
-        log.debug('_get_var_decl_init_value_single: returns %s'%str(init_value))
+        log.debug('_get_var_decl_init_value_single: returns %s', str(init_value))
         return init_value
 
     @log_entity
@@ -412,31 +399,31 @@ class CursorHandler(ClangHandler):
             ##                         if t.spelling != ';'])
         because some literal might need cleaning."""
         tokens = list(cursor.get_tokens())
-        log.debug('literal has %d tokens.[ %s ]' % (len(tokens),
-                                                    str([str(t.spelling) for t in tokens])))
+        log.debug('literal has %d tokens.[ %s ]', len(tokens),
+                                                    str([str(t.spelling) for t in tokens]))
         final_value = []
         # code.interact(local=locals())
-        log.debug('cursor.type:%s' % (cursor.type.kind.name))
+        log.debug('cursor.type:%s', cursor.type.kind.name)
         for token in tokens:
             value = token.spelling
-            log.debug('token:%s tk.kd:%11s tk.cursor.kd:%15s cursor.kd:%15s' % (
+            log.debug('token:%s tk.kd:%11s tk.cursor.kd:%15s cursor.kd:%15s',
                 token.spelling, token.kind.name, token.cursor.kind.name,
-                cursor.kind.name))
+                cursor.kind.name)
             # Punctuation is probably not part of the init_value,
             # but only in specific case: ';' endl, or part of list_expr
             if (token.kind == TokenKind.PUNCTUATION and
                 (token.cursor.kind == CursorKind.INVALID_FILE or
                  token.cursor.kind == CursorKind.INIT_LIST_EXPR)):
-                log.debug('IGNORE token %s' % (value))
+                log.debug('IGNORE token %s', value)
                 continue
             elif token.kind == TokenKind.COMMENT:
-                log.debug('Ignore comment %s' % (value))
+                log.debug('Ignore comment %s', value)
                 continue
             # elif token.cursor.kind == CursorKind.VAR_DECL:
             elif token.location not in cursor.extent:
                 log.debug(
-                    'FIXME BUG: token.location not in cursor.extent %s' %
-                    (value))
+                    'FIXME BUG: token.location not in cursor.extent %s',
+                    value)
                 # FIXME
                 # there is most probably a BUG in clang or python-clang
                 # when on #define with no value, a token is taken from
