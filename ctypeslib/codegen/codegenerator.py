@@ -12,11 +12,6 @@ from ctypeslib.codegen import typedesc
 import logging
 log = logging.getLogger('codegen')
 
-import code
-
-################################################################
-
-
 class Generator(object):
 
     def __init__(self, output,
@@ -42,6 +37,7 @@ class Generator(object):
         self.done = set()  # type descriptions that have been generated
         self.names = set()  # names that have been generated
 
+    # pylint: disable=method-hidden
     def enable_fundamental_type_wrappers(self):
         """
         If a type is a int128, a long_double_t or a void, some placeholders need
@@ -77,6 +73,7 @@ class Generator(object):
         # assuming a LONG also has the same sizeof than a pointer.
         word_size = self.parser.get_ctypes_size(TypeKind.POINTER) / 8
         word_type = self.parser.get_ctypes_name(TypeKind.ULONG)
+        # pylint: disable=protected-access
         word_char = getattr(ctypes, word_type)._type_
         # replacing template values
         headers = headers.replace('__POINTER_SIZE__', str(word_size))
@@ -161,7 +158,7 @@ class Generator(object):
     def Macro(self, macro):
         """Handles macro. No test cases else that #defines."""
         if macro.location is None:
-            log.info('Ignoring %s with no location' % (macro.name))
+            log.info('Ignoring %s with no location', macro.name)
             return
         if self.generate_locations:
             print >> self.stream, "# %s:%s" % (macro.location)
@@ -422,7 +419,7 @@ class Generator(object):
         self._structures += 1
         depends = set()
         if struct.members is None:
-            log.error('Error while parsing members for: %s' % (struct.name))
+            log.error('Error while parsing members for: %s', struct.name)
             return
         # look in bases class for dependencies
         # FIXME - need a real dependency graph maker
@@ -439,14 +436,14 @@ class Generator(object):
         self.done.add(struct)
         depends.discard(None)
         if len(depends) > 0:
-            log.debug('Generate %s DEPENDS %s' % (struct.name, depends))
+            log.debug('Generate %s DEPENDS %s', struct.name, depends)
             self._generate(struct.get_head(), False)
             # generate dependencies
             for dep in depends:
                 self._generate(dep)
             self._generate(struct.get_body(), False)
         else:
-            log.debug('No depends for %s' % (struct.name))
+            log.debug('No depends for %s', struct.name)
             if struct.name in self.names:
                 # headers already produced
                 self._generate(struct.get_body(), False)
@@ -458,7 +455,7 @@ class Generator(object):
     Union = Structure
 
     def StructureHead(self, head, inline=False):
-        log.debug('Head start for %s inline:%s' % (head.name, inline))
+        log.debug('Head start for %s inline:%s', head.name, inline)
         for struct in head.struct.bases:
             self._generate(struct.get_head())
             # add dependencies
@@ -480,10 +477,10 @@ class Generator(object):
         if inline and not head.struct.members:
             print >> self.stream, "    pass\n"
         self.names.add(head.struct.name)
-        log.debug('Head finished for %s' % (head.name))
+        log.debug('Head finished for %s', head.name)
 
     def StructureBody(self, body, inline=False):
-        log.debug('Body start for %s' % (body.name))
+        log.debug('Body start for %s', body.name)
         fields = []
         methods = []
         for m in body.struct.members:
@@ -500,8 +497,8 @@ class Generator(object):
                 pass
         # handled inline Vs dependent
         log.debug(
-            "body inline:%s for structure %s" %
-            (inline, body.struct.name))
+            "body inline:%s for structure %s",
+            inline, body.struct.name)
         if not inline:
             prefix = "%s." % (body.struct.name)
         else:
@@ -557,7 +554,7 @@ class Generator(object):
                         (fieldname, type_name)
                 else:
                     # FIXME: Python bitfield is int32 only.
-                    from clang.cindex import TypeKind
+                    #from clang.cindex import TypeKind
                     print >> self.stream, "    ('%s', %s, %s)," % \
                         (fieldname,
                          # self.parser.get_ctypes_name(TypeKind.LONG),
@@ -566,7 +563,7 @@ class Generator(object):
             if inline:
                 print >> self.stream, prefix,
             print >> self.stream, "]\n"
-        log.debug('Body finished for %s' % (body.name))
+        log.debug('Body finished for %s', body.name)
         return
 
     def find_dllname(self, func):
@@ -579,6 +576,7 @@ class Generator(object):
             except AttributeError:
                 pass
             else:
+                # pylint: disable=protected-access
                 return dll._name
         return None
 
@@ -710,7 +708,7 @@ class Generator(object):
         ## c_long_double_t
         2) return appropriate name for type
         """
-        log.debug('HERE in FundamentalType for %s %s' % (_type, _type.name))
+        log.debug('HERE in FundamentalType for %s %s', _type, _type.name)
         if _type.name in ["None", "c_long_double_t", "c_uint128", "c_int128"]:
             self.enable_fundamental_type_wrappers()
             return _type.name
@@ -727,19 +725,19 @@ class Generator(object):
             print >> self.stream, "# %s:%d" % item.location
         if self.generate_comments:
             self.print_comment(item)
-        log.debug("generate %s, %s" % (item.__class__.__name__, item.name))
-        '''
-        log.debug('generate: %s( %s )'%( type(item).__name__, name))
-        if name in self.known_symbols:
-            log.debug('item is in known_symbols %s'% name )
-            mod = self.known_symbols[name]
-            print >> self.imports, "from %s import %s" % (mod, name)
-            self.done.add(item)
-            if isinstance(item, typedesc.Structure):
-                self.done.add(item.get_head())
-                self.done.add(item.get_body())
-            return
-        '''
+        log.debug("generate %s, %s", item.__class__.__name__, item.name)
+        #
+        #log.debug('generate: %s( %s )', type(item).__name__, name)
+        #if name in self.known_symbols:
+        #    log.debug('item is in known_symbols %s'% name )
+        #    mod = self.known_symbols[name]
+        #    print >> self.imports, "from %s import %s" % (mod, name)
+        #    self.done.add(item)
+        #    if isinstance(item, typedesc.Structure):
+        #        self.done.add(item.get_head())
+        #        self.done.add(item.get_body())
+        #    return
+        #
         # to avoid infinite recursion, we have to mark it as done
         # before actually generating the code.
         self.done.add(item)
@@ -885,8 +883,8 @@ def generate_code(srcfiles,
                 syms.remove(i.name)
 
         if syms:
-            log.warning("symbols not found %s" %
-                        ([str(x) for x in list(syms)]))
+            log.warning("symbols not found %s",
+                        [str(x) for x in list(syms)])
 
     if expressions:
         for i in items:
