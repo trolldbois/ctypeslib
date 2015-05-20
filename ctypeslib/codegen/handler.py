@@ -58,8 +58,8 @@ class ClangHandler(object):
 
     def set_location(self, obj, cursor):
         """ Location is also used for codegeneration ordering."""
-        if (hasattr(cursor, 'location') and cursor.location is not None
-                and cursor.location.file is not None):
+        if (hasattr(cursor, 'location') and cursor.location is not None and
+                cursor.location.file is not None):
             obj.location = (cursor.location.file.name, cursor.location.line)
         return
 

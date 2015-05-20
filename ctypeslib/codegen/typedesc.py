@@ -5,15 +5,16 @@ class T(object):
     name = None
     location = None
     comment = None
+
     def __repr__(self):
-        kv=self.__dict__
+        kv = self.__dict__
         s = []
-        for k,v in kv.items():
-            if isinstance(v,T):
-                s.append('%s=%s(...)'%(k,v.__class__.__name__))
+        for k, v in kv.items():
+            if isinstance(v, T):
+                s.append('%s=%s(...)' % (k, v.__class__.__name__))
             else:
-                s.append('%s=%s'%(k,v))
-        return "%s(%s)"%(self.__class__.__name__,','.join(s) )
+                s.append('%s=%s' % (k, v))
+        return "%s(%s)" % (self.__class__.__name__, ','.join(s))
 
 
 class Argument(T):
@@ -141,12 +142,7 @@ class PointerType(T):
         self.typ = typ
         self.size = int(size)
         self.align = int(align)
-        # USELESS FIXME
-        if isinstance(typ, str):
-            self.name = "LP_%s" % (self.typ)
-            log.warning('FIXME Pointertype subtype name should not be str')
-        else:
-            self.name = "LP_%s" % (self.typ.name)
+        self.name = "LP_%s" % (self.typ.name)
 
 
 class Typedef(T):

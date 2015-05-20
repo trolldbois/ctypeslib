@@ -1,21 +1,17 @@
 """clangparser - use clang to get preprocess a source code."""
 
 from clang.cindex import Index, TranslationUnit
-from clang.cindex import CursorKind, TypeKind, TokenKind
+from clang.cindex import CursorKind, TypeKind
 
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen import cursorhandler
 from ctypeslib.codegen import typehandler
 from ctypeslib.codegen import util
-from ctypeslib.codegen.util import log_entity
 from ctypeslib.codegen.handler import InvalidDefinitionError
 from ctypeslib.codegen.handler import DuplicateDefinitionException
 
 import logging
 log = logging.getLogger('clangparser')
-
-# DEBUG
-import code
 
 
 class Clang_Parser(object):
@@ -122,7 +118,8 @@ class Clang_Parser(object):
 
     def parse_string(self, inputdata):
         # store inputdata in temp file
-        import tempfile, os
+        import tempfile
+        import os
         handle, filename = tempfile.mkstemp(".h")
         os.close(handle)
         open(filename, "w").write(inputdata)
@@ -147,10 +144,10 @@ class Clang_Parser(object):
                 return
         # find and call the handler for this element
         log.debug(
-            'Found a %s|%s|%s' %
-            (node.kind.name,
-             node.displayname,
-             node.spelling))
+            'Found a %s|%s|%s',
+            node.kind.name,
+            node.displayname,
+            node.spelling)
         # build stuff.
         try:
             stop_recurse = self.parse_cursor(node)
@@ -171,11 +168,11 @@ class Clang_Parser(object):
     def register(self, name, obj):
         """Registers an unique type description"""
         if name in self.all:
-            log.debug('register: %s already existed: %s' % (name, obj.name))
+            log.debug('register: %s already existed: %s', name, obj.name)
             # code.interact(local=locals())
             raise DuplicateDefinitionException(
                 'register: %s already existed: %s' % (name, obj.name))
-        log.debug('register: %s ' % (name))
+        log.debug('register: %s ', name)
         self.all[name] = obj
         return obj
 
@@ -189,7 +186,7 @@ class Clang_Parser(object):
 
     def remove_registered(self, name):
         """Removes a named type"""
-        log.debug('Unregister %s' % (name))
+        log.debug('Unregister %s', name)
         del self.all[name]
 
     def make_ctypes_convertor(self, _flags):
@@ -253,9 +250,9 @@ typedef void* pointer_t;''', flags=_flags)
         self.ctypes_sizes[TypeKind.POINTER] = size
         self.ctypes_sizes[TypeKind.NULLPTR] = size
 
-        log.debug('ARCH sizes: long:%s longdouble:%s' % (
-            self.ctypes_typename[TypeKind.LONG],
-            self.ctypes_typename[TypeKind.LONGDOUBLE]))
+        log.debug('ARCH sizes: long:%s longdouble:%s',
+                  self.ctypes_typename[TypeKind.LONG],
+                  self.ctypes_typename[TypeKind.LONGDOUBLE])
         return
 
     def get_ctypes_name(self, typekind):
@@ -329,13 +326,13 @@ typedef void* pointer_t;''', flags=_flags)
         remove = []
         for _id, _item in self.all.items():
             if _item is None:
-                log.warning('ignoring %s' % (_id))
+                log.warning('ignoring %s', _id)
                 continue
             location = getattr(_item, "location", None)
             # FIXME , why do we get different location types
             if location and hasattr(location, 'file'):
                 _item.location = location.file.name, location.line
-                log.error('%s %s came in with a SourceLocation' % (_id, _item))
+                log.error('%s %s came in with a SourceLocation', _id, _item)
             elif location is None:
                 # FIXME make this optional to be able to see internals
                 # FIXME macro/alias are here
@@ -348,7 +345,7 @@ typedef void* pointer_t;''', flags=_flags)
         namespace = {}
         for i in self.all.values():
             if not isinstance(i, interesting):
-                log.debug('ignoring %s' % (i))
+                log.debug('ignoring %s', i)
                 continue  # we don't want these
             name = getattr(i, "name", None)
             if name is not None:

@@ -23,7 +23,7 @@ class Generator(object):
                  generate_comments=False,
                  known_symbols=None,
                  searched_dlls=None,
-                 preloaded_dlls=[],
+                 preloaded_dlls=None,
                  generate_docstrings=False,
                  generate_locations=False):
         self.output = output
@@ -33,7 +33,7 @@ class Generator(object):
         self.generate_comments = generate_comments
         self.generate_docstrings = generate_docstrings
         self.known_symbols = known_symbols or {}
-        self.preloaded_dlls = preloaded_dlls
+        self.preloaded_dlls = preloaded_dlls or []
         if searched_dlls is None:
             self.searched_dlls = []
         else:
@@ -179,13 +179,13 @@ class Generator(object):
         # when the macro is called.
         # mcode = "def %s%s: return %s # macro" % (macro.name, macro.args,
         # macro.body)
-        try:
-            compile(mcode, "<string>", "exec")
-        except SyntaxError:
-            print >> self.stream, "#", mcode
-        else:
-            print >> self.stream, mcode, '# Macro'
-            self.names.add(macro.name)
+        # try:
+        #    compile(mcode, "<string>", "exec")
+        # except SyntaxError:
+        #    print >> self.stream, "#", mcode
+        # else:
+        #    print >> self.stream, mcode, '# Macro'
+        #    self.names.add(macro.name)
 
     _typedefs = 0
 
@@ -314,14 +314,14 @@ class Generator(object):
         else:
             init_value = tp.init
             if isinstance(tp.typ, typedesc.PointerType) or \
-                isinstance(tp.typ, typedesc.ArrayType):
-                if (isinstance(tp.typ.typ, typedesc.FundamentalType) and \
-                     (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
+                    isinstance(tp.typ, typedesc.ArrayType):
+                if (isinstance(tp.typ.typ, typedesc.FundamentalType) and
+                        (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
                     # string
                     # FIXME a char * is not a python string.
                     # we should output a cstring() construct.
                     init_value = repr(tp.init)
-                elif (isinstance(tp.typ.typ, typedesc.FundamentalType) and \
+                elif (isinstance(tp.typ.typ, typedesc.FundamentalType) and
                       ('int' in tp.typ.typ.name) or 'long' in tp.typ.typ.name):
                     # array of number
                     # CARE: size of elements must match size of array
@@ -605,7 +605,7 @@ class Generator(object):
     def get_sharedlib(self, dllname, cc):
         if cc == "stdcall":
             self.need_WinLibraries()
-            if not dllname in self._stdcall_libraries:
+            if dllname not in self._stdcall_libraries:
                 print >> self.imports, "_stdcall_libraries[%r] = WinDLL(%r)" % (
                     dllname, dllname)
                 self._stdcall_libraries[dllname] = None
@@ -615,7 +615,7 @@ class Generator(object):
             global_flag = ", mode=RTLD_GLOBAL"
         else:
             global_flag = ""
-        if not dllname in self._c_libraries:
+        if dllname not in self._c_libraries:
             print >> self.imports, "_libraries[%r] = CDLL(%r%s)" % (
                 dllname, dllname, global_flag)
             self._c_libraries[dllname] = None
@@ -838,17 +838,17 @@ def generate_code(srcfiles,
                   known_symbols=None,
                   searched_dlls=None,
                   types=None,
-                  preloaded_dlls=[],
+                  preloaded_dlls=None,
                   generate_docstrings=False,
                   generate_locations=False,
                   generate_includes=False,
                   filter_location=True,
-                  flags=[]
+                  flags=None
                   ):
 
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
-    parser = clangparser.Clang_Parser(flags)
+    parser = clangparser.Clang_Parser(flags or [])
     # if macros are not needed, use a faster TranslationUnit
     if typedesc.Macro in types:
         parser.activate_macros_parsing()

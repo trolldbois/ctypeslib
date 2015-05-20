@@ -10,7 +10,7 @@ import logging
 log = logging.getLogger('utils')
 
 
-def get_tu(source, lang='c', all_warnings=False, flags=[]):
+def get_tu(source, lang='c', all_warnings=False, flags=None):
     """Obtain a translation unit from source and language.
 
     By default, the translation unit is created from source file "t.<ext>"
@@ -21,7 +21,7 @@ def get_tu(source, lang='c', all_warnings=False, flags=[]):
 
     all_warnings is a convenience argument to enable all compiler warnings.
     """
-    args = list(flags)
+    args = list(flags or [])
     name = 't.c'
     if lang == 'cpp':
         name = 't.cpp'
@@ -121,6 +121,7 @@ def log_entity(func):
 
 
 class ADict(dict):
+
     def __getattr__(self, name):
         try:
             return self[name]

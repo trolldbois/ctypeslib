@@ -10,9 +10,6 @@ from ctypeslib.codegen.handler import InvalidDefinitionError
 import logging
 log = logging.getLogger('typehandler')
 
-# DEBUG
-import code
-
 
 class TypeHandler(ClangHandler):
 
@@ -50,24 +47,22 @@ class TypeHandler(ClangHandler):
             align = typ.get_align()
         return typedesc.FundamentalType(ctypesname, size, align)
 
-    """
-    INVALID
-    OVERLOAD
-    DEPENDENT
-    OBJCID
-    OBJCCLASS
-    OBJCSEL
-    COMPLEX
-    BLOCKPOINTER
-    LVALUEREFERENCE
-    RVALUEREFERENCE
-    OBJCINTERFACE
-    OBJCOBJECTPOINTER
-    FUNCTIONNOPROTO
-    FUNCTIONPROTO
-    VECTOR
-    MEMBERPOINTER
-    """
+    # INVALID
+    # OVERLOAD
+    # DEPENDENT
+    # OBJCID
+    # OBJCCLASS
+    # OBJCSEL
+    # COMPLEX
+    # BLOCKPOINTER
+    # LVALUEREFERENCE
+    # RVALUEREFERENCE
+    # OBJCINTERFACE
+    # OBJCOBJECTPOINTER
+    # FUNCTIONNOPROTO
+    # FUNCTIONPROTO
+    # VECTOR
+    # MEMBERPOINTER
 
     ## const, restrict and volatile
     ## typedesc.CvQualifiedType(typ, const, volatile)
@@ -75,7 +70,6 @@ class TypeHandler(ClangHandler):
     # not listed has node in the AST.
     # not very useful in python anyway.
     TYPEDEF = ClangHandler._do_nothing
-    #ENUM = ClangHandler._do_nothing
 
     @log_entity
     def ENUM(self, _cursor_type):
@@ -108,8 +102,8 @@ class TypeHandler(ClangHandler):
         size = _cursor_type.get_size()  # not size of pointee
         align = _cursor_type.get_align()
         log.debug(
-            "POINTER: size:%d align:%d typ:%s" %
-            (size, align, _type.kind))
+            "POINTER: size:%d align:%d typ:%s",
+            size, align, _type.kind)
         if self.is_fundamental_type(_type):
             p_type = self.parse_cursor_type(_type)
         elif self.is_pointer_type(_type) or self.is_array_type(_type):
@@ -127,15 +121,15 @@ class TypeHandler(ClangHandler):
                 p_type = self.get_registered(decl_name)
             else:  # forward declaration, without looping
                 log.debug(
-                    'POINTER: %s type was not previously declared' %
-                    (decl_name))
+                    'POINTER: %s type was not previously declared',
+                    decl_name)
                 try:
                     p_type = self.parse_cursor(decl)
                 except InvalidDefinitionError as e:
                     # no declaration in source file. Fake a void *
                     p_type = typedesc.FundamentalType('None', 1, 1)
                     comment = "InvalidDefinitionError"
-        log.debug("POINTER: pointee type_name:'%s'" % (_p_type_name))
+        log.debug("POINTER: pointee type_name:'%s'", _p_type_name)
         # return the pointer
         obj = typedesc.PointerType(p_type, size, align)
         obj.location = p_type.location
