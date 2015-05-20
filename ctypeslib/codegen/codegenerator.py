@@ -12,11 +12,6 @@ from ctypeslib.codegen import typedesc
 import logging
 log = logging.getLogger('codegen')
 
-import code
-
-################################################################
-
-
 class Generator(object):
 
     def __init__(self, output,
@@ -42,6 +37,7 @@ class Generator(object):
         self.done = set()  # type descriptions that have been generated
         self.names = set()  # names that have been generated
 
+    # pylint: disable=method-hidden
     def enable_fundamental_type_wrappers(self):
         """
         If a type is a int128, a long_double_t or a void, some placeholders need
@@ -77,6 +73,7 @@ class Generator(object):
         # assuming a LONG also has the same sizeof than a pointer.
         word_size = self.parser.get_ctypes_size(TypeKind.POINTER) / 8
         word_type = self.parser.get_ctypes_name(TypeKind.ULONG)
+        # pylint: disable=protected-access
         word_char = getattr(ctypes, word_type)._type_
         # replacing template values
         headers = headers.replace('__POINTER_SIZE__', str(word_size))
@@ -579,6 +576,7 @@ class Generator(object):
             except AttributeError:
                 pass
             else:
+                # pylint: disable=protected-access
                 return dll._name
         return None
 
