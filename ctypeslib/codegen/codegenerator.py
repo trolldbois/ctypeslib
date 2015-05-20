@@ -605,7 +605,7 @@ class Generator(object):
     def get_sharedlib(self, dllname, cc):
         if cc == "stdcall":
             self.need_WinLibraries()
-            if not dllname in self._stdcall_libraries:
+            if dllname not in self._stdcall_libraries:
                 print >> self.imports, "_stdcall_libraries[%r] = WinDLL(%r)" % (
                     dllname, dllname)
                 self._stdcall_libraries[dllname] = None
@@ -615,7 +615,7 @@ class Generator(object):
             global_flag = ", mode=RTLD_GLOBAL"
         else:
             global_flag = ""
-        if not dllname in self._c_libraries:
+        if dllname not in self._c_libraries:
             print >> self.imports, "_libraries[%r] = CDLL(%r%s)" % (
                 dllname, dllname, global_flag)
             self._c_libraries[dllname] = None
