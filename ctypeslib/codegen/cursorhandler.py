@@ -263,8 +263,8 @@ class CursorHandler(ClangHandler):
             ctypesname = self.get_ctypes_name(_ctype.kind)
             _type = typedesc.FundamentalType(ctypesname, 0, 0)
         elif self.is_unexposed_type(_ctype):
-            st = 'PATCH NEEDED: %s type is not exposed by clang'%(
-                      self.get_unique_name(cursor))
+            st = 'PATCH NEEDED: %s type is not exposed by clang' % (
+                self.get_unique_name(cursor))
             log.error(st)
             raise RuntimeError(st)
         elif self.is_array_type(_ctype) or _ctype.kind == TypeKind.RECORD:

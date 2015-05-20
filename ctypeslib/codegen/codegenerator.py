@@ -179,11 +179,11 @@ class Generator(object):
         # when the macro is called.
         # mcode = "def %s%s: return %s # macro" % (macro.name, macro.args,
         # macro.body)
-        #try:
+        # try:
         #    compile(mcode, "<string>", "exec")
-        #except SyntaxError:
+        # except SyntaxError:
         #    print >> self.stream, "#", mcode
-        #else:
+        # else:
         #    print >> self.stream, mcode, '# Macro'
         #    self.names.add(macro.name)
 
@@ -314,14 +314,14 @@ class Generator(object):
         else:
             init_value = tp.init
             if isinstance(tp.typ, typedesc.PointerType) or \
-                isinstance(tp.typ, typedesc.ArrayType):
-                if (isinstance(tp.typ.typ, typedesc.FundamentalType) and \
-                     (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
+                    isinstance(tp.typ, typedesc.ArrayType):
+                if (isinstance(tp.typ.typ, typedesc.FundamentalType) and
+                        (tp.typ.typ.name == "c_char" or tp.typ.typ.name == "c_wchar")):
                     # string
                     # FIXME a char * is not a python string.
                     # we should output a cstring() construct.
                     init_value = repr(tp.init)
-                elif (isinstance(tp.typ.typ, typedesc.FundamentalType) and \
+                elif (isinstance(tp.typ.typ, typedesc.FundamentalType) and
                       ('int' in tp.typ.typ.name) or 'long' in tp.typ.typ.name):
                     # array of number
                     # CARE: size of elements must match size of array

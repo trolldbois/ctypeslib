@@ -121,6 +121,7 @@ def log_entity(func):
 
 
 class ADict(dict):
+
     def __getattr__(self, name):
         try:
             return self[name]

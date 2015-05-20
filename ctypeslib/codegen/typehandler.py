@@ -10,6 +10,7 @@ from ctypeslib.codegen.handler import InvalidDefinitionError
 import logging
 log = logging.getLogger('typehandler')
 
+
 class TypeHandler(ClangHandler):
 
     """
@@ -46,7 +47,6 @@ class TypeHandler(ClangHandler):
             align = typ.get_align()
         return typedesc.FundamentalType(ctypesname, size, align)
 
-    
     # INVALID
     # OVERLOAD
     # DEPENDENT
@@ -64,14 +64,12 @@ class TypeHandler(ClangHandler):
     # VECTOR
     # MEMBERPOINTER
 
-
     ## const, restrict and volatile
     ## typedesc.CvQualifiedType(typ, const, volatile)
     # Type has multiple functions for const, volatile, restrict
     # not listed has node in the AST.
     # not very useful in python anyway.
     TYPEDEF = ClangHandler._do_nothing
-
 
     @log_entity
     def ENUM(self, _cursor_type):

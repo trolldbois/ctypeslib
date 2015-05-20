@@ -13,6 +13,7 @@ from ctypeslib.codegen.handler import DuplicateDefinitionException
 import logging
 log = logging.getLogger('clangparser')
 
+
 class Clang_Parser(object):
 
     """
@@ -117,7 +118,8 @@ class Clang_Parser(object):
 
     def parse_string(self, inputdata):
         # store inputdata in temp file
-        import tempfile, os
+        import tempfile
+        import os
         handle, filename = tempfile.mkstemp(".h")
         os.close(handle)
         open(filename, "w").write(inputdata)
@@ -144,8 +146,8 @@ class Clang_Parser(object):
         log.debug(
             'Found a %s|%s|%s',
             node.kind.name,
-             node.displayname,
-             node.spelling)
+            node.displayname,
+            node.spelling)
         # build stuff.
         try:
             stop_recurse = self.parse_cursor(node)
@@ -249,8 +251,8 @@ typedef void* pointer_t;''', flags=_flags)
         self.ctypes_sizes[TypeKind.NULLPTR] = size
 
         log.debug('ARCH sizes: long:%s longdouble:%s',
-            self.ctypes_typename[TypeKind.LONG],
-            self.ctypes_typename[TypeKind.LONGDOUBLE])
+                  self.ctypes_typename[TypeKind.LONG],
+                  self.ctypes_typename[TypeKind.LONGDOUBLE])
         return
 
     def get_ctypes_name(self, typekind):
