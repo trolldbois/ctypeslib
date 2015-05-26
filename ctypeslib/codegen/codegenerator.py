@@ -604,17 +604,17 @@ class Generator(object):
         if cc == "stdcall":
             self.need_WinLibraries()
             if dllname not in self._stdcall_libraries:
-                print >> self.imports, "_stdcall_libraries[%r] = WinDLL(%r)" % (
+                print >> self.imports, "_stdcall_libraries[%r] = ctypes.WinDLL(%r)" % (
                     dllname, dllname)
                 self._stdcall_libraries[dllname] = None
             return "_stdcall_libraries[%r]" % dllname
         self.need_CLibraries()
         if self.preloaded_dlls != []:
-            global_flag = ", mode=RTLD_GLOBAL"
+            global_flag = ", mode=ctypes.RTLD_GLOBAL"
         else:
             global_flag = ""
         if dllname not in self._c_libraries:
-            print >> self.imports, "_libraries[%r] = CDLL(%r%s)" % (
+            print >> self.imports, "_libraries[%r] = ctypes.CDLL(%r%s)" % (
                 dllname, dllname, global_flag)
             self._c_libraries[dllname] = None
         return "_libraries[%r]" % dllname
@@ -785,7 +785,7 @@ class Generator(object):
         self.generate_code(items)
 
     def generate_code(self, items):
-        print >> self.imports, "\n".join(["CDLL('%s', RTLD_GLOBAL)" % preloaded_dll
+        print >> self.imports, "\n".join(["ctypes.CDLL('%s', ctypes.RTLD_GLOBAL)" % preloaded_dll
                                           for preloaded_dll
                                           in self.preloaded_dlls])
         loops = self.generate_items(items)
