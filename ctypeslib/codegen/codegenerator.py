@@ -902,8 +902,6 @@ def generate_code(srcfiles,
                 if match and match.group() == i.name:
                     todo.append(i)
                     break
-    #import code
-    #code.interact(local=locals())
     if symbols or expressions:
         items = todo
 
