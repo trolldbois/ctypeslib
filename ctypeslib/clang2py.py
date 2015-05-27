@@ -149,6 +149,12 @@ def main(argv=None):
                         action="append",
                         default=[])
 
+    parser.add_argument("-q","--quiet",
+                        action="store_true",
+                        dest="quiet",
+                        help="Shut down warnings and below",
+                        default="False")
+
     parser.add_argument("--show-ids", dest="showIDs",
                         help="Don't compute cursor IDs (very slow)",
                         default=False)
@@ -171,6 +177,8 @@ def main(argv=None):
     level = logging.INFO
     if options.debug:
         level = logging.DEBUG
+    elif options.quiet:
+        level = logging.ERROR
     logging.basicConfig(level=level, stream=sys.stderr)
 
     if options.output == "-":

@@ -189,7 +189,8 @@ class CursorHandler(ClangHandler):
             _argtype_name = self.get_unique_name(_argtype_decl)
             if not self.is_registered(_argtype_name):
                 log.error('this param type is not declared')
-                # code.interact(local=locals())
+                #import code
+                #code.interact(local=locals())
                 _argtype = self.parse_cursor_type(_type)
             else:
                 _argtype = self.get_registered(_argtype_name)

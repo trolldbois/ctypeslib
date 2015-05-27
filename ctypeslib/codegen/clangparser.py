@@ -106,6 +106,7 @@ class Clang_Parser(object):
             return
         if len(self.tu.diagnostics) > 0:
             for x in self.tu.diagnostics:
+                log.warning(x.spelling)
                 if x.severity > 2:
                     log.warning("Source code has some error. Please fix.")
                     log.warning(x.spelling)
@@ -144,7 +145,9 @@ class Clang_Parser(object):
                 return
         # find and call the handler for this element
         log.debug(
-            'Found a %s|%s|%s',
+            '%s:%d: Found a %s|%s|%s',
+            node.location.file,
+            node.location.line,
             node.kind.name,
             node.displayname,
             node.spelling)
