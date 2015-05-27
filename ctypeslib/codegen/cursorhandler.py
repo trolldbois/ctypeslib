@@ -534,7 +534,7 @@ class CursorHandler(ClangHandler):
         if num is not None:
             name = "%s_%d", name, num
         # TODO unittest: try redefinition.
-        # check for definition already parsed
+        # Find if a record definition was already parsed and registered
         if (self.is_registered(name) and
                 self.get_registered(name).members is not None):
             log.debug(
@@ -572,6 +572,8 @@ class CursorHandler(ClangHandler):
             self.set_location(obj, cursor)
             self.set_comment(obj, cursor)
             declared_instance = True
+        else:
+            obj = self.get_registered(name)
         # capture members declaration
         members = []
         # Go and recurse through fields
