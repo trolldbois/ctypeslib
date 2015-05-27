@@ -563,25 +563,25 @@ class CursorHandler(ClangHandler):
         # Declaration vs Definition point
         # when a struct decl happen before the definition, we have no members
         # in the first declaration instance.
-        if not self.is_registered(name) and not cursor.is_definition():
-            # juste save the spot, don't look at members == None
-            log.debug('cursor %s is not on a definition', name)
-            obj = _output_type(name, align, None, bases, size, packed=False)
-            return self.register(name, obj)
-        log.debug('cursor %s is a definition', name)
-        # save the type in the registry. Useful for not looping in case of
-        # members with forward references
         obj = None
-        packed = False
-        declared_instance = False
         if not self.is_registered(name):
-            obj = _output_type(name, align, None, bases, size, packed=False)
-            self.register(name, obj)
-            self.set_location(obj, cursor)
-            self.set_comment(obj, cursor)
-            declared_instance = True
+            if not cursor.is_definition():
+                # just save the spot, don't look at members == None
+                log.debug('cursor %s is not on a definition', name)
+                obj = _output_type(name, align, None, bases, size, packed=False)
+                return self.register(name, obj)
+            else:
+                log.debug('cursor %s is a definition', name)
+                # save the type in the registry. Useful for not looping in case of
+                # members with forward references
+                obj = _output_type(name, align, None, bases, size, packed=False)
+                self.register(name, obj)
+                self.set_location(obj, cursor)
+                self.set_comment(obj, cursor)
+                declared_instance = True
         else:
             obj = self.get_registered(name)
+            declared_instance = False
         # capture members declaration
         members = []
         # Go and recurse through fields
@@ -602,21 +602,16 @@ class CursorHandler(ClangHandler):
                     child.kind, name)
                 continue
         log.debug('_record_decl: %d members', len(members))
-        # if len(members) == 0:
-        #    import code
-        #    code.interact(local=locals())
-        if self.is_registered(name):
-            # STRUCT_DECL as a child of TYPEDEF_DECL for example
-            # FIXME: make a test case for that.
-            if not declared_instance:
-                log.debug(
-                    '_record_decl: %s was previously registered',
-                    name)
-            obj = self.get_registered(name)
-            obj.members = members
-            obj.packed = packed
-            # final fixup
-            self._fixup_record(obj)
+        # by now, the type is registered.
+        if not declared_instance:
+            log.debug(
+                '_record_decl: %s was previously registered',
+                name)
+        obj = self.get_registered(name)
+        obj.members = members
+        #obj.packed = packed
+        # final fixup
+        self._fixup_record(obj)
         return obj
 
     def _fixup_record_bitfields_type(self, s):
