@@ -891,8 +891,10 @@ def generate_code(srcfiles,
                         [str(x) for x in list(syms)])
 
     if expressions:
-        for i in items:
-            for s in expressions:
+        for s in expressions:
+            log.debug("regexp: looking for %s",s.pattern)
+            for i in items:
+                log.debug("regexp: i.name is %s",i.name)
                 if i.name is None:
                     continue
                 match = s.match(i.name)
@@ -900,6 +902,8 @@ def generate_code(srcfiles,
                 if match and match.group() == i.name:
                     todo.append(i)
                     break
+    #import code
+    #code.interact(local=locals())
     if symbols or expressions:
         items = todo
 

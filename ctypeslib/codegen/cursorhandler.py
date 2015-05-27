@@ -547,10 +547,18 @@ class CursorHandler(ClangHandler):
         size = cursor.type.get_size()
         align = cursor.type.get_align()
         if size < 0 or align < 0:
-            log.error('invalid structure %s %s align:%d size:%d',
-                      name, cursor.location, align, size)
-            raise InvalidDefinitionError('invalid structure %s %s align:%d size:%d',
-                                         name, cursor.location, align, size)
+            #CXTypeLayoutError_Invalid = -1,
+            #CXTypeLayoutError_Incomplete = -2,
+            #CXTypeLayoutError_Dependent = -3,
+            #CXTypeLayoutError_NotConstantSize = -4,
+            #CXTypeLayoutError_InvalidFieldName = -5
+            errs = dict([(-1,"Invalid"),(-2,"Incomplete"),(-3,"Dependent"),
+                     (-4,"NotConstantSize"),(-5,"InvalidFieldName")])
+            loc = "%s:%s"%(cursor.location.file,cursor.location.line)
+            log.error('Structure %s is %s %s align:%d size:%d',
+                      name, errs[size], loc, align, size)
+            raise InvalidDefinitionError('Structure %s is %s %s align:%d size:%d',
+                                         name, errs[size], loc, align, size)
         log.debug('_record_decl: name: %s size:%d', name, size)
         # Declaration vs Definition point
         # when a struct decl happen before the definition, we have no members
