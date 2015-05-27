@@ -418,12 +418,13 @@ class Generator(object):
     def Structure(self, struct):
         self._structures += 1
         depends = set()
+        # We only print a empty struct.
         if struct.members is None:
-            log.error('Error while parsing members for: %s', struct.name)
+            log.info('No members for: %s', struct.name)
+            self._generate(struct.get_head(), False)
             return
         # look in bases class for dependencies
         # FIXME - need a real dependency graph maker
-
         # remove myself, just in case.
         self.done.remove(struct)
         # checks members dependencies in bases
@@ -794,10 +795,13 @@ class Generator(object):
         self.output.write("\n\n")
         self.output.write(self.stream.getvalue())
 
-        text = "__all__ = [%s]" % ", ".join([repr(str(n)) for n in self.names])
-
-        wrapper = textwrap.TextWrapper(break_long_words=False,
-                                       subsequent_indent="           ")
+        text = "__all__ = \\"
+        # text Wrapper doesn't work for the first line in certain cases.
+        print >> self.output, text
+        # doesn't work for the first line in certain cases.
+        wrapper = textwrap.TextWrapper(break_long_words=False, initial_indent="    ",
+                                       subsequent_indent="    ")
+        text = "[%s]" % ", ".join([repr(str(n)) for n in self.names])
         for line in wrapper.wrap(text):
             print >> self.output, line
 
@@ -887,8 +891,10 @@ def generate_code(srcfiles,
                         [str(x) for x in list(syms)])
 
     if expressions:
-        for i in items:
-            for s in expressions:
+        for s in expressions:
+            log.debug("regexp: looking for %s",s.pattern)
+            for i in items:
+                log.debug("regexp: i.name is %s",i.name)
                 if i.name is None:
                     continue
                 match = s.match(i.name)

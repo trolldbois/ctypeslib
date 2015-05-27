@@ -64,12 +64,14 @@ def main(argv=None):
                         default=False)
     parser.add_argument("-c", dest="generate_comments", action="store_true",
                         help="include source doxygen-style comments", default=False)
-    parser.add_argument("-d", dest="generate_docstrings", action="store_true",
+    parser.add_argument("-d","--doc",
+                        dest="generate_docstrings", action="store_true",
                         help="include docstrings containing C prototype and source file location",
                         default=False)
     parser.add_argument("-e", dest="generate_locations", action="store_true",
                         help="include source file location in comments", default=False)
-    parser.add_argument("-k", action="store",
+    parser.add_argument("-k", "--kind", 
+                        action="store",
                         dest="kind", help="kind of type descriptions to include: "
                         "a = Alias,\n"
                         "c = Class,\n"
@@ -84,7 +86,7 @@ def main(argv=None):
                         metavar="TYPEKIND",
                         default="cdefstu")
 
-    parser.add_argument("-l",
+    parser.add_argument("-l","--include-librarie",
                         dest="dlls",
                         help="libraries to search for exported functions",
                         action="append",
@@ -95,7 +97,7 @@ def main(argv=None):
     else:
         default_modules = []  # ctypes is already imported
 
-    parser.add_argument("-m",
+    parser.add_argument("-m","--module",
                         dest="modules",
                         metavar="module",
                         help="Python module(s) containing symbols which will "
@@ -103,12 +105,12 @@ def main(argv=None):
                         action="append",
                         default=default_modules)
 
-    parser.add_argument("-o",
+    parser.add_argument("-o","--output",
                         dest="output",
                         help="output filename (if not specified, standard output will be used)",
                         default="-")
 
-    parser.add_argument("-r",
+    parser.add_argument("-r","--regex",
                         dest="expressions",
                         metavar="EXPRESSION",
                         action="append",
@@ -117,7 +119,7 @@ def main(argv=None):
                         "everything will be included)",
                         default=None)
 
-    parser.add_argument("-s",
+    parser.add_argument("-s","--symbol",
                         dest="symbols",
                         metavar="SYMBOL",
                         action="append",
@@ -126,7 +128,7 @@ def main(argv=None):
                         "everything will be included)",
                         default=None)
 
-    parser.add_argument("-v",
+    parser.add_argument("-v","--verbose",
                         action="store_true",
                         dest="verbose",
                         help="verbose output",
@@ -137,17 +139,23 @@ def main(argv=None):
                         default=windows_dlls,
                         help="add all standard windows dlls to the searched dlls list")
 
-    parser.add_argument("-x",
+    parser.add_argument("-x","--exclude-includes",
                         action="store_true",
                         default=False,
                         help="Parse object in sources files only. Ignore includes")
 
-    parser.add_argument("--preload",
+    parser.add_argument("-p","--preload",
                         dest="preload",
                         metavar="DLL",
                         help="dlls to be loaded before all others (to resolve symbols)",
                         action="append",
                         default=[])
+
+    parser.add_argument("-q","--quiet",
+                        action="store_true",
+                        dest="quiet",
+                        help="Shut down warnings and below",
+                        default="False")
 
     parser.add_argument("--show-ids", dest="showIDs",
                         help="Don't compute cursor IDs (very slow)",
@@ -171,6 +179,8 @@ def main(argv=None):
     level = logging.INFO
     if options.debug:
         level = logging.DEBUG
+    elif options.quiet:
+        level = logging.ERROR
     logging.basicConfig(level=level, stream=sys.stderr)
 
     if options.output == "-":

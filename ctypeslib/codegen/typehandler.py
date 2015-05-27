@@ -69,8 +69,21 @@ class TypeHandler(ClangHandler):
     # Type has multiple functions for const, volatile, restrict
     # not listed has node in the AST.
     # not very useful in python anyway.
-    TYPEDEF = ClangHandler._do_nothing
 
+    @log_entity
+    def TYPEDEF(self, _cursor_type):
+        """
+        Handles TYPEDEF statement.
+        """
+        _decl = _cursor_type.get_declaration()
+        name = self.get_unique_name(_decl)
+        if self.is_registered(name):
+            obj = self.get_registered(name)
+        else:
+            log.debug('Was in TYPEDEF but had to parse record declaration for %s', name)
+            obj = self.parse_cursor(_decl)
+        return obj
+    
     @log_entity
     def ENUM(self, _cursor_type):
         """
@@ -225,7 +238,7 @@ class TypeHandler(ClangHandler):
         if self.is_registered(name):
             obj = self.get_registered(name)
         else:
-            log.warning('Was in RECORD but had to parse record declaration ')
+            log.debug('Was in RECORD but had to parse record declaration for %s'%(name))
             obj = self.parse_cursor(_decl)
         return obj
 

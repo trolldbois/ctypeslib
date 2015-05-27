@@ -184,12 +184,11 @@ class CursorHandler(ClangHandler):
                 self.is_pointer_type(_type) or
                 self.is_unexposed_type(_type)):
             _argtype = self.parse_cursor_type(_type)
-        else:  # FIXME which UT/case ?
+        else:  # FIXME: Which UT/case ? size_t in stdio.h for example.
             _argtype_decl = _type.get_declaration()
             _argtype_name = self.get_unique_name(_argtype_decl)
             if not self.is_registered(_argtype_name):
-                log.error('this param type is not declared')
-                # code.interact(local=locals())
+                log.info('This param type is not declared: %s',_argtype_name)
                 _argtype = self.parse_cursor_type(_type)
             else:
                 _argtype = self.get_registered(_argtype_name)
@@ -535,7 +534,7 @@ class CursorHandler(ClangHandler):
         if num is not None:
             name = "%s_%d", name, num
         # TODO unittest: try redefinition.
-        # check for definition already parsed
+        # Find if a record definition was already parsed and registered
         if (self.is_registered(name) and
                 self.get_registered(name).members is not None):
             log.debug(
@@ -548,31 +547,41 @@ class CursorHandler(ClangHandler):
         size = cursor.type.get_size()
         align = cursor.type.get_align()
         if size < 0 or align < 0:
-            log.error('invalid structure %s %s align:%d size:%d',
-                      name, cursor.location, align, size)
-            raise InvalidDefinitionError('invalid structure %s %s align:%d size:%d',
-                                         name, cursor.location, align, size)
+            #CXTypeLayoutError_Invalid = -1,
+            #CXTypeLayoutError_Incomplete = -2,
+            #CXTypeLayoutError_Dependent = -3,
+            #CXTypeLayoutError_NotConstantSize = -4,
+            #CXTypeLayoutError_InvalidFieldName = -5
+            errs = dict([(-1,"Invalid"),(-2,"Incomplete"),(-3,"Dependent"),
+                     (-4,"NotConstantSize"),(-5,"InvalidFieldName")])
+            loc = "%s:%s"%(cursor.location.file,cursor.location.line)
+            log.error('Structure %s is %s %s align:%d size:%d',
+                      name, errs[size], loc, align, size)
+            raise InvalidDefinitionError('Structure %s is %s %s align:%d size:%d',
+                                         name, errs[size], loc, align, size)
         log.debug('_record_decl: name: %s size:%d', name, size)
         # Declaration vs Definition point
         # when a struct decl happen before the definition, we have no members
         # in the first declaration instance.
-        if not self.is_registered(name) and not cursor.is_definition():
-            # juste save the spot, don't look at members == None
-            log.debug('cursor %s is not on a definition', name)
-            obj = _output_type(name, align, None, bases, size, packed=False)
-            return self.register(name, obj)
-        log.debug('cursor %s is a definition', name)
-        # save the type in the registry. Useful for not looping in case of
-        # members with forward references
         obj = None
-        packed = False
-        declared_instance = False
         if not self.is_registered(name):
-            obj = _output_type(name, align, None, bases, size, packed=False)
-            self.register(name, obj)
-            self.set_location(obj, cursor)
-            self.set_comment(obj, cursor)
-            declared_instance = True
+            if not cursor.is_definition():
+                # just save the spot, don't look at members == None
+                log.debug('cursor %s is not on a definition', name)
+                obj = _output_type(name, align, None, bases, size, packed=False)
+                return self.register(name, obj)
+            else:
+                log.debug('cursor %s is a definition', name)
+                # save the type in the registry. Useful for not looping in case of
+                # members with forward references
+                obj = _output_type(name, align, None, bases, size, packed=False)
+                self.register(name, obj)
+                self.set_location(obj, cursor)
+                self.set_comment(obj, cursor)
+                declared_instance = True
+        else:
+            obj = self.get_registered(name)
+            declared_instance = False
         # capture members declaration
         members = []
         # Go and recurse through fields
@@ -593,21 +602,16 @@ class CursorHandler(ClangHandler):
                     child.kind, name)
                 continue
         log.debug('_record_decl: %d members', len(members))
-        # if len(members) == 0:
-        #    import code
-        #    code.interact(local=locals())
-        if self.is_registered(name):
-            # STRUCT_DECL as a child of TYPEDEF_DECL for example
-            # FIXME: make a test case for that.
-            if not declared_instance:
-                log.debug(
-                    '_record_decl: %s was previously registered',
-                    name)
-            obj = self.get_registered(name)
-            obj.members = members
-            obj.packed = packed
-            # final fixup
-            self._fixup_record(obj)
+        # by now, the type is registered.
+        if not declared_instance:
+            log.debug(
+                '_record_decl: %s was previously registered',
+                name)
+        obj = self.get_registered(name)
+        obj.members = members
+        #obj.packed = packed
+        # final fixup
+        self._fixup_record(obj)
         return obj
 
     def _fixup_record_bitfields_type(self, s):
