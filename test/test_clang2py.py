@@ -11,8 +11,6 @@ from subprocess import Popen, PIPE
 
 
 class InputOutput(ClangTest):
-    #@unittest.skip('')
-
     def test_stdout_default(self):
         'run clang2py test/data/test-includes.h'
         p = Popen(['clang2py', 'test/data/test-includes.h'], 
@@ -60,9 +58,7 @@ class InputOutput(ClangTest):
         self.assertIn("error: too few arguments", error)
 
 
-class Arguments(ClangTest):
-    #@unittest.skip('')
-
+class ArgumentInclude(ClangTest):
     def test_include_with(self):
         ' run clang2py -i test/data/test-includes.h'
         p = Popen(['clang2py', '-i', 'test/data/test-includes.h'], 
@@ -88,6 +84,32 @@ class Arguments(ClangTest):
         self.assertIn("struct_Name", output)
         self.assertIn("struct_Name3", output)
         self.assertNotIn("struct_Name2", output)
+
+class ArgumentHelper(ClangTest):
+    def test_helper(self):
+        'run clang2py -h'
+        p = Popen(['clang2py', '-h', 'test/data/test-includes.h'], 
+                  stdin=PIPE, 
+                  stdout=PIPE, 
+                  stderr=PIPE,
+                  bufsize=-1)
+        output, error = p.communicate()
+        self.assertEquals(p.returncode, 0)
+        self.assertIn("Cross-architecture:", output)
+        self.assertIn("usage:", output)
+        self.assertIn("optional arguments", output)
+
+class ArgumentVersion(ClangTest):
+    def test_version(self):
+        'run clang2py -V'
+        p = Popen(['clang2py', '-V', 'XXXXX'], 
+                  stdin=PIPE, 
+                  stdout=PIPE, 
+                  stderr=PIPE,
+                  bufsize=-1)
+        output, error = p.communicate()
+        self.assertEquals(p.returncode, 0)
+        self.assertIn("clang2py version", error) #???!!!
 
 
 if __name__ == "__main__":

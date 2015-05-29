@@ -59,19 +59,25 @@ def main(argv=None):
     version = pkg_resources.require("ctypeslib2")[0].version
 
     parser = argparse.ArgumentParser(prog='clang2py',
-                                     description='Version %s. Generate python ABI code from C code' % (version))
-    parser.add_argument('-V', '--version', action='version',
-                        version="clang2py version %s" % (version))
-    parser.add_argument("--debug", dest="debug", action="store_const",
-                        const=True, help='setLevel to DEBUG')
-    parser.add_argument("-c", dest="generate_comments", action="store_true",
-                        help="include source doxygen-style comments", default=False)
+                                     description='Version %s. Generate python code from C headers' % (version))
+    parser.add_argument("-c", "--comments",
+                        dest="generate_comments",
+                        action="store_true",
+                        help="include source doxygen-style comments",
+                        default=False)
     parser.add_argument("-d","--doc",
                         dest="generate_docstrings", action="store_true",
                         help="include docstrings containing C prototype and source file location",
                         default=False)
-    parser.add_argument("-e", dest="generate_locations", action="store_true",
-                        help="include source file location in comments", default=False)
+    parser.add_argument("--debug", 
+                        action="store_const",
+                        const=True, 
+                        help='setLevel to DEBUG')
+    parser.add_argument("-e", "--show-definition-location", 
+                        dest="generate_locations", 
+                        action="store_true",
+                        help="include source file location in comments", 
+                        default=False)
     parser.add_argument("-k", "--kind", 
                         action="store",
                         dest="kind", help="kind of type descriptions to include: "
@@ -88,7 +94,8 @@ def main(argv=None):
                         metavar="TYPEKIND",
                         default="cdefstu")
 
-    parser.add_argument("-i", "--includes", dest="generate_includes",
+    parser.add_argument("-i", "--includes", 
+                        dest="generate_includes",
                         action="store_true",
                         help="include declaration defined outside of the sourcefiles",
                         default=False)
@@ -158,6 +165,9 @@ def main(argv=None):
                         dest="verbose",
                         help="verbose output",
                         default=False)
+    parser.add_argument('-V', '--version', 
+                        action='version',
+                        version="%(prog)s version "+version)
 
     parser.add_argument("-w",
                         action="store",
@@ -175,7 +185,9 @@ def main(argv=None):
 
     parser.add_argument("--max-depth", dest="maxDepth",
                         help="Limit cursor expansion to depth N",
-                        metavar="N", type=int, default=None)
+                        metavar="N", 
+                        type=int, 
+                        default=None)
 
     # recognize - as stdin
     # we do NOT support stdin
