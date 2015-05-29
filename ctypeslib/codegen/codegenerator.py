@@ -844,8 +844,7 @@ def generate_code(srcfiles,
                   preloaded_dlls=None,
                   generate_docstrings=False,
                   generate_locations=False,
-                  generate_includes=False,
-                  filter_location=True,
+                  filter_location=False,
                   flags=None
                   ):
 
@@ -860,6 +859,14 @@ def generate_code(srcfiles,
 
     if filter_location is True:
         parser.filter_location(srcfiles)
+    #print len(items)
+    # -i arguments
+    #if not generate_includes:
+    #    # limit generation to definitions in srcfiles only
+    #    # dependencies will be generated even if from another file
+    #    items = [i for i in items if i.location[0] in srcfiles]
+    #print len(items)
+
     #
     items = []
     for srcfile in srcfiles:
@@ -874,12 +881,6 @@ def generate_code(srcfiles,
 
     if types:
         items = [i for i in items if isinstance(i, types)]
-
-    # -i arguments
-    if not generate_includes:
-        # limit generation to definitions in srcfiles only
-        # dependencies will be generated even if from another file
-        items = [i for i in items if i.location[0] in srcfiles]
 
     if symbols:
         syms = set(symbols)
