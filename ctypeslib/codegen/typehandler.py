@@ -238,7 +238,7 @@ class TypeHandler(ClangHandler):
         if self.is_registered(name):
             obj = self.get_registered(name)
         else:
-            log.debug('Was in RECORD but had to parse record declaration for %s'%(name))
+            log.debug('Was in RECORD but had to parse record declaration for %s',name)
             obj = self.parse_cursor(_decl)
         return obj
 
