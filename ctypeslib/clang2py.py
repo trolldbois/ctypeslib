@@ -287,7 +287,7 @@ def main(argv=None):
         for char in options.kind:
             try:
                 typ = type_table[char]
-            except KeyError as e:
+            except KeyError:
                 parser.error(
                     "%s is not a valid choice for a TYPEKIND" %
                     (char))

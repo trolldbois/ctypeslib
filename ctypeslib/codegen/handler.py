@@ -8,10 +8,6 @@ from ctypeslib.codegen.util import log_entity
 import logging
 log = logging.getLogger('handler')
 
-# DEBUG
-import code
-
-
 class CursorKindException(TypeError):
 
     """When a child node of a VAR_DECL is parsed as an initialization value,
@@ -176,13 +172,13 @@ class ClangHandler(object):
         name = self.get_unique_name(node)
         #import code
         # code.interact(local=locals())
-        log.warning('_do_nothing for %s/%s' % (node.kind.name, name))
+        log.warning('_do_nothing for %s/%s',node.kind.name, name)
         return True
 
     ###########################################
     # TODO FIXME: 100% cursor/type Kind coverage
     def __getattr__(self, name, **args):
         if name not in self._unhandled:
-            log.warning('%s is not handled' % (name))
+            log.warning('%s is not handled',name)
             self._unhandled.append(name)
         return self._do_nothing
