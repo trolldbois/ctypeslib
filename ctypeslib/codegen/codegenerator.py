@@ -36,6 +36,7 @@ class Generator(object):
 
         self.done = set()  # type descriptions that have been generated
         self.names = set()  # names that have been generated
+        self.macros = 0
 
     # pylint: disable=method-hidden
     def enable_fundamental_type_wrappers(self):
@@ -843,8 +844,7 @@ def generate_code(srcfiles,
                   preloaded_dlls=None,
                   generate_docstrings=False,
                   generate_locations=False,
-                  generate_includes=False,
-                  filter_location=True,
+                  filter_location=False,
                   flags=None
                   ):
 
@@ -859,25 +859,21 @@ def generate_code(srcfiles,
 
     if filter_location is True:
         parser.filter_location(srcfiles)
+
     #
     items = []
     for srcfile in srcfiles:
-
+        # verifying that is really a file we can open
         with open(srcfile):
             pass
         parser.parse(srcfile)
         items += parser.get_result()
     log.debug('Input was parsed')
-    # code.interact(local=locals())
     # filter symbols to generate
     todo = []
 
     if types:
         items = [i for i in items if isinstance(i, types)]
-
-    if not generate_includes:
-        # limit generation to definitions in srcfiles only
-        items = [i for i in items if i.location[0] in srcfiles]
 
     if symbols:
         syms = set(symbols)

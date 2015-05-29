@@ -1,7 +1,7 @@
 """clangparser - use clang to get preprocess a source code."""
 
 from clang.cindex import Index, TranslationUnit
-from clang.cindex import CursorKind, TypeKind
+from clang.cindex import TypeKind
 
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen import cursorhandler
@@ -163,7 +163,7 @@ class Clang_Parser(object):
             # them.
             for child in node.get_children():
                 self.startElement(child)
-        except InvalidDefinitionError as e:
+        except InvalidDefinitionError:
             pass
         # startElement returns None.
         return None

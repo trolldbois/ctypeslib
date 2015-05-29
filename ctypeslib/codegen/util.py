@@ -114,7 +114,7 @@ def log_entity(func):
             parent = args[1].semantic_parent
             if parent:
                 name = 'child of %s' % parent.displayname
-        log.debug("%s: displayname:'%s'" % (func.__name__, name))
+        log.debug("%s: displayname:'%s'",func.__name__, name)
         # print 'calling {}'.format(func.__name__)
         return func(*args, **kwargs)
     return fn

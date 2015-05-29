@@ -134,7 +134,7 @@ class ClangTest(unittest.TestCase):
         gen.generate_code(items)
         return gen
 
-    def gen(self, fname, flags=[]):
+    def gen(self, fname, flags=[], debug=False):
         """Take a file input and generate the code.
         """
         ofi = StringIO()
@@ -150,15 +150,17 @@ class ClangTest(unittest.TestCase):
         output = ''.join(ofi.readlines())
         exec output in namespace
         self.namespace = ADict(namespace)
+        if debug:
+            print(output)
         return
 
-    def convert(self, src_code, flags=[]):
+    def convert(self, src_code, flags=[], debug=False):
         """Take a string input, write it into a temp file and the code.
         """
         hfile = mktemp(".h")
         open(hfile, "w").write(src_code)
         try:
-            self.gen(hfile, flags)
+            self.gen(hfile, flags,debug)
         finally:
             os.unlink(hfile)
         return

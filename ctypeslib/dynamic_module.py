@@ -241,9 +241,7 @@ class CodeGenerator(object):
         self.decls = names
 
         dlls = dict([o for o in ns.items()
-                     if isinstance(o[1], ctypes.CDLL)
-                     and not isinstance(o[1], ctypes.PyDLL)])
-
+                     if isinstance(o[1], ctypes.CDLL) and not isinstance(o[1], ctypes.PyDLL)])
         self.codegenerator = Generator(output=None,
                                        known_symbols=None,
                                        searched_dlls=dlls)

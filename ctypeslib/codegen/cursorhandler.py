@@ -43,23 +43,23 @@ class CursorHandler(ClangHandler):
     ###########################################
     # ATTRIBUTES
 
-    @log_entity
-    def UNEXPOSED_ATTR(self, cursor):
+    #@log_entity
+    #def UNEXPOSED_ATTR(self, cursor):
         # FIXME: do we do something with these ?
         # parent = cursor.semantic_parent
         # print 'parent is',parent.displayname, parent.location, parent.extent
         # TODO until attr is exposed by clang:
         # readlines()[extent] .split(' ') | grep {inline,packed}
-        return
+    #    return
 
-    @log_entity
-    def PACKED_ATTR(self, cursor):
+    #@log_entity
+    #def PACKED_ATTR(self, cursor):
         # FIXME: do we do something with these ?
         # parent = cursor.semantic_parent
         # print 'parent is',parent.displayname, parent.location, parent.extent
         # TODO until attr is exposed by clang:
         # readlines()[extent] .split(' ') | grep {inline,packed}
-        return
+    #    return
 
     ################################
     # EXPRESSIONS handlers
@@ -345,7 +345,7 @@ class CursorHandler(ClangHandler):
             _tmp = None
             try:
                 _tmp = self._get_var_decl_init_value_single(_ctype, child)
-            except CursorKindException as e:
+            except CursorKindException:
                 log.debug(
                     '_get_var_decl_init_value: children init value skip on %s',
                     child.kind)
@@ -695,13 +695,13 @@ class CursorHandler(ClangHandler):
                 i = s.members.index(m)
                 if len(s.members) > i + 1:
                     # has to exists, no arch is aligned on 24 bits.
-                    next = s.members[i + 1]
-                    if next.bits == 8:
-                        # next field is a char.
+                    next_member = s.members[i + 1]
+                    if next_member.bits == 8:
+                        # next_member field is a char.
                         # it will be aggregated in a 32 bits space
                         # we need to make it a member of 32bit bitfield
-                        next.is_bitfield = True
-                        next.comment = "Promoted to bitfield member to handle 3-bytes situation"
+                        next_member.is_bitfield = True
+                        next_member.comment = "Promoted to bitfield member to handle 3-bytes situation"
                         continue
 
         #
@@ -796,12 +796,12 @@ class CursorHandler(ClangHandler):
             #                            (length//8)*8, prev_member=padding)
             return padding_nb
         elif length > 8:
-            bytes = length / 8
+            pad_bytes = length / 8
             padding = typedesc.Field(name,
                                      typedesc.ArrayType(
                                          typedesc.FundamentalType(
                                              self.get_ctypes_name(TypeKind.CHAR_U), length, 1),
-                                         bytes),
+                                         pad_bytes),
                                      offset, length, is_padding=True)
             members.append(padding)
             return padding_nb
@@ -830,7 +830,7 @@ class CursorHandler(ClangHandler):
         name = self.get_unique_name(cursor)
         parent = cursor.semantic_parent
         # record_name = parent.spelling
-        record_name = self.get_unique_name(cursor.semantic_parent)
+        # Not used anymore ? record_name = self.get_unique_name(cursor.semantic_parent)
         #_id = cursor.get_usr()
         # anonymous fields
         if cursor.is_anonymous():
@@ -954,7 +954,7 @@ class CursorHandler(ClangHandler):
         obj = typedesc.Macro(name, None, value)
         try:
             self.register(name, obj)
-        except DuplicateDefinitionException as e:
+        except DuplicateDefinitionException:
             log.info(
                 'Redefinition of %s %s->%s',
                 name, self.parser.all[name].args, value)
