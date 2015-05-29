@@ -36,6 +36,7 @@ class Generator(object):
 
         self.done = set()  # type descriptions that have been generated
         self.names = set()  # names that have been generated
+        self.macros = 0
 
     # pylint: disable=method-hidden
     def enable_fundamental_type_wrappers(self):
