@@ -859,13 +859,6 @@ def generate_code(srcfiles,
 
     if filter_location is True:
         parser.filter_location(srcfiles)
-    #print len(items)
-    # -i arguments
-    #if not generate_includes:
-    #    # limit generation to definitions in srcfiles only
-    #    # dependencies will be generated even if from another file
-    #    items = [i for i in items if i.location[0] in srcfiles]
-    #print len(items)
 
     #
     items = []
