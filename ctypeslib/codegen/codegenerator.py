@@ -863,21 +863,22 @@ def generate_code(srcfiles,
     #
     items = []
     for srcfile in srcfiles:
-
+        # verifying that is really a file we can open
         with open(srcfile):
             pass
         parser.parse(srcfile)
         items += parser.get_result()
     log.debug('Input was parsed')
-    # code.interact(local=locals())
     # filter symbols to generate
     todo = []
 
     if types:
         items = [i for i in items if isinstance(i, types)]
 
+    # -i arguments
     if not generate_includes:
         # limit generation to definitions in srcfiles only
+        # dependencies will be generated even if from another file
         items = [i for i in items if i.location[0] in srcfiles]
 
     if symbols:

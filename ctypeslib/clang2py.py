@@ -2,6 +2,7 @@
 import argparse
 import logging
 import os
+import platform
 import re
 import sys
 import pkg_resources
@@ -48,6 +49,10 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
+    local_platform_triple = "%s-%s"%(platform.machine(),platform.system())
+    clang_opts = []
+    files = None
+    
     def windows_dlls(option, opt, value, parser):
         parser.values.dlls.extend(windows_dll_names)
 
@@ -59,9 +64,6 @@ def main(argv=None):
                         version="clang2py version %s" % (version))
     parser.add_argument("--debug", dest="debug", action="store_const",
                         const=True, help='setLevel to DEBUG')
-    parser.add_argument("-a", dest="generate_includes", action="store_true",
-                        help="include declaration defined outside of the sourcefiles ",
-                        default=False)
     parser.add_argument("-c", dest="generate_comments", action="store_true",
                         help="include source doxygen-style comments", default=False)
     parser.add_argument("-d","--doc",
@@ -85,6 +87,11 @@ def main(argv=None):
                         "default = 'cdefstu'\n",
                         metavar="TYPEKIND",
                         default="cdefstu")
+
+    parser.add_argument("-i", "--includes", dest="generate_includes",
+                        action="store_true",
+                        help="include declaration defined outside of the sourcefiles",
+                        default=False)
 
     parser.add_argument("-l","--include-librarie",
                         dest="dlls",
@@ -110,6 +117,19 @@ def main(argv=None):
                         help="output filename (if not specified, standard output will be used)",
                         default="-")
 
+    parser.add_argument("-p","--preload",
+                        dest="preload",
+                        metavar="DLL",
+                        help="dlls to be loaded before all others (to resolve symbols)",
+                        action="append",
+                        default=[])
+
+    parser.add_argument("-q","--quiet",
+                        action="store_true",
+                        dest="quiet",
+                        help="Shut down warnings and below",
+                        default="False")
+
     parser.add_argument("-r","--regex",
                         dest="expressions",
                         metavar="EXPRESSION",
@@ -128,6 +148,11 @@ def main(argv=None):
                         "everything will be included)",
                         default=None)
 
+    parser.add_argument("-t","--target",
+                        dest="target",
+                        help="target architecture (default: %s)"%(local_platform_triple),
+                        default=None) # actually let clang alone decide.
+
     parser.add_argument("-v","--verbose",
                         action="store_true",
                         dest="verbose",
@@ -144,19 +169,6 @@ def main(argv=None):
                         default=False,
                         help="Parse object in sources files only. Ignore includes")
 
-    parser.add_argument("-p","--preload",
-                        dest="preload",
-                        metavar="DLL",
-                        help="dlls to be loaded before all others (to resolve symbols)",
-                        action="append",
-                        default=[])
-
-    parser.add_argument("-q","--quiet",
-                        action="store_true",
-                        dest="quiet",
-                        help="Shut down warnings and below",
-                        default="False")
-
     parser.add_argument("--show-ids", dest="showIDs",
                         help="Don't compute cursor IDs (very slow)",
                         default=False)
@@ -165,16 +177,36 @@ def main(argv=None):
                         help="Limit cursor expansion to depth N",
                         metavar="N", type=int, default=None)
 
+    # recognize - as stdin
+    # we do NOT support stdin
     parser.add_argument("files", nargs="+",
-                        help="source filenames", type=argparse.FileType('r'))
+                        help="source filenames. stdin is not supported", 
+                        type=argparse.FileType('r')) 
 
-    #parser.add_argument("clang-opts", required=False, help="clang options", type=str)
+    parser.add_argument("--clang-args", 
+                        action="store",
+                        default=None,
+                        required=False, 
+                        help="clang options", 
+                        type=str)
 
-    parser.epilog = '''About clang-args:     You can pass modifier to clang after your file name.
-    For example, try "-target x86_64" or "-target i386-linux" as the last argument to change the target CPU arch.'''
+    parser.epilog = """Cross-architecture: You can pass target modifiers to clang.
+    For example, try "-target x86_64" or "-target i386-linux" as the last argument to change the target CPU arch."""
 
-    options, clang_opts = parser.parse_known_args()
-    files = [f.name for f in options.files]
+    options = parser.parse_args()
+    
+    # handle stdin, just in case
+    files = []
+    for f in options.files:
+        if f == sys.stdin:
+            raise ValueError('stdin is not supported')
+        files.append(f.name)
+        f.close()
+    #files = [f.name for f in options.files]
+    if options.target is not None:
+        clang_opts = ["-target",options.target]
+    if options.clang_args is not None:
+        clang_opts.extend(options.clang_args.split(" "))
 
     level = logging.INFO
     if options.debug:

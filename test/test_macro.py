@@ -23,13 +23,6 @@ class Macro(ClangTest):
         self.convert('''#define __MY_VAL 1''', flags)
         self.assertEquals(getattr(self.namespace,"__MY_VAL"), 1)
 
-    def test_simple_integer_literal(self):
-        flags = ['-target', 'i386-linux']
-        self.convert('''#define MY_VAL 1''', flags)
-        self.assertEquals(self.namespace.MY_VAL, 1)
-        self.convert('''#define __MY_VAL 1''', flags)
-        self.assertEquals(getattr(self.namespace,"__MY_VAL"), 1)
-
 
 if __name__ == "__main__":
     unittest.main()
