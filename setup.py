@@ -6,7 +6,7 @@ from ctypeslib import __version__
 
 setup(
     name="ctypeslib2",
-    version="2.1.1",
+    version="2.1.2",
     description="ctypeslib2 - FFI toolkit, relies on clang",
     long_description=open("README.md").read(),
     author="Loic Jaquemet",
