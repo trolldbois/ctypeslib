@@ -28,6 +28,8 @@ install:
   - pip install coveralls
 
 script:
+# we need clang2py in the path
+  - python setup.py develop
 # run tests
   - python setup.py test
   - coverage run --source=ctypeslib setup.py test
