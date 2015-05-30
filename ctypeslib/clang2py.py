@@ -7,6 +7,7 @@ import re
 import sys
 import pkg_resources
 
+import ctypeslib
 from ctypeslib.codegen.codegenerator import generate_code
 from ctypeslib.codegen import typedesc
 
@@ -56,7 +57,7 @@ def main(argv=None):
     def windows_dlls(option, opt, value, parser):
         parser.values.dlls.extend(windows_dll_names)
 
-    version = pkg_resources.require("ctypeslib2")[0].version
+    version = ctypeslib.__version__
 
     parser = argparse.ArgumentParser(prog='clang2py',
                                      description='Version %s. Generate python code from C headers' % (version))
