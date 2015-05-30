@@ -18,18 +18,16 @@ install:
   - sudo apt-get update 
     # arrrh... http://docs.travis-ci.com/user/languages/python/.
     # system python package will not be used.
-  - sudo apt-get install libclang1-3.7 python-clang-3.7  --yes --force-yes
+  - sudo apt-get install libclang1-3.7 --yes --force-yes
 #permission denied  - sudo echo `echo "/usr/lib/llvm-3.7/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
   - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang-3.7.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
   - sudo ldconfig  
 # tests dependencies
-#  - pip install nose
-  - pip install clang==3.7.dev234765
   - pip install coveralls
 
 script:
-# we need clang2py in the path
-  - python setup.py develop
+# we need clang2py in the path. also installs python clang
+  - python setup.py install
 # run tests
   - python setup.py test
   - coverage run --source=ctypeslib setup.py test
