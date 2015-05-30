@@ -29,4 +29,7 @@ setup(
                                 'data/headers.tpl' ]},
     scripts=['scripts/clang2py'],
     test_suite="test.alltests",
+    install_requires=[
+       'clang>=3.7.dev234765',
+    ]
 )
