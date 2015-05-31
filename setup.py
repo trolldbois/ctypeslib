@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup
-from ctypeslib import __version__
 
 setup(
     name="ctypeslib2",
-    version="2.1.2",
+    version="2.1.3",
     description="ctypeslib2 - FFI toolkit, relies on clang",
     long_description=open("README.md").read(),
     author="Loic Jaquemet",
