@@ -20,6 +20,8 @@ else:
 # configure python-clang to use the local clang library
 try:
     from ctypes.util import find_library
+    print 'find_library("clang-3.7")', find_library("clang-3.7")
+    print 'find_library("clang")', find_library("clang")
     if find_library("clang-3.7") is not None:
         from clang import cindex
         cindex.Config.set_library_file(find_library("clang-3.7"))
