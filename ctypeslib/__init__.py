@@ -7,8 +7,9 @@ import os.path
 try:
     _dist = get_distribution('ctypeslib2')
     # Normalize case for Windows systems
-    dist_loc = os.path.normcase(_dist.location)
-    here = os.path.normcase(__file__)
+    # if you are in a virtualenv, ./local/* are aliases to ./*
+    dist_loc = os.path.normcase(os.path.realpath(_dist.location))
+    here = os.path.normcase(os.path.realpath(__file__))
     if not here.startswith(os.path.join(dist_loc, 'ctypeslib')):
         # not installed, but there is another version that *is*
         raise DistributionNotFound
@@ -20,6 +21,7 @@ else:
 # configure python-clang to use the local clang library
 try:
     from ctypes.util import find_library
+    # debug for python-haystack travis-ci
     print 'find_library("clang-3.7")', find_library("clang-3.7")
     print 'find_library("clang")', find_library("clang")
     if find_library("clang-3.7") is not None:
