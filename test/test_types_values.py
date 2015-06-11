@@ -368,7 +368,7 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.foo, "foo")
         self.assertEqual(type(self.namespace.foo), unicode)
 
-    @unittest.skip('')
+    @unittest.skip('find a good test for docstring')
     def test_docstring(self):
         import os
         from ctypes import CDLL
