@@ -590,9 +590,14 @@ class CursorHandler(ClangHandler):
                   str(['%s/%s' % (f.kind.name, f.spelling) for f in fields]))
         for field in fields:
             members.append(self.FIELD_DECL(field))
+        # FIXME BUG: in some case of circular dependencies (HEAP_SUBSEGMENT)
+        # clang cannot generate fields properly.
+        # FIXME
         # check for other stuff
         for child in cursor.get_children():
-            if child.kind == CursorKind.PACKED_ATTR:
+            if child in fields:
+                continue
+            elif child.kind == CursorKind.PACKED_ATTR:
                 obj.packed = True
                 log.debug('PACKED record')
                 continue  # dont mess with field calculations
