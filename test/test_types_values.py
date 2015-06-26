@@ -335,6 +335,67 @@ class ConstantsTest(ClangTest):
         # code.interact(local=locals())
         self.assertEqual(ctypes.sizeof(self.namespace.struct_X), 304)
 
+    def test_anonymous_struct_extended(self):
+        flags = ['-target', 'i386-linux']
+        self.convert(
+            '''
+typedef unsigned long int uint64_t;
+typedef uint64_t ULONGLONG;
+typedef union MY_ROOT_UNION {
+ struct {
+  ULONGLONG Alignment;
+  ULONGLONG Region;
+ };
+ struct {
+     struct {
+        ULONGLONG Depth : 16;
+        ULONGLONG Sequence : 9;
+        ULONGLONG NextEntry : 39;
+        ULONGLONG HeaderType : 1;
+        ULONGLONG Init : 1;
+        ULONGLONG Reserved : 59;
+        ULONGLONG Region : 3;
+    };
+} Header8;
+ struct {
+     struct {
+        ULONGLONG Depth : 16;
+        ULONGLONG Sequence : 48;
+        ULONGLONG HeaderType : 1;
+        ULONGLONG Init : 1;
+        ULONGLONG Reserved : 2;
+        ULONGLONG NextEntry : 60;
+    };
+} Header16;
+ struct {
+  struct {
+     struct {
+        ULONGLONG Depth : 16;
+        ULONGLONG Sequence : 48;
+        ULONGLONG HeaderType : 1;
+        ULONGLONG Reserved : 3;
+        ULONGLONG NextEntry : 60;
+    };
+  } HeaderX64;
+ };
+} __attribute__((packed)) MY_ROOT_UNION, *PMY_ROOT_UNION, **PPMY_ROOT_UNION ;
+        };
+        ''', flags)
+        ['MY_ROOT_UNION', 'ULONGLONG', '',
+    '', '',
+
+    '',
+    '', 'PPMY_ROOT_UNION',
+    'struct_MY_ROOT_UNION_2Sa', '',
+    'union_MY_ROOT_UNION', 'uint64_t', 'PMY_ROOT_UNION']
+
+        self.assertIn("MY_ROOT_UNION", self.namespace)
+        self.assertIn("struct_MY_ROOT_UNION_2Sa", self.namespace)
+        self.assertIn("struct_MY_ROOT_UNION_4Sa", self.namespace)
+        self.assertIn("struct_MY_ROOT_UNION_6Sa", self.namespace)
+        self.assertIn("struct_MY_ROOT_UNION_6Sa_0Sa", self.namespace)
+        self.assertEqual(ctypes.sizeof(self.namespace.union_MY_ROOT_UNION), 8)
+
     #@unittest.skip('')
     # no macro support yet
     @unittest.expectedFailure
@@ -392,5 +453,5 @@ class ConstantsTest(ClangTest):
 import logging
 import sys
 if __name__ == "__main__":
-    #logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
+    logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
     unittest.main()

@@ -195,7 +195,9 @@ class ArgumentTypeKind(ClangTest):
                   bufsize=-1)
         output, error = p.communicate()
         self.assertEquals(p.returncode, 0)
-        self.assertIn("struct_c__S__complex6_Sa_1", output)
+        self.assertIn("struct__complex6", output)
+        self.assertIn("struct__complex6_0Sa", output)
+        self.assertIn("struct__complex6_1Sa", output)
 
     def test_typedef(self):
         'run clang2py -k t test/data/test-basic-types.c'
@@ -219,7 +221,12 @@ class ArgumentTypeKind(ClangTest):
                   bufsize=-1)
         output, error = p.communicate()
         self.assertEquals(p.returncode, 0)
-        self.assertIn("class union_c__S__complex3_Ua_0", output)
+        self.assertIn("struct__complex3", output)
+        self.assertIn("union__complex3_0Ua", output)
+        self.assertIn("struct__complex3_0Ua_2Sa", output)
+        self.assertIn("struct__complex3_0Ua_0Sa", output)
+        self.assertIn("struct__complex3_0Ua_1Sa", output)
+        self.assertIn("union__complex3_0Ua_1Sa_1Ua", output)
 
 class ArgumentComments(ClangTest):
     @unittest.skip('find a good test for function')

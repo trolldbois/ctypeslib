@@ -83,26 +83,132 @@ class ClangHandler(object):
             return "_" + name
         return name
 
+    def _get_anon_name(self, cursor):
+        '''Creates a name for anonymous fields'''
+        # .spelling and .diplayname are ''
+        # get the field number
+        parent = cursor.semantic_parent
+        if parent.kind not in [CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,CursorKind.CLASS_DECL,CursorKind.FIELD_DECL]:
+            log.debug('Parent is a root %s', parent.kind)
+            return ''
+        
+        #log.debug('Asking parent get_unique_name')
+        pname = self.get_unique_name(parent)
+        log.debug('_get_anon_name: Got parent get_unique_name %s',pname)
+        # cursor is a FIELD_DECL. we need the {STRUCT,UNION}_DECL
+        _cursor_decl = cursor.type.get_declaration()
+
+        if '/' in pname or pname=='struct_':
+            print "pname is struct_"
+            import code
+            code.interact(local=locals())
+        
+        _t = None
+        _i = 0
+        found = False
+        # Look at the parent fields to find myself
+        if cursor.is_definition():
+            for m in parent.get_children():
+                log.debug('childs i:%d cursor.kind %s',_i,cursor.kind)
+                log.debug('childs i:%d %s',_i, cursor.spelling)
+                if m == _cursor_decl:
+                    found = True
+                    break
+                _i+=1
+        else:
+            for m in parent.type.get_fields():
+                log.debug('fields i:%d cursor.kind %s',_i,cursor.kind)
+                log.debug('fields i:%d %s',_i, cursor.spelling)
+                if m == cursor:
+                    found = True
+                    break
+                _i+=1
+        if not found:
+            print 'BUG'
+            import code
+            code.interact(local=locals())
+            raise NotImplementedError("BUG cursor location %s"%cursor.location)
+        
+        # cursor is FIELD_DECL, we need to find out if its a struct or a union
+        _akind = cursor.type.get_declaration().kind
+        if _akind == CursorKind.UNION_DECL:
+            _t = 'Ua'
+        elif _akind == CursorKind.STRUCT_DECL:
+            _t = 'Sa'
+        else:
+            raise NotImplementedError("Not sure what kind of member that is %s"%_akind)
+        # truncate parent name to remove the first part ( union or struct)
+        _premainer = '_'.join(pname.split('_')[1:])
+        name = '%s_%d%s'%(_premainer,_i,_t)
+        return name
+
+
     def get_unique_name(self, cursor):
         name = ''
-        if hasattr(cursor, 'displayname'):
+        from clang import cindex
+        record_kind=[CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,CursorKind.CLASS_DECL,CursorKind.FIELD_DECL]
+        if cursor.kind in record_kind and (
+            cursor.is_anonymous() or cursor.spelling == ''):
+                #print 'anon kind is ', cursor.kind
+                #print 'location', cursor.location
+                #print 'get_usr', cursor.get_usr()
+                #log.debug('Anonymous cursor, building name')
+                name = self._get_anon_name(cursor)
+                log.debug('Anonymous cursor, got name %s',name)
+                #import code
+                #code.interact(local=locals())
+                
+        elif hasattr(cursor, 'displayname'):
             name = cursor.displayname
         elif hasattr(cursor, 'spelling'):
             name = cursor.spelling
-        if name == '' and hasattr(
-                cursor, 'get_usr'):  # FIXME: should not get Type
-            _id = cursor.get_usr()
-            if _id == '':  # anonymous is spelling == ''
-                return None
-            name = self.make_python_name(_id)
-        if cursor.kind == CursorKind.STRUCT_DECL:
-            name = 'struct_%s' % (name)
-        elif cursor.kind == CursorKind.UNION_DECL:
-            name = 'union_%s' % (name)
-        elif cursor.kind == CursorKind.CLASS_DECL:
-            name = 'class_%s' % (name)
-        elif cursor.kind == CursorKind.TYPE_REF:
-            name = name.replace(' ', '_')
+        if name == '' :#and hasattr(
+            #cursor, 'get_usr'):
+            log.error('get_unique_name: empty name and this is kind %s',cursor.kind)  
+            #import code
+            #code.interact(local=locals())
+            # FIXME: 
+            # BUG : name collision between to union field siblings children
+            # we need to find a unique identifier for this anonymous struct.
+            # would be nice to have a unique identifier based on the semantic parent
+            # clang says
+            '''A Unified Symbol Resolution (USR) is a string that identifies a
+        particular entity (function, class, variable, etc.) within a
+        program.'''
+            '''
+>>> cursor.get_usr()
+'c:@S@_HEAP_ENTRY@Ua@Sa@Ua@Sa'
+>>> x=list(cursor.semantic_parent.get_children())
+>>> x[0].get_usr()
+'c:@S@_HEAP_ENTRY@Ua@Sa@Ua@Sa'
+>>> x[1].get_usr()
+'c:@S@_HEAP_ENTRY@Ua@Sa@Ua@Sa'
+'''
+            # so we need to use the parent field name to construct it.
+            # TODO: recurse on semantic_parent to reconstruct the field id 
+            # of all anonymous siblings
+            # cf codegenerator:531.
+            #_id = cursor.get_usr()
+        #    _id = self._get_anon_name(cursor)
+            #if _id == '':  # anonymous is spelling == ''
+            #    return None
+        #    name = self.make_python_name(_id)
+        #if cursor.kind == CursorKind.STRUCT_DECL:
+        #    name = 'struct_%s' % (name)
+        #elif cursor.kind == CursorKind.UNION_DECL:
+        #    name = 'union_%s' % (name)
+        #elif cursor.kind == CursorKind.CLASS_DECL:
+        #    name = 'class_%s' % (name)
+        #elif cursor.kind == CursorKind.TYPE_REF:
+        #    name = name.replace(' ', '_')
+        _prefix = None
+        names= {CursorKind.STRUCT_DECL: 'struct_',
+                CursorKind.UNION_DECL: 'union_',
+                CursorKind.CLASS_DECL: 'class_',
+                CursorKind.TYPE_REF: '_'}
+        if cursor.kind in names:
+            _prefix = names[cursor.kind]
+        name = '%s%s' % (_prefix or '', name)
         return name
 
     def is_fundamental_type(self, t):
