@@ -592,11 +592,9 @@ class CursorHandler(ClangHandler):
         for field in fields:
             log.debug('creating FIELD_DECL for %s/%s',f.kind.name, f.spelling)
             members.append(self.FIELD_DECL(field))
-        # FIXME BUG: in some case of circular dependencies (HEAP_SUBSEGMENT)
-        # clang cannot generate fields properly.
-        # FIXME
-        #import code
-        #code.interact(local=locals())
+        # FIXME BUG clang: anonymous structure field with only one anonymous field 
+        # is not a FIELD_DECL. does not appear in get_fields() !!!
+        #
         # check for other stuff
         for child in cursor.get_children():
             if child in fields:
@@ -838,13 +836,14 @@ class CursorHandler(ClangHandler):
         Some specific treatment for a bitfield.
         """
         # name, type
-        log.debug('FIELD_DECL: get the cursor unique name')
-        name = self.get_unique_name(cursor)
-        log.debug('FIELD_DECL: the cursor unique name is %s',name)
         parent = cursor.semantic_parent
-        # record_name = parent.spelling
-        # anonymous fields - we need to make up a field name for python
-        # and get the offset of the field in the record
+        # field name: 
+        # either its cursor.spelling or it is an anonymous field
+        # Anonymous Field: 
+        #    We have to create a name
+        #    it will be the indice of the field (_0,_1,...)
+        # offset of field:
+        #    we will need it late. get the offset of the field in the record
         if cursor.is_anonymous():
             # get offset by iterating all fields of parent
             offset = cursor.get_field_offsetof()
@@ -856,16 +855,18 @@ class CursorHandler(ClangHandler):
             name = "_%d" % (fieldnum)
             log.debug("FIELD_DECL: anonymous field renamed to %s",name)
         else:
+            name = cursor.spelling
             offset = parent.type.get_offset(name)
             if offset < 0:
                 log.error('FIELD_DECL: BAD RECORD, Bad offset: %d for %s', offset, name)
                 # FIXME if c++ class ?
         log.debug('FIELD_DECL: field offset is %d', offset)
-        # after dealing with anon bitfields
+
+        # after dealing with anon bitfields, it could happen.
         if name == '':
             raise ValueError("Field has no displayname")
 
-        # bitfield chekcs
+        # bitfield checks
         bits = None
         if cursor.is_bitfield():
             log.debug('FIELD_DECL: field is part of a bitfield')

@@ -87,7 +87,7 @@ class ClangHandler(object):
         '''Creates a name for anonymous fields'''
         # .spelling and .diplayname are ''
         # get the field number
-        parent = cursor.semantic_parent
+        parent = cursor.lexical_parent
         if parent.kind not in [CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,CursorKind.CLASS_DECL,CursorKind.FIELD_DECL]:
             log.debug('Parent is a root %s', parent.kind)
             return ''
@@ -144,17 +144,18 @@ class ClangHandler(object):
 
 
     def get_unique_name(self, cursor):
+        # FIXME, there is a difference between an anonymous struct field and
+        # and anonymous structure type.
         name = ''
-        from clang import cindex
+        if cursor.kind in [CursorKind.UNEXPOSED_DECL]:
+            return ''
+        
         record_kind=[CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,CursorKind.CLASS_DECL,CursorKind.FIELD_DECL]
         if cursor.kind in record_kind and (
             cursor.is_anonymous() or cursor.spelling == ''):
-                #print 'anon kind is ', cursor.kind
-                #print 'location', cursor.location
-                #print 'get_usr', cursor.get_usr()
                 #log.debug('Anonymous cursor, building name')
-                name = self._get_anon_name(cursor)
-                log.debug('Anonymous cursor, got name %s',name)
+                name = self._get_anon_name(cursor.get_definition())
+                log.debug('Anonymous cursor, got name %s anonymous: %s',name, cursor.is_anonymous())
                 #import code
                 #code.interact(local=locals())
                 
@@ -162,45 +163,14 @@ class ClangHandler(object):
             name = cursor.displayname
         elif hasattr(cursor, 'spelling'):
             name = cursor.spelling
-        if name == '' :#and hasattr(
-            #cursor, 'get_usr'):
-            log.error('get_unique_name: empty name and this is kind %s',cursor.kind)  
-            #import code
-            #code.interact(local=locals())
-            # FIXME: 
-            # BUG : name collision between to union field siblings children
-            # we need to find a unique identifier for this anonymous struct.
-            # would be nice to have a unique identifier based on the semantic parent
-            # clang says
-            '''A Unified Symbol Resolution (USR) is a string that identifies a
-        particular entity (function, class, variable, etc.) within a
-        program.'''
-            '''
->>> cursor.get_usr()
-'c:@S@_HEAP_ENTRY@Ua@Sa@Ua@Sa'
->>> x=list(cursor.semantic_parent.get_children())
->>> x[0].get_usr()
-'c:@S@_HEAP_ENTRY@Ua@Sa@Ua@Sa'
->>> x[1].get_usr()
-'c:@S@_HEAP_ENTRY@Ua@Sa@Ua@Sa'
-'''
-            # so we need to use the parent field name to construct it.
-            # TODO: recurse on semantic_parent to reconstruct the field id 
-            # of all anonymous siblings
-            # cf codegenerator:531.
-            #_id = cursor.get_usr()
-        #    _id = self._get_anon_name(cursor)
-            #if _id == '':  # anonymous is spelling == ''
-            #    return None
-        #    name = self.make_python_name(_id)
-        #if cursor.kind == CursorKind.STRUCT_DECL:
-        #    name = 'struct_%s' % (name)
-        #elif cursor.kind == CursorKind.UNION_DECL:
-        #    name = 'union_%s' % (name)
-        #elif cursor.kind == CursorKind.CLASS_DECL:
-        #    name = 'class_%s' % (name)
-        #elif cursor.kind == CursorKind.TYPE_REF:
-        #    name = name.replace(' ', '_')
+        if (name == '' and cursor.semantic_parent
+            and cursor.semantic_parent.kind == CursorKind.TRANSLATION_UNIT):
+            # corner case
+            if cursor.get_usr() == '':
+                import code
+                code.interact(local=locals())
+            name = self.make_python_name(cursor.get_usr())
+            log.debug('get_unique_name: root unnamed type kind %s',cursor.kind)  
         _prefix = None
         names= {CursorKind.STRUCT_DECL: 'struct_',
                 CursorKind.UNION_DECL: 'union_',
@@ -210,6 +180,7 @@ class ClangHandler(object):
             _prefix = names[cursor.kind]
         name = '%s%s' % (_prefix or '', name)
         return name
+
 
     def is_fundamental_type(self, t):
         return (not self.is_pointer_type(t) and
