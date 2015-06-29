@@ -336,7 +336,7 @@ class ConstantsTest(ClangTest):
         self.assertEqual(ctypes.sizeof(self.namespace.struct_X), 304)
 
     def test_anonymous_struct_extended(self):
-        flags = ['-target', 'i386-linux']
+        flags = ['-target', 'x86_64-linux']
         self.convert(
             '''
 typedef unsigned long int uint64_t;
@@ -381,20 +381,15 @@ typedef union MY_ROOT_UNION {
 } __attribute__((packed)) MY_ROOT_UNION, *PMY_ROOT_UNION, **PPMY_ROOT_UNION ;
         };
         ''', flags)
-        ['MY_ROOT_UNION', 'ULONGLONG', '',
-    '', '',
-
-    '',
-    '', 'PPMY_ROOT_UNION',
-    'struct_MY_ROOT_UNION_2Sa', '',
-    'union_MY_ROOT_UNION', 'uint64_t', 'PMY_ROOT_UNION']
-
-        self.assertIn("MY_ROOT_UNION", self.namespace)
-        self.assertIn("struct_MY_ROOT_UNION_2Sa", self.namespace)
-        self.assertIn("struct_MY_ROOT_UNION_4Sa", self.namespace)
-        self.assertIn("struct_MY_ROOT_UNION_6Sa", self.namespace)
-        self.assertIn("struct_MY_ROOT_UNION_6Sa_0Sa", self.namespace)
-        self.assertEqual(ctypes.sizeof(self.namespace.union_MY_ROOT_UNION), 8)
+        self.assertIn("MY_ROOT_UNION", self.namespace.keys())
+        self.assertIn("struct_MY_ROOT_UNION_0", self.namespace.keys())
+        self.assertIn("struct_MY_ROOT_UNION_1", self.namespace.keys())
+        self.assertIn("struct_MY_ROOT_UNION_2", self.namespace.keys())
+        self.assertIn("struct_MY_ROOT_UNION_3", self.namespace.keys())
+        self.assertIn("struct_MY_ROOT_UNION_3_0", self.namespace.keys())
+        self.assertIn("struct_MY_ROOT_UNION_3_0_0", self.namespace.keys())
+        self.assertIn("struct_MY_ROOT_UNION_1_0", self.namespace.keys())
+        self.assertEqual(ctypes.sizeof(self.namespace.union_MY_ROOT_UNION), 16)
 
     #@unittest.skip('')
     # no macro support yet

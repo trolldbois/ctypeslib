@@ -839,6 +839,7 @@ class CursorHandler(ClangHandler):
         parent = cursor.semantic_parent
         # field name: 
         # either its cursor.spelling or it is an anonymous field
+        # we do NOT rely on get_unique_name for a Field name.
         # Anonymous Field: 
         #    We have to create a name
         #    it will be the indice of the field (_0,_1,...)

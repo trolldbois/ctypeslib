@@ -83,102 +83,83 @@ class ClangHandler(object):
             return "_" + name
         return name
 
-    def _get_anon_name(self, cursor):
-        '''Creates a name for anonymous fields'''
-        # .spelling and .diplayname are ''
-        # get the field number
+    def _make_unknown_name(self, cursor):
+        '''Creates a name for unname type'''
         parent = cursor.lexical_parent
-        if parent.kind not in [CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,CursorKind.CLASS_DECL,CursorKind.FIELD_DECL]:
-            log.debug('Parent is a root %s', parent.kind)
-            return ''
-        
-        #log.debug('Asking parent get_unique_name')
         pname = self.get_unique_name(parent)
-        log.debug('_get_anon_name: Got parent get_unique_name %s',pname)
-        # cursor is a FIELD_DECL. we need the {STRUCT,UNION}_DECL
+        log.debug('_make_unknown_name: Got parent get_unique_name %s',pname)
+        # we only look at types declarations
         _cursor_decl = cursor.type.get_declaration()
 
-        if '/' in pname or pname=='struct_':
-            print "pname is struct_"
-            import code
-            code.interact(local=locals())
-        
-        _t = None
+        ## FIXME remove Ua Sa
+        # we create names for type name Ua for union, Sa for struct
+        #_t = None
+        #if _cursor_decl.kind == CursorKind.UNION_DECL:
+        #    _t = 'Ua'
+        #elif _cursor_decl.kind == CursorKind.STRUCT_DECL:
+        #    _t = 'Sa'
+        #else:
+        #    raise NotImplementedError("Not sure what kind of member that is %s"%_akind)
+
+        # we had the field index from the parent record, as to differenciate
+        # between unnamed siblings of a same struct
         _i = 0
         found = False
         # Look at the parent fields to find myself
-        if cursor.is_definition():
-            for m in parent.get_children():
-                log.debug('childs i:%d cursor.kind %s',_i,cursor.kind)
-                log.debug('childs i:%d %s',_i, cursor.spelling)
-                if m == _cursor_decl:
-                    found = True
-                    break
-                _i+=1
-        else:
-            for m in parent.type.get_fields():
-                log.debug('fields i:%d cursor.kind %s',_i,cursor.kind)
-                log.debug('fields i:%d %s',_i, cursor.spelling)
-                if m == cursor:
-                    found = True
-                    break
-                _i+=1
+        for m in parent.get_children():
+            # FIXME: make the good indices for fields
+            log.debug('_make_unknown_name child %d %s %s %s',_i,m.kind, m.type.kind,m.location)
+            if m.kind not in [CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,
+                              CursorKind.CLASS_DECL]:#,
+                              #CursorKind.FIELD_DECL]:
+                continue
+            if m == _cursor_decl:
+                found = True
+                break
+            _i+=1
         if not found:
-            print 'BUG'
-            import code
-            code.interact(local=locals())
-            raise NotImplementedError("BUG cursor location %s"%cursor.location)
-        
-        # cursor is FIELD_DECL, we need to find out if its a struct or a union
-        _akind = cursor.type.get_declaration().kind
-        if _akind == CursorKind.UNION_DECL:
-            _t = 'Ua'
-        elif _akind == CursorKind.STRUCT_DECL:
-            _t = 'Sa'
-        else:
-            raise NotImplementedError("Not sure what kind of member that is %s"%_akind)
-        # truncate parent name to remove the first part ( union or struct)
+            raise NotImplementedError("_make_unknown_name BUG %s"%cursor.location)
+        # truncate parent name to remove the first part (union or struct)
         _premainer = '_'.join(pname.split('_')[1:])
-        name = '%s_%d%s'%(_premainer,_i,_t)
+        #names= {CursorKind.STRUCT_DECL: 'struct',
+        #        CursorKind.UNION_DECL: 'union',
+        #        CursorKind.CLASS_DECL: 'class',
+        #        CursorKind.TYPE_REF: ''}
+        name = '%s_%d'%(_premainer,_i)
         return name
 
 
     def get_unique_name(self, cursor):
-        # FIXME, there is a difference between an anonymous struct field and
-        # and anonymous structure type.
+        '''get the spelling or create a unique name for a cursor'''
         name = ''
         if cursor.kind in [CursorKind.UNEXPOSED_DECL]:
             return ''
-        
-        record_kind=[CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,CursorKind.CLASS_DECL,CursorKind.FIELD_DECL]
-        if cursor.kind in record_kind and (
-            cursor.is_anonymous() or cursor.spelling == ''):
-                #log.debug('Anonymous cursor, building name')
-                name = self._get_anon_name(cursor.get_definition())
-                log.debug('Anonymous cursor, got name %s anonymous: %s',name, cursor.is_anonymous())
+        # covers most cases
+        name = cursor.spelling
+        # if its a record decl or field decl and its type is unnamed
+        if cursor.spelling == '':
+            # a unnamed object at the root TU
+            if (cursor.semantic_parent
+                and cursor.semantic_parent.kind == CursorKind.TRANSLATION_UNIT):
+                name = self.make_python_name(cursor.get_usr())
+                log.debug('get_unique_name: root unnamed type kind %s',cursor.kind)
+            elif cursor.kind in [CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,
+                                 CursorKind.CLASS_DECL,CursorKind.FIELD_DECL]:
+                name = self._make_unknown_name(cursor)
+                log.debug('Unnamed cursor type, got name %s',name)
+            else:
+                log.debug('Unnamed cursor, No idea what to do')
                 #import code
                 #code.interact(local=locals())
-                
-        elif hasattr(cursor, 'displayname'):
-            name = cursor.displayname
-        elif hasattr(cursor, 'spelling'):
-            name = cursor.spelling
-        if (name == '' and cursor.semantic_parent
-            and cursor.semantic_parent.kind == CursorKind.TRANSLATION_UNIT):
-            # corner case
-            if cursor.get_usr() == '':
-                import code
-                code.interact(local=locals())
-            name = self.make_python_name(cursor.get_usr())
-            log.debug('get_unique_name: root unnamed type kind %s',cursor.kind)  
-        _prefix = None
-        names= {CursorKind.STRUCT_DECL: 'struct_',
-                CursorKind.UNION_DECL: 'union_',
-                CursorKind.CLASS_DECL: 'class_',
-                CursorKind.TYPE_REF: '_'}
-        if cursor.kind in names:
-            _prefix = names[cursor.kind]
-        name = '%s%s' % (_prefix or '', name)
+                return ''
+        if cursor.kind in [CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,
+                                 CursorKind.CLASS_DECL]:
+            names= {CursorKind.STRUCT_DECL: 'struct',
+                    CursorKind.UNION_DECL: 'union',
+                    CursorKind.CLASS_DECL: 'class',
+                    CursorKind.TYPE_REF: ''}
+            name = '%s_%s'%(names[cursor.kind],name)
+        log.debug('get_unique_name: name "%s"',name)
         return name
 
 
