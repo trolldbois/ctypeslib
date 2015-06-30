@@ -78,7 +78,7 @@ class ClangHandler(object):
             if name.startswith("__"):
                 return "_X" + name
         if len(name) == 0:
-            raise ValueError
+            pass
         elif name[0] in "01234567879":
             return "_" + name
         return name
@@ -90,17 +90,6 @@ class ClangHandler(object):
         log.debug('_make_unknown_name: Got parent get_unique_name %s',pname)
         # we only look at types declarations
         _cursor_decl = cursor.type.get_declaration()
-
-        ## FIXME remove Ua Sa
-        # we create names for type name Ua for union, Sa for struct
-        #_t = None
-        #if _cursor_decl.kind == CursorKind.UNION_DECL:
-        #    _t = 'Ua'
-        #elif _cursor_decl.kind == CursorKind.STRUCT_DECL:
-        #    _t = 'Sa'
-        #else:
-        #    raise NotImplementedError("Not sure what kind of member that is %s"%_akind)
-
         # we had the field index from the parent record, as to differenciate
         # between unnamed siblings of a same struct
         _i = 0
@@ -121,10 +110,6 @@ class ClangHandler(object):
             raise NotImplementedError("_make_unknown_name BUG %s"%cursor.location)
         # truncate parent name to remove the first part (union or struct)
         _premainer = '_'.join(pname.split('_')[1:])
-        #names= {CursorKind.STRUCT_DECL: 'struct',
-        #        CursorKind.UNION_DECL: 'union',
-        #        CursorKind.CLASS_DECL: 'class',
-        #        CursorKind.TYPE_REF: ''}
         name = '%s_%d'%(_premainer,_i)
         return name
 
