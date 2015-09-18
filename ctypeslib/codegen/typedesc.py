@@ -157,7 +157,7 @@ class ArrayType(T):
     def __init__(self, typ, size):
         self.typ = typ
         self.size = size
-        self.name = "array_%s" % (typ.name)
+        self.name = "array_%s" % typ.name
 
 
 class StructureHead(T):
