@@ -592,7 +592,7 @@ class CursorHandler(ClangHandler):
         for field in fields:
             log.debug('creating FIELD_DECL for %s/%s',f.kind.name, f.spelling)
             members.append(self.FIELD_DECL(field))
-        # FIXME BUG clang: anonymous structure field with only one anonymous field 
+        # FIXME BUG clang: anonymous structure field with only one anonymous field
         # is not a FIELD_DECL. does not appear in get_fields() !!!
         #
         # check for other stuff
@@ -604,7 +604,7 @@ class CursorHandler(ClangHandler):
             elif child.kind == CursorKind.PACKED_ATTR:
                 obj.packed = True
                 log.debug('PACKED record')
-                continue  # dont mess with field calculations                    
+                continue  # dont mess with field calculations
             else:  # could be others.... struct_decl, etc...
                 log.debug(
                     'Unhandled field %s in record %s',
@@ -829,7 +829,7 @@ class CursorHandler(ClangHandler):
     CLASS_DECL = STRUCT_DECL
     _fixup_Class = _fixup_record
 
-    #@log_entity DEBUG 
+    #@log_entity DEBUG
     def FIELD_DECL(self, cursor):
         """
         Handles Field declarations.
@@ -837,10 +837,10 @@ class CursorHandler(ClangHandler):
         """
         # name, type
         parent = cursor.semantic_parent
-        # field name: 
+        # field name:
         # either its cursor.spelling or it is an anonymous field
         # we do NOT rely on get_unique_name for a Field name.
-        # Anonymous Field: 
+        # Anonymous Field:
         #    We have to create a name
         #    it will be the indice of the field (_0,_1,...)
         # offset of field:
@@ -865,7 +865,10 @@ class CursorHandler(ClangHandler):
 
         # after dealing with anon bitfields, it could happen.
         if name == '':
-            raise ValueError("Field has no displayname")
+            if cursor.is_bitfield():
+                name = 'anon_%d_%d' % (cursor.get_field_offsetof(), cursor.get_bitfield_width())
+            else:
+                raise ValueError("Field has no displayname")
 
         # bitfield checks
         bits = None
