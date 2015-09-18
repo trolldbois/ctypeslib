@@ -61,6 +61,7 @@ struct bytes2b {
 };
 
 // case 1 byte on int32
+// struct bytes1.a2 is at 1
 struct byte1 {
     unsigned int b1:4;
     char a2;
@@ -89,16 +90,17 @@ struct complex1 {
 // b2 alone
 // c2, d2 together
 // where we would have expected b2,c2,d2 together in int16
+// but no.
 struct complex {
     unsigned int a1;
     unsigned int b1:4;
     unsigned int c1:10;
     unsigned int d1:2;
-    char a2;
-    unsigned int b2:4;
-    unsigned int c2:10;
-    unsigned long long d2:2;
-    int h;
+    //char a2;
+    //unsigned int b2:4;
+    //unsigned int c2:10;
+    //unsigned long long d2:2;
+    //int h;
 };
 
 // packed by compiler in three bitfields
@@ -106,6 +108,7 @@ struct complex {
 // b2 alone
 // c2, d2 together
 // more or less expected
+/*
 struct complex2 {
     unsigned int a1;
     unsigned int b1:4;
@@ -117,14 +120,22 @@ struct complex2 {
     unsigned long long d2:3;
     int h;
 };
+*/
 
 // anonymous field
-struct anonfield{
+struct anonfield {
+	unsigned int b:1;
+	unsigned int:15;
+};
+
+
+//FIXME
+struct anonfield2 {
 	unsigned int a:7;
 	unsigned int b:1;
 	unsigned int c:8;
 	unsigned int:16;
-}
+};
 
 //clang -m32 data/test-bitfield.c -o test_bitfield
 /*
@@ -137,7 +148,7 @@ printf("struct bytes1.a2 is at %d\n",offsetof(struct byte1, a2));
 printf("struct bytes1b %d\n",sizeof(struct byte1b));
 printf("struct bytes2 %d\n",sizeof(struct bytes2));
 printf("struct bytes2b %d\n",sizeof(struct bytes2b));
-printf("struct bytes3 %d\n",sizeof(struct bytes3));
+//printf("struct bytes3 %d\n",sizeof(struct bytes3));
 printf("struct bytes3b %d\n",sizeof(struct bytes3b));
 printf("struct bytes3c %d\n",sizeof(struct bytes3c));
 printf("struct bytes4 %d\n",sizeof(struct bytes4));

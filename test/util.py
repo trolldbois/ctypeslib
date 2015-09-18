@@ -148,7 +148,10 @@ class ClangTest(unittest.TestCase):
         ignore_coding = ofi.readline()
         #exec ofi.getvalue() in namespace
         output = ''.join(ofi.readlines())
-        exec output in namespace
+        try:
+            exec output in namespace
+        except ValueError, e:
+            print output
         self.namespace = ADict(namespace)
         if debug:
             print(output)

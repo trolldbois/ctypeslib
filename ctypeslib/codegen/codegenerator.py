@@ -557,6 +557,9 @@ class Generator(object):
                 else:
                     # FIXME: Python bitfield is int32 only.
                     #from clang.cindex import TypeKind
+                    #print fieldname
+                    #import code
+                    #code.interact(local=locals())
                     print >> self.stream, "    ('%s', %s, %s)," % \
                         (fieldname,
                          # self.parser.get_ctypes_name(TypeKind.LONG),
