@@ -682,12 +682,6 @@ class CursorHandler(ClangHandler):
         for bf_size, members in bitfields:
             name = members[0].type.name
             pad_bits = 0
-            # IF s.size < 32, then
-            # always set the type to c_uint when its c_uint family
-            # a c_uint8 bitfield is always a c_uint32.
-            # FIXME TU with != uint32
-            name = 'c_uint32'
-            # set the whole bitfield to the appropriate type size.
             if bf_size <= 8:  # use 1 byte - type = char
                 # prep the padding bitfield size
                 pad_bits = 8 - bf_size
@@ -700,7 +694,7 @@ class CursorHandler(ClangHandler):
                 pad_bits = 64 - bf_size
             else:
                 name = 'c_uint64'
-                pad_bits = bf_size%64 - bf_size
+                pad_bits = bf_size % 64 - bf_size
             # change the type to harmonise the bitfield
             log.debug('_fixup_record_bitfield_size: fix type to %s', name)
             # set the whole bitfield to the appropriate type size.
@@ -816,7 +810,7 @@ class CursorHandler(ClangHandler):
         name = 'PADDING_%d' % padding_nb
         padding_nb += 1
         log.debug("_make_padding: for %d bits", length)
-        if (length % 8) != 0 or prev_member.is_bitfield:
+        if (length % 8) != 0 or (prev_member is not None and prev_member.is_bitfield):
             # add a padding to align with the bitfield type
             # then multiple bytes if required.
             # pad_length = (length % 8)
