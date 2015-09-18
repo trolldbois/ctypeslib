@@ -586,13 +586,22 @@ class CursorHandler(ClangHandler):
         members = []
         # Go and recurse through fields
         fields = list(cursor.type.get_fields())
+        decl_f=[f.type.get_declaration() for f in fields]
         log.debug('Fields: %s',
                   str(['%s/%s' % (f.kind.name, f.spelling) for f in fields]))
         for field in fields:
+            log.debug('creating FIELD_DECL for %s/%s',f.kind.name, f.spelling)
             members.append(self.FIELD_DECL(field))
+        # FIXME BUG clang: anonymous structure field with only one anonymous field
+        # is not a FIELD_DECL. does not appear in get_fields() !!!
+        #
         # check for other stuff
         for child in cursor.get_children():
-            if child.kind == CursorKind.PACKED_ATTR:
+            if child in fields:
+                continue
+            elif child in decl_f:
+                continue
+            elif child.kind == CursorKind.PACKED_ATTR:
                 obj.packed = True
                 log.debug('PACKED record')
                 continue  # dont mess with field calculations
@@ -634,6 +643,9 @@ class CursorHandler(ClangHandler):
         that can contains the number of bits.
         Otherwise ctypes has strange bitfield rules packing stuff to the biggest
         type possible.
+
+        ** but at the same time, if a bitfield member is from type x, we need to
+        respect that
         """
         # phase 1, make bitfield, relying upon padding.
         bitfields = []
@@ -641,7 +653,6 @@ class CursorHandler(ClangHandler):
         current_bits = 0
         for m in s.members:
             if m.is_bitfield:
-                current_bits += m.bits
                 bitfield_members.append(m)
                 if m.is_padding:
                     # compiler says this ends the bitfield
@@ -649,6 +660,9 @@ class CursorHandler(ClangHandler):
                     bitfields.append((size, bitfield_members))
                     bitfield_members = []
                     current_bits = 0
+                else:
+                    # size of padding is not included
+                    current_bits += m.bits
             elif len(bitfield_members) == 0:
                 # no opened bitfield
                 continue
@@ -662,34 +676,41 @@ class CursorHandler(ClangHandler):
             size = current_bits
             bitfields.append((size, bitfield_members))
 
+        # compilers tend to reduce the size of the bitfield
+        # to the bf_size
         # set the proper type name for the bitfield.
         for bf_size, members in bitfields:
             name = members[0].type.name
-            # set the whole bitfield to the appropriate type size.
-            if bf_size == 8:  # use 1 byte - type = char
-                name = 'c_uint8'
-            elif bf_size == 16:  # use 2 byte
-                name = 'c_uint16'
-            elif bf_size == 32:  # use 2 byte
-                name = 'c_uint32'
-            else:
+            pad_bits = 0
+            if bf_size <= 8:  # use 1 byte - type = char
+                # prep the padding bitfield size
+                pad_bits = 8 - bf_size
+            elif bf_size <= 16:  # use 2 byte
+                pad_bits = 16 - bf_size
+            elif bf_size <= 32:  # use 2 byte
+                pad_bits = 32 - bf_size
+            elif bf_size <= 64:  # use 2 byte
                 name = 'c_uint64'  # also the 3 bytes + char thing
+                pad_bits = 64 - bf_size
+            else:
+                name = 'c_uint64'
+                pad_bits = bf_size % 64 - bf_size
             # change the type to harmonise the bitfield
             log.debug('_fixup_record_bitfield_size: fix type to %s', name)
             # set the whole bitfield to the appropriate type size.
             for m in members:
                 m.type.name = name
-
-            # Hack the first members to be the smallest possible.
-            # so that they do not extend the previous bitfield in python
-            if members[0].bits <= 8:
-                members[0].type.name = 'c_uint8'
-            elif members[0].bits <= 16:
-                members[0].type.name = 'c_uint16'
+                if m.is_padding:
+                    # this is the last field.
+                    # reduce the size of this padding field to the
+                    m.bits = pad_bits
+            # and remove padding if the size is 0
+            if members[-1].is_padding and members[-1].bits == 0:
+                s.members.remove(members[-1])
 
         # phase 2 - integrate the special 3 Bytes + char fix
         for bf_size, members in bitfields:
-            if bf_size == 24:
+            if True or bf_size == 24:
                 # we need to check for a 3bytes + char corner case
                 m = members[-1]
                 i = s.members.index(m)
@@ -701,9 +722,10 @@ class CursorHandler(ClangHandler):
                         # it will be aggregated in a 32 bits space
                         # we need to make it a member of 32bit bitfield
                         next_member.is_bitfield = True
-                        next_member.comment = "Promoted to bitfield member to handle 3-bytes situation"
+                        next_member.comment = "Promoted to bitfield member and type (was char)"
+                        next_member.type = m.type
+                        log.info("%s.%s promoted to bitfield member and type", s.name, next_member.name)
                         continue
-
         #
         return
 
@@ -714,6 +736,14 @@ class CursorHandler(ClangHandler):
             log.debug('FIXUP_STRUCT: no members')
             s.members = []
             return
+        if s.size == 0:
+            log.debug('FIXUP_STRUCT: struct has size 0')
+        #    s.members.append(typedesc.Field('PADDING_0',
+        #                     typedesc.FundamentalType(self.get_ctypes_name(TypeKind.CHAR_U), 1, 1),
+        #                     0, 1, is_padding=True))
+            return
+        # try to fix bitfields without padding first
+        self._fixup_record_bitfields_type(s)
         # No need to lookup members in a global var.
         # Just fix the padding
         members = []
@@ -766,7 +796,7 @@ class CursorHandler(ClangHandler):
         s.members = members
         log.debug("FIXUP_STRUCT: size:%d offset:%d", s.size * 8, offset)
         # if member and not member.is_bitfield:
-        self._fixup_record_bitfields_type(s)
+        ## self._fixup_record_bitfields_type(s)
         # , assert that the last field stop at the size limit
         assert offset == s.size * 8
         return
@@ -780,7 +810,7 @@ class CursorHandler(ClangHandler):
         name = 'PADDING_%d' % padding_nb
         padding_nb += 1
         log.debug("_make_padding: for %d bits", length)
-        if (length % 8) != 0:
+        if (length % 8) != 0 or (prev_member is not None and prev_member.is_bitfield):
             # add a padding to align with the bitfield type
             # then multiple bytes if required.
             # pad_length = (length % 8)
@@ -820,52 +850,61 @@ class CursorHandler(ClangHandler):
     CLASS_DECL = STRUCT_DECL
     _fixup_Class = _fixup_record
 
-    @log_entity
+    #@log_entity DEBUG
     def FIELD_DECL(self, cursor):
         """
         Handles Field declarations.
         Some specific treatment for a bitfield.
         """
         # name, type
-        name = self.get_unique_name(cursor)
         parent = cursor.semantic_parent
-        # record_name = parent.spelling
-        # Not used anymore ? record_name = self.get_unique_name(cursor.semantic_parent)
-        #_id = cursor.get_usr()
-        # anonymous fields
-        if cursor.is_anonymous():
+        # field name:
+        # either its cursor.spelling or it is an anonymous field
+        # we do NOT rely on get_unique_name for a Field name.
+        # Anonymous Field:
+        #    We have to create a name
+        #    it will be the indice of the field (_0,_1,...)
+        # offset of field:
+        #    we will need it late. get the offset of the field in the record
+        name = cursor.spelling
+        # after dealing with anon bitfields, it could happen. an unnammed bitfield member is not is_anonymous()
+        if cursor.is_anonymous() or (name == '' and cursor.is_bitfield()):
             # get offset by iterating all fields of parent
+            # corner case for anonymous fields
+            #if offset == -5: use field.get_offset_of()
             offset = cursor.get_field_offsetof()
+            prev = fieldnum = -1
             for i, _f in enumerate(parent.type.get_fields()):
                 if _f == cursor:
                     fieldnum = i
                     break
+                prev = _f
             # make a name
-            name = "_%d" % (fieldnum)
-            log.warning(
-                "Cursor has no displayname - anonymous field renamed to %s",
-                name)
+            if fieldnum == -1:
+                raise ValueError("Anonymous field was not found in get_fields()")
+            name = "_%d" % fieldnum
+            log.debug("FIELD_DECL: anonymous field renamed to %s", name)
         else:
             offset = parent.type.get_offset(name)
-            if offset < 0:
-                log.error('BAD RECORD, Bad offset: %d for %s', offset, name)
-                # FIXME if c++ class ?
-        # bitfield
+        # some debug
+        if offset < 0:
+            log.error('FIELD_DECL: BAD RECORD, Bad offset: %d for %s', offset, name)
+        # FIXME if c++ class ?
+        log.debug('FIELD_DECL: field offset is %d', offset)
+
+        # bitfield checks
         bits = None
         if cursor.is_bitfield():
+            log.debug('FIELD_DECL: field is part of a bitfield')
             bits = cursor.get_bitfield_width()
-            name = self.get_unique_name(cursor)
         else:
-            # code.interact(local=locals())
             bits = cursor.type.get_size() * 8
             if bits < 0:
                 log.warning(
                     'Bad source code, bitsize == %d <0 on %s',
                     bits, name)
                 bits = 0
-        # after dealing with anon bitfields
-        if name == '':
-            raise ValueError("Field has no displayname")
+        log.debug('FIELD_DECL: field is %d bits', bits)
         # try to get a representation of the type
         # _canonical_type = cursor.type.get_canonical()
         # t-t-t-t-
@@ -878,17 +917,21 @@ class CursorHandler(ClangHandler):
             _type = self.parse_cursor_type(_canonical_type)
         else:
             children = list(cursor.get_children())
+            log.debug('FIELD_DECL: we now look for the declaration name.'
+                      'kind %s',_decl.kind)
             if len(children) > 0 and _decl.kind == CursorKind.NO_DECL_FOUND:
                 # constantarray of typedef of pointer , and other cases ?
                 _decl_name = self.get_unique_name(
                     list(
                         cursor.get_children())[0])
             else:
-                _decl_name = self.get_unique_name(
-                    cursor.type.get_declaration())  # .spelling ??
+                _decl_name = self.get_unique_name(_decl)
+            log.debug('FIELD_DECL: the declaration name %s',_decl_name)
             # rename anonymous field type name
-            if cursor.is_anonymous():
-                _decl_name += name
+            # 2015-06-26 handled in get_name
+            #if cursor.is_anonymous():
+            #    _decl_name += name
+            #    log.debug('FIELD_DECL: IS_ANONYMOUS the declaration name %s',_decl_name)
             if self.is_registered(_decl_name):
                 log.debug(
                     'FIELD_DECL: used type from cache: %s',
