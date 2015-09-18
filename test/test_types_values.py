@@ -150,6 +150,8 @@ class ConstantsTest(ClangTest):
         """)
         self.assertEqual(ctypes.sizeof(self.namespace.array_t), 64)
         self.assertEqual(ctypes.sizeof(self.namespace.union_u), 4)
+        self.assertSizes("array_t")
+        self.assertSizes("union_u")
 
     def test_array(self):
         self.convert('''
@@ -174,7 +176,7 @@ class ConstantsTest(ClangTest):
             char varsize[];
         };
         """)
-        self.assertEqual(ctypes.sizeof(self.namespace.struct_blah), 1)
+        self.assertSizes("struct_blah")
         # self brewn size modification
         self.assertEqual(ctypes.sizeof(self.namespace.array), 0)
 
@@ -185,6 +187,7 @@ class ConstantsTest(ClangTest):
         """)
         self.assertEqual(ctypes.sizeof(self.namespace.struct_tagEMPTY), 0)
         self.assertEqual(ctypes.sizeof(self.namespace.EMPTY), 0)
+        self.assertSizes("struct_tagEMPTY")
 
     def test_struct_named_twice(self):
         self.convert('''
@@ -195,6 +198,7 @@ class ConstantsTest(ClangTest):
         self.assertEqual(ctypes.sizeof(self.namespace.struct_xyz), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.xyz), 4)
         self.assertSizes('xyz')
+        self.assertSizes("struct_xyz")
 
     def test_struct_with_pointer(self):
         self.convert('''
@@ -227,6 +231,9 @@ class ConstantsTest(ClangTest):
         self.assertEqual(ctypes.sizeof(self.namespace.struct_foo), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.foo_t), 4 * 256)
         self.assertEqual(ctypes.sizeof(self.namespace.somestruct), 4 * 256)
+        self.assertSizes("struct_foo")
+        self.assertSizes("foo_t")
+        self.assertSizes("somestruct")
 
     def test_struct_with_struct_array_member(self):
         self.convert('''
@@ -240,6 +247,9 @@ class ConstantsTest(ClangTest):
         self.assertEqual(ctypes.sizeof(self.namespace.struct_A), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.structA_t), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.struct_B), 4 * 8)
+        self.assertSizes("struct_A")
+        self.assertSizes("structA_t")
+        self.assertSizes("struct_B")
 
     def test_var_decl_and_scope(self):
         self.convert('''
@@ -334,6 +344,7 @@ class ConstantsTest(ClangTest):
         #import code
         # code.interact(local=locals())
         self.assertEqual(ctypes.sizeof(self.namespace.struct_X), 304)
+        self.assertSizes("struct_X")
 
     def test_anonymous_struct_extended(self):
         flags = ['-target', 'x86_64-linux']
@@ -390,6 +401,7 @@ typedef union MY_ROOT_UNION {
         self.assertIn("struct_MY_ROOT_UNION_3_0_0", self.namespace.keys())
         self.assertIn("struct_MY_ROOT_UNION_1_0", self.namespace.keys())
         self.assertEqual(ctypes.sizeof(self.namespace.union_MY_ROOT_UNION), 16)
+        self.assertSizes("union_MY_ROOT_UNION")
 
     #@unittest.skip('')
     # no macro support yet

@@ -676,11 +676,6 @@ class CursorHandler(ClangHandler):
             size = current_bits
             bitfields.append((size, bitfield_members))
 
-        #import pdb
-        #pdb.set_trace()
-        #print 'bf_size', bitfields[0][0]
-
-
         # compilers tend to reduce the size of the bitfield
         # to the bf_size
         # set the proper type name for the bitfield.
@@ -690,23 +685,22 @@ class CursorHandler(ClangHandler):
             # IF s.size < 32, then
             # always set the type to c_uint when its c_uint family
             # a c_uint8 bitfield is always a c_uint32.
+            # FIXME TU with != uint32
             name = 'c_uint32'
             # set the whole bitfield to the appropriate type size.
             if bf_size <= 8:  # use 1 byte - type = char
-                #name = 'c_uint8'
                 # prep the padding bitfield size
                 pad_bits = 8 - bf_size
             elif bf_size <= 16:  # use 2 byte
-                #name = 'c_uint16'
                 pad_bits = 16 - bf_size
             elif bf_size <= 32:  # use 2 byte
-                #name = 'c_uint32'
                 pad_bits = 32 - bf_size
             elif bf_size <= 64:  # use 2 byte
                 name = 'c_uint64'  # also the 3 bytes + char thing
                 pad_bits = 64 - bf_size
             else:
-                raise ValueError("Can't handle very large bitfields")
+                name = 'c_uint64'
+                pad_bits = bf_size%64 - bf_size
             # change the type to harmonise the bitfield
             log.debug('_fixup_record_bitfield_size: fix type to %s', name)
             # set the whole bitfield to the appropriate type size.
@@ -716,22 +710,9 @@ class CursorHandler(ClangHandler):
                     # this is the last field.
                     # reduce the size of this padding field to the
                     m.bits = pad_bits
-            #import pdb
-            #pdb.set_trace()
             # and remove padding if the size is 0
             if members[-1].is_padding and members[-1].bits == 0:
                 s.members.remove(members[-1])
-
-            # 2015-09 compilers tend to reduce the size of the bitfield
-            # to the bf_size
-            # Hack the first members to be the smallest possible.
-            # so that they do not extend the previous bitfield in python
-            ## Im not sure I understand this.
-            if False:
-                if members[0].bits <= 8:
-                    members[0].type.name = 'c_uint8'
-                elif members[0].bits <= 16:
-                    members[0].type.name = 'c_uint16'
 
         # phase 2 - integrate the special 3 Bytes + char fix
         for bf_size, members in bitfields:
@@ -760,6 +741,12 @@ class CursorHandler(ClangHandler):
         if s.members is None:
             log.debug('FIXUP_STRUCT: no members')
             s.members = []
+            return
+        if s.size == 0:
+            log.debug('FIXUP_STRUCT: struct has size 0')
+        #    s.members.append(typedesc.Field('PADDING_0',
+        #                     typedesc.FundamentalType(self.get_ctypes_name(TypeKind.CHAR_U), 1, 1),
+        #                     0, 1, is_padding=True))
             return
         # try to fix bitfields without padding first
         self._fixup_record_bitfields_type(s)
