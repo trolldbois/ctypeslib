@@ -12,16 +12,16 @@ python:
 install:
 # travis-ci use Ubuntu 12.04.5 LTS (Precise Pangolin) 64bit
 # install snapshot version of libclang1 libclang-common-3.X-dev
-  - sudo apt-add-repository "deb http://llvm.org/apt/precise/ llvm-toolchain-precise main" --yes
+  - sudo apt-add-repository "deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.7 main" --yes
   - sudo apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main"  --yes
   - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
-  - sudo apt-get update 
+  - sudo apt-get update
     # arrrh... http://docs.travis-ci.com/user/languages/python/.
     # system python package will not be used.
   - sudo apt-get install libclang1-3.7 --yes --force-yes
 #permission denied  - sudo echo `echo "/usr/lib/llvm-3.7/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
   - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang-3.7.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
-  - sudo ldconfig  
+  - sudo ldconfig
 # tests dependencies
   - pip install coveralls
 
