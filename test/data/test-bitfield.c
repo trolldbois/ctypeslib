@@ -20,24 +20,24 @@ struct bytes4b {
 
 // BUG TODO fix codegen
 // 3 bytes bitfield +1 char packed into a int32
-// packed on 4 bytes by compiler. 
+// packed on 4 bytes by compiler.
 // But ctypes cannot put b1 in 3 bytes type
 // so we force a2 in the bitfield
 /*
 struct bytes3 { // should be 8 bytes
     unsigned int a1; // 0-31
-    unsigned int b1:23; // 32-55 
+    unsigned int b1:23; // 32-55
     char a2; // 56-64 but python says 64-72
 };
 */
 
 // case 3 bytes bitfield
 struct bytes3b { // should be 8 bytes
-    unsigned int b1:23; // 32-55 
+    unsigned int b1:23; // 32-55
 };
 
 // that works because a2 cant align in bitfield
-struct bytes3c { 
+struct bytes3c {
     unsigned int b1:23; // 0-23
     // 9 bit align
     short a2; // 32-48 + pad
@@ -84,7 +84,7 @@ struct complex1 {
 };
 
 
-// packed by compiler in three bitfields 
+// packed by compiler in three bitfields
 // b1,c1,d1
 // b2 alone
 // c2, d2 together
@@ -101,7 +101,7 @@ struct complex {
     int h;
 };
 
-// packed by compiler in three bitfields 
+// packed by compiler in three bitfields
 // b1,c1,d1
 // b2 alone
 // c2, d2 together
@@ -118,6 +118,13 @@ struct complex2 {
     int h;
 };
 
+// anonymous field
+struct anonfield{
+	unsigned int a:7;
+	unsigned int b:1;
+	unsigned int c:8;
+	unsigned int:16;
+}
 
 //clang -m32 data/test-bitfield.c -o test_bitfield
 /*
@@ -138,6 +145,7 @@ printf("struct bytes4b %d\n",sizeof(struct bytes4b));
 printf("struct complex %d\n",sizeof(struct complex));
 printf("struct complex1 %d\n",sizeof(struct complex1));
 printf("struct complex2 %d\n",sizeof(struct complex2));
+printf("struct anonfield %d\n",sizeof(struct anonfield));
 }
 */
 
