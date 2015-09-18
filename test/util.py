@@ -204,7 +204,7 @@ class ClangTest(unittest.TestCase):
             target is not None,
             '%s was not found in source' %
             name)
-        members = [c.displayname for c in target.type.get_fields()]
+        members = [(c.displayname,c) for c in target.type.get_fields()]
         _clang_type = target.type
         _python_type = getattr(self.namespace, name)
         # let'shandle bitfield - precalculate offsets
@@ -220,13 +220,17 @@ class ClangTest(unittest.TestCase):
             # base offset
             fields_offsets[_n] = ofs
         # now use that
-        for member in members:
-            _c_offset = _clang_type.get_offset(member)
+        for i, (membername, field) in enumerate(members):
+            # anonymous fields
+            if membername == '':
+                membername = '_%d' % i
+            #_c_offset = _clang_type.get_offset(member)
+            _c_offset = field.get_field_offsetof()
             #_p_offset = 8*getattr(_python_type, member).offset
-            _p_offset = fields_offsets[member]
+            _p_offset = fields_offsets[membername]
             self.assertEquals(_c_offset, _p_offset,
                               'Offsets for target: %s.%s Clang:%d Python:%d flags:%s' % (
-                                  name, member, _c_offset, _p_offset, self.parser.flags))
+                                  name, membername, _c_offset, _p_offset, self.parser.flags))
         return
 
 __all__ = [

@@ -24,9 +24,8 @@ class RecordTest(ClangTest):
         self.assertSizes("struct_bytes4b")
         self.assertSizes("struct_complex")
         self.assertSizes("struct_complex1")
-        #self.assertSizes("struct_complex2")
+        self.assertSizes("struct_complex2")
         self.assertSizes("struct_anonfield")
-
 
     def _check_offsets(self):
         self.assertOffsets("struct_byte1")
@@ -39,7 +38,7 @@ class RecordTest(ClangTest):
         self.assertOffsets("struct_bytes4b")
         self.assertOffsets("struct_complex")
         self.assertOffsets("struct_complex1")
-        #self.assertOffsets("struct_complex2")
+        self.assertOffsets("struct_complex2")
         self.assertOffsets("struct_anonfield")
 
     #@unittest.skip('')
@@ -61,7 +60,7 @@ class RecordTest(ClangTest):
         self._check_offsets()
 
     # ('TODO, fix the codegen because python doesnt like that')
-    @unittest.expectedFailure
+    #@unittest.expectedFailure
     def test_char_bitfield(self):
         ''' "bit fields not allowed for type c_char" '''
         flags = ['-target', 'x86_64-linux']

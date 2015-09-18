@@ -18,18 +18,17 @@ struct bytes4b {
     unsigned int d1:9;
 };
 
-// BUG TODO fix codegen
+
 // 3 bytes bitfield +1 char packed into a int32
 // packed on 4 bytes by compiler.
 // But ctypes cannot put b1 in 3 bytes type
 // so we force a2 in the bitfield
-/*
 struct bytes3 { // should be 8 bytes
     unsigned int a1; // 0-31
     unsigned int b1:23; // 32-55
-    char a2; // 56-64 but python says 64-72
+    char a2; // 56-64 but python says 64-72 if we keep char
 };
-*/
+
 
 // case 3 bytes bitfield
 struct bytes3b { // should be 8 bytes
@@ -108,7 +107,7 @@ struct complex {
 // b2 alone
 // c2, d2 together
 // more or less expected
-/*
+
 struct complex2 {
     unsigned int a1;
     unsigned int b1:4;
@@ -120,7 +119,7 @@ struct complex2 {
     unsigned long long d2:3;
     int h;
 };
-*/
+
 
 // anonymous field
 struct anonfield {
