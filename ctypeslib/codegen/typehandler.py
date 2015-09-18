@@ -83,7 +83,7 @@ class TypeHandler(ClangHandler):
             log.debug('Was in TYPEDEF but had to parse record declaration for %s', name)
             obj = self.parse_cursor(_decl)
         return obj
-    
+
     @log_entity
     def ENUM(self, _cursor_type):
         """
@@ -173,6 +173,8 @@ class TypeHandler(ClangHandler):
             # pointers to POD have no declaration ??
             # FIXME test_struct_with_pointer x_n_t g[1]
             _subtype = self.parse_cursor_type(_array_type)
+        elif self.is_array_type(_array_type):
+            _subtype = self.parse_cursor_type(_array_type)
         else:
             _subtype_decl = _array_type.get_declaration()
             _subtype = self.parse_cursor(_subtype_decl)
@@ -180,7 +182,6 @@ class TypeHandler(ClangHandler):
             #    pass
             #_subtype_name = self.get_unique_name(_subtype_decl)
             #_subtype = self.get_registered(_subtype_name)
-        # code.interact(local=locals())
         obj = typedesc.ArrayType(_subtype, size)
         obj.location = _subtype.location
         return obj
