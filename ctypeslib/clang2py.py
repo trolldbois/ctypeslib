@@ -53,7 +53,7 @@ def main(argv=None):
     local_platform_triple = "%s-%s"%(platform.machine(),platform.system())
     clang_opts = []
     files = None
-    
+
     def windows_dlls(option, opt, value, parser):
         parser.values.dlls.extend(windows_dll_names)
 
@@ -70,16 +70,16 @@ def main(argv=None):
                         dest="generate_docstrings", action="store_true",
                         help="include docstrings containing C prototype and source file location",
                         default=False)
-    parser.add_argument("--debug", 
+    parser.add_argument("--debug",
                         action="store_const",
-                        const=True, 
+                        const=True,
                         help='setLevel to DEBUG')
-    parser.add_argument("-e", "--show-definition-location", 
-                        dest="generate_locations", 
+    parser.add_argument("-e", "--show-definition-location",
+                        dest="generate_locations",
                         action="store_true",
-                        help="include source file location in comments", 
+                        help="include source file location in comments",
                         default=False)
-    parser.add_argument("-k", "--kind", 
+    parser.add_argument("-k", "--kind",
                         action="store",
                         dest="kind", help="kind of type descriptions to include: "
                         "a = Alias,\n"
@@ -95,13 +95,13 @@ def main(argv=None):
                         metavar="TYPEKIND",
                         default="cdefstu")
 
-    parser.add_argument("-i", "--includes", 
+    parser.add_argument("-i", "--includes",
                         dest="generate_includes",
                         action="store_true",
                         help="include declaration defined outside of the sourcefiles",
                         default=False)
 
-    parser.add_argument("-l","--include-librarie",
+    parser.add_argument("-l","--include-library",
                         dest="dlls",
                         help="libraries to search for exported functions",
                         action="append",
@@ -166,7 +166,7 @@ def main(argv=None):
                         dest="verbose",
                         help="verbose output",
                         default=False)
-    parser.add_argument('-V', '--version', 
+    parser.add_argument('-V', '--version',
                         action='version',
                         version="%(prog)s version "+version)
 
@@ -186,28 +186,28 @@ def main(argv=None):
 
     parser.add_argument("--max-depth", dest="maxDepth",
                         help="Limit cursor expansion to depth N",
-                        metavar="N", 
-                        type=int, 
+                        metavar="N",
+                        type=int,
                         default=None)
 
     # recognize - as stdin
     # we do NOT support stdin
     parser.add_argument("files", nargs="+",
-                        help="source filenames. stdin is not supported", 
-                        type=argparse.FileType('r')) 
+                        help="source filenames. stdin is not supported",
+                        type=argparse.FileType('r'))
 
-    parser.add_argument("--clang-args", 
+    parser.add_argument("--clang-args",
                         action="store",
                         default=None,
-                        required=False, 
-                        help="clang options", 
+                        required=False,
+                        help="clang options",
                         type=str)
 
     parser.epilog = """Cross-architecture: You can pass target modifiers to clang.
     For example, try "-target x86_64" or "-target i386-linux" as the last argument to change the target CPU arch."""
 
     options = parser.parse_args()
-    
+
     # handle stdin, just in case
     files = []
     for f in options.files:
