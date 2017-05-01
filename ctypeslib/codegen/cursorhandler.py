@@ -613,9 +613,7 @@ class CursorHandler(ClangHandler):
         log.debug('_record_decl: %d members', len(members))
         # by now, the type is registered.
         if not declared_instance:
-            log.debug(
-                '_record_decl: %s was previously registered',
-                name)
+            log.debug('_record_decl: %s was previously registered', name)
         obj = self.get_registered(name)
         obj.members = members
         #obj.packed = packed
@@ -737,10 +735,7 @@ class CursorHandler(ClangHandler):
             s.members = []
             return
         if s.size == 0:
-            log.debug('FIXUP_STRUCT: struct has size 0')
-        #    s.members.append(typedesc.Field('PADDING_0',
-        #                     typedesc.FundamentalType(self.get_ctypes_name(TypeKind.CHAR_U), 1, 1),
-        #                     0, 1, is_padding=True))
+            log.debug('FIXUP_STRUCT: struct has size %d', s.size)
             return
         # try to fix bitfields without padding first
         self._fixup_record_bitfields_type(s)
@@ -761,6 +756,10 @@ class CursorHandler(ClangHandler):
             member = m
             log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d',
                       member.name, member.offset, member.offset + member.bits, offset)
+            if member.offset < 0:
+                # FIXME INCOMPLETEARRAY
+                # just exit
+                return
             if member.offset > offset:
                 # create padding
                 length = member.offset - offset
@@ -889,6 +888,8 @@ class CursorHandler(ClangHandler):
         # some debug
         if offset < 0:
             log.error('FIELD_DECL: BAD RECORD, Bad offset: %d for %s', offset, name)
+            # incomplete record definition, gives us an error here on fields.
+            # BUG clang bindings ?
         # FIXME if c++ class ?
         log.debug('FIELD_DECL: field offset is %d', offset)
 
@@ -900,9 +901,7 @@ class CursorHandler(ClangHandler):
         else:
             bits = cursor.type.get_size() * 8
             if bits < 0:
-                log.warning(
-                    'Bad source code, bitsize == %d <0 on %s',
-                    bits, name)
+                log.warning('Bad source code, bitsize == %d <0 on %s', bits, name)
                 bits = 0
         log.debug('FIELD_DECL: field is %d bits', bits)
         # try to get a representation of the type

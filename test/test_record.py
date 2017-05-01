@@ -157,6 +157,17 @@ struct entry {
         ''', ['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.struct_entry), 8)
 
+    def test_zero_length_array(self):
+        flags = ['-target', 'x86_64-linux']
+        self.gen('test/data/test-zero-length-array.c', flags)
+        self.assertEquals(self.namespace.struct_example_detail.first.offset, 0)
+        self.assertEquals(self.namespace.struct_example_detail.last.offset, 4)
+        self.assertEquals(self.namespace.struct_example.argsz.offset, 0)
+        self.assertEquals(self.namespace.struct_example.flags.offset, 4)
+        self.assertEquals(self.namespace.struct_example.count.offset, 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_example_detail), 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_example), 12)
+
 
 import logging
 import sys

@@ -160,10 +160,10 @@ class TypeHandler(ClangHandler):
         # we need to get the canonical typedef, in some cases
         _type = _cursor_type.get_canonical()
         size = _type.get_array_size()
-        # FIXME: useful or not ?
         if size == -1 and _type.kind == TypeKind.INCOMPLETEARRAY:
             size = 0
-            # Fixes error in negative sized array.
+            # FIXME: Incomplete Array handling at end of record.
+            # https://gcc.gnu.org/onlinedocs/gcc/Zero-Length.html
             # FIXME VARIABLEARRAY DEPENDENTSIZEDARRAY
         _array_type = _type.get_array_element_type()  # .get_canonical()
         if self.is_fundamental_type(_array_type):
