@@ -757,7 +757,11 @@ class CursorHandler(ClangHandler):
             log.debug('Fixup_struct: Member:%s offsetbits:%d->%d expecting offset:%d',
                       member.name, member.offset, member.offset + member.bits, offset)
             if member.offset < 0:
-                # FIXME INCOMPLETEARRAY
+                # FIXME INCOMPLETEARRAY (clang bindings?)
+                # All fields have offset == -2. No padding will be done.
+                # But the fields are ordered and code will be produces with typed info.
+                # so in most cases, it will work. if there is a structure with incompletearray
+                # and padding or alignement issue, it will produce wrong results
                 # just exit
                 return
             if member.offset > offset:
