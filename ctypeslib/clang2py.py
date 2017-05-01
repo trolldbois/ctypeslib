@@ -263,7 +263,7 @@ def main(argv=None):
             name,
             mode=RTLD_GLOBAL) for name in options.preload]
 
-    dlls = [load_library(name) for name in options.dlls]
+    dlls = [load_library(name) for name in options.dll]
 
     for name in options.modules:
         mod = __import__(name)
