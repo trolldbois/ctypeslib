@@ -102,8 +102,8 @@ def main(argv=None):
                         default=False)
 
     parser.add_argument("-l","--include-library",
-                        dest="dlls",
-                        help="libraries to search for exported functions",
+                        dest="dll",
+                        help="library to search for exported functions. Add multiple times if required",
                         action="append",
                         default=[])
 
@@ -128,7 +128,7 @@ def main(argv=None):
     parser.add_argument("-p","--preload",
                         dest="preload",
                         metavar="DLL",
-                        help="dlls to be loaded before all others (to resolve symbols)",
+                        help="dll to be loaded before all others (to resolve symbols)",
                         action="append",
                         default=[])
 
@@ -158,7 +158,7 @@ def main(argv=None):
 
     parser.add_argument("-t","--target",
                         dest="target",
-                        help="target architecture (default: %s)"%(local_platform_triple),
+                        help="target architecture (default: %s)" % local_platform_triple,
                         default=None) # actually let clang alone decide.
 
     parser.add_argument("-v","--verbose",
@@ -200,11 +200,11 @@ def main(argv=None):
                         action="store",
                         default=None,
                         required=False,
-                        help="clang options",
+                        help="clang options, in quotes: --clang-args=\"-std=c99 -Wall\"",
                         type=str)
 
     parser.epilog = """Cross-architecture: You can pass target modifiers to clang.
-    For example, try "-target x86_64" or "-target i386-linux" as the last argument to change the target CPU arch."""
+    For example, try --clang-args="-target x86_64" or "-target i386-linux" to change the target CPU arch."""
 
     options = parser.parse_args()
 
