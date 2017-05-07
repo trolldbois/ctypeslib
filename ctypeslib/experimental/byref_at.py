@@ -49,10 +49,10 @@ class PyCArgObject(Structure):
 
 assert sizeof(PyCArgObject) == type(byref(c_int())).__basicsize__
 
-print "sizeof(PyCArgObject)", sizeof(PyCArgObject)
+print("sizeof(PyCArgObject)", sizeof(PyCArgObject))
 
 for name, _ in PyCArgObject._fields_:
-    print name, getattr(PyCArgObject, name)
+    print(name, getattr(PyCArgObject, name))
 
 for name in "c h i l q d f p".split():
-    print name, getattr(PyCArgObject, name)
+    print(name, getattr(PyCArgObject, name))

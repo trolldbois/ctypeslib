@@ -11,12 +11,12 @@ setup(
     author="Loic Jaquemet",
     author_email="loic.jaquemet+python@gmail.com",
     classifiers=[
-        #'Development Status :: 4 - Beta',
-        'Development Status :: 5 - Production/Stable',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python',
-        'Topic :: Software Development :: Libraries :: Python Modules',
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 2.7",
+        # "Programming Language :: Python :: 3.6", # clang not ready
+        "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     url="https://github.com/trolldbois/ctypeslib",
     download_url="https://github.com/trolldbois/ctypeslib/releases",
@@ -30,6 +30,6 @@ setup(
     scripts=['scripts/clang2py'],
     test_suite="test.alltests",
     install_requires=[
-       'clang>=3.7dev',
+       'clang>=4.0',
     ]
 )

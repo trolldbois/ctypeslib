@@ -76,14 +76,14 @@ class RecordTest(ClangTest):
 
 def p(s):
     import ctypes
-    print 'sizeof', ctypes.sizeof(s)
+    print('sizeof', ctypes.sizeof(s))
     for x in s._fields_:
         if len(x) == 2:
             f, t = x
-            print f, getattr(s, f)
+            print(f, getattr(s, f))
         else:
             f, t, o = x
-            print f, getattr(s, f)
+            print(f, getattr(s, f))
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

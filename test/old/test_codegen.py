@@ -45,14 +45,14 @@ class ConstantsTest(unittest.TestCase):
             ofi = StringIO()
             generate_code(xmlfile, ofi, **kw)
             namespace = {}
-            exec ofi.getvalue() in namespace
+            exec(ofi.getvalue(), namespace)
 # print ofi.getvalue()
             return ADict(namespace)
 
         finally:
             os.unlink(hfile)
             if dump:
-                print open(xmlfile).read()
+                print(open(xmlfile).read())
             os.unlink(xmlfile)
 
     def test_longlong(self):

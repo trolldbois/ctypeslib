@@ -146,12 +146,13 @@ class ClangTest(unittest.TestCase):
         # DEBUG
         ofi.seek(0)
         ignore_coding = ofi.readline()
-        #exec ofi.getvalue() in namespace
+        # exec ofi.getvalue() in namespace
         output = ''.join(ofi.readlines())
         try:
-            exec output in namespace
-        except ValueError, e:
-            print output
+            # PY3 change
+            exec(output, namespace)
+        except ValueError:
+            print(output)
         self.namespace = ADict(namespace)
         if debug:
             print(output)

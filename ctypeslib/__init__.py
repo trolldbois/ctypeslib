@@ -32,6 +32,6 @@ try:
         from clang import cindex
         cindex.Config.set_library_file(find_library("clang"))
 except ImportError as e:
-    print e
+    print(e)
 
 
