@@ -9,72 +9,139 @@
 
 ## Status update
 
-2015-05-01: master branch works with libclang-3.7 HEAD
+2017-05-01: master branch works with libclang-4.0 HEAD
 
 ## Installation
 
-The requirement on python-clang-3.7 means that you either need:
+On Ubuntu, libclang libraries are installed with versions.
+This library tries to load a few different versions to help you out. (__init__.py)
+But if you encounter a version compatibility issue, you might have to fix the problem
+using one of the following solutions:
 
-1. to install libclang1-dev to get libclang.so
-2. create a link to libclang-3.7.so.1 named libclang.so
-3. hardcode the required clang.cindex.Config.load_library_file in your code
+1. Install libclang1-dev to get libclang.so (maybe)
+2. OR create a link to libclang-4.0.so.1 named libclang.so
+3. OR hardcode a call to clang.cindex.Config.load_library_file('libclang-4.0.so.1') in your code
 
 
 ### Pypi
 
-Stable Distribution is available through pypi at https://pypi.python.org/pypi/ctypeslib2/
+Stable Distribution is available through PyPi at https://pypi.python.org/pypi/ctypeslib2/
 
 `sudo pip install ctypeslib2`
 
 ### Setting up clang >= 3.7 dependency
 
-See the LLVM Clang instructions for dev branch 3.7 at http://llvm.org/apt/
+See the LLVM Clang instructions at http://llvm.org/apt/.
 
-    sudo apt-add-repository "deb http://llvm.org/apt/raring/ llvm-toolchain-raring main"
-    sudo apt-get install libclang1-3.7 python-clang-3.7
-    sudo echo `echo "/usr/lib/llvm-3.7/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
-    sudo ldconfig -n
+## Examples
+
+Source file:
+```
+$ cat t.c 
+struct my_bitfield
+{
+  long a:3;
+  long b:4;
+  unsigned long long c:3;
+  unsigned long long d:3;
+  long f:2;
+} ;
+```
+Run c-to-python script:
+`clang2py t.c`
+Output:
+```
+# -*- coding: utf-8 -*-
+#
+# TARGET arch is: []
+# WORD_SIZE is: 8
+# POINTER_SIZE is: 8
+# LONGDOUBLE_SIZE is: 16
+#
+import ctypes
+
+class struct_my_bitfield(ctypes.Structure):
+    _pack_ = True # source:False
+    _fields_ = [
+    ('a', ctypes.c_int64, 3),
+    ('b', ctypes.c_int64, 4),
+    ('c', ctypes.c_int64, 3),
+    ('d', ctypes.c_int64, 3),
+    ('f', ctypes.c_int64, 2),
+    ('PADDING_0', ctypes.c_int64, 49),
+     ]
+
+__all__ = \
+    ['struct_my_bitfield']
+```
+
+
+
 
 ## Usage
 ```
-usage: clang2py [-h] [--debug] [-c] [-d] [-k TYPEKIND] [-l DLLS] [-o OUTPUT]
-                [-r EXPRESSION] [-s SYMBOL] [-v] [-w W] [-m module]
-                [--preload DLL] [--show-ids SHOWIDS] [--max-depth N]
+usage: clang2py [-h] [-c] [-d] [--debug] [-e] [-k TYPEKIND] [-i] [-l DLL]
+                [-m module] [-o OUTPUT] [-p DLL] [-q] [-r EXPRESSION]
+                [-s SYMBOL] [-t TARGET] [-v] [-V] [-w W] [-x]
+                [--show-ids SHOWIDS] [--max-depth N] [--clang-args CLANG_ARGS]
                 files [files ...]
 
-generate python ABI code from C code
+Version 2.1.5rc0. Generate python code from C headers
 
 positional arguments:
-  files               source filenames
+  files                 source filenames. stdin is not supported
 
 optional arguments:
-  -h, --help          show this help message and exit
-  --debug             setLevel to DEBUG
-  -c                  include source file location in comments
-  -d                  include docstrings containing C prototype and source
-                      file location
-  -k TYPEKIND         kind of type descriptions to include: d = #defines, e =
-                      enumerations, f = functions, s = structures, t =
-                      typedefs
-  -l DLLS             libraries to search for exported functions
-  -o OUTPUT           output filename (if not specified, standard output will
-                      be used)
-  -r EXPRESSION       regular expression for symbols to include (if neither
-                      symbols nor expressions are specified,everything will be
-                      included)
-  -s SYMBOL           symbol to include (if neither symbols nor expressions
-                      are specified,everything will be included)
-  -v                  verbose output
-  -w W                add all standard windows dlls to the searched dlls list
-  -m module           Python module(s) containing symbols which will be
-                      imported instead of generated
-  --preload DLL       dlls to be loaded before all others (to resolve symbols)
-  --show-ids SHOWIDS  Don't compute cursor IDs (very slow)
-  --max-depth N       Limit cursor expansion to depth N
+  -h, --help            show this help message and exit
+  -c, --comments        include source doxygen-style comments
+  -d, --doc             include docstrings containing C prototype and source
+                        file location
+  --debug               setLevel to DEBUG
+  -e, --show-definition-location
+                        include source file location in comments
+  -k TYPEKIND, --kind TYPEKIND
+                        kind of type descriptions to include: a = Alias, c =
+                        Class, d = Variable, e = Enumeration, f = Function, m
+                        = Macro, #define s = Structure, t = Typedef, u = Union
+                        default = 'cdefstu'
+  -i, --includes        include declaration defined outside of the sourcefiles
+  -l DLL, --include-library DLL
+                        library to search for exported functions. Add multiple
+                        times if required
+  -m module, --module module
+                        Python module(s) containing symbols which will be
+                        imported instead of generated
+  -o OUTPUT, --output OUTPUT
+                        output filename (if not specified, standard output
+                        will be used)
+  -p DLL, --preload DLL
+                        dll to be loaded before all others (to resolve
+                        symbols)
+  -q, --quiet           Shut down warnings and below
+  -r EXPRESSION, --regex EXPRESSION
+                        regular expression for symbols to include (if neither
+                        symbols nor expressions are specified,everything will
+                        be included)
+  -s SYMBOL, --symbol SYMBOL
+                        symbol to include (if neither symbols nor expressions
+                        are specified,everything will be included)
+  -t TARGET, --target TARGET
+                        target architecture (default: x86_64-Linux)
+  -v, --verbose         verbose output
+  -V, --version         show program's version number and exit
+  -w W                  add all standard windows dlls to the searched dlls
+                        list
+  -x, --exclude-includes
+                        Parse object in sources files only. Ignore includes
+  --show-ids SHOWIDS    Don't compute cursor IDs (very slow)
+  --max-depth N         Limit cursor expansion to depth N
+  --clang-args CLANG_ARGS
+                        clang options, in quotes: --clang-args="-std=c99
+                        -Wall"
 
-About clang-args: You can pass modifier to clang after your file name. For
-example, try "-target x86_64" or "-target i386-linux" as the last argument to
-change the target CPU arch.
+Cross-architecture: You can pass target modifiers to clang. For example, try
+--clang-args="-target x86_64" or "-target i386-linux" to change the target CPU
+arch.
 ```
 
 ## Inner workings for memo
@@ -92,8 +159,6 @@ change the target CPU arch.
  
 Because clang is capable to handle different target architecture, this fork 
  {is/should be} able to produce cross-platform memory representation if needed.
-
-
 
 
 ## Credits
@@ -116,8 +181,3 @@ This fork of ctypeslib is heavily patched for clang.
 The original ctypeslib is written by
 - author="Thomas Heller",
 - author_email="theller@ctypes.org",
-
-
-
-
- 

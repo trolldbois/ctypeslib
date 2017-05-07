@@ -22,15 +22,11 @@ else:
 try:
     from ctypes.util import find_library
     # debug for python-haystack travis-ci
-    #print 'find_library("clang-3.7")', find_library("clang-3.7")
-    #print 'find_library("clang")', find_library("clang")
-    if find_library("clang-3.7") is not None:
-        from clang import cindex
-        cindex.Config.set_library_file(find_library("clang-3.7"))
-        # else, this is going to fail. Probably.
-    elif find_library("clang") is not None:
-        from clang import cindex
-        cindex.Config.set_library_file(find_library("clang"))
+    for version in ["clang", "clang-4.0", "clang-3.9", "clang-3.8", "clang-3.7"]:
+        if find_library(version) is not None:
+            from clang import cindex
+            cindex.Config.set_library_file(find_library(version))
+            break
 except ImportError as e:
     print(e)
 
