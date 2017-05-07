@@ -2,10 +2,7 @@ import sys
 import os
 import unittest
 import tempfile
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
+from io import StringIO
 
 import ctypes
 from ctypes.util import find_library

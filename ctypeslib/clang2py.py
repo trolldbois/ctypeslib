@@ -269,7 +269,7 @@ def main(argv=None):
         mod = __import__(name)
         for submodule in name.split(".")[1:]:
             mod = getattr(mod, submodule)
-        for name, item in mod.__dict__.iteritems():
+        for name, item in mod.__dict__.items():
             if isinstance(item, type):
                 known_symbols[name] = mod.__name__
 

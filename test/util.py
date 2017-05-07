@@ -4,11 +4,12 @@
 
 import ctypes
 import os
+from io import StringIO
+
 from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
 import unittest
 from ctypeslib.codegen import clangparser, codegenerator
-from StringIO import StringIO
 
 import tempfile
 

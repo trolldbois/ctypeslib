@@ -3,8 +3,10 @@ Type descriptions are collections of typedesc instances.
 '''
 
 from __future__ import print_function
+from __future__ import unicode_literals
 import textwrap
-import StringIO  # need unicode support, no cStringIO
+from io import StringIO
+
 import sys
 
 from ctypeslib.codegen import clangparser
@@ -23,8 +25,8 @@ class Generator(object):
                  generate_docstrings=False,
                  generate_locations=False):
         self.output = output
-        self.stream = StringIO.StringIO()
-        self.imports = StringIO.StringIO()
+        self.stream = StringIO()
+        self.imports = StringIO()
         self.generate_locations = generate_locations
         self.generate_comments = generate_comments
         self.generate_docstrings = generate_docstrings
@@ -380,7 +382,7 @@ class Generator(object):
     def Enumeration(self, tp):
         if self.generate_comments:
             self.print_comment(tp)
-        print(file=self.stream)
+        print(u'', file=self.stream)
         if tp.name:
             print("# values for enumeration '%s'" % tp.name, file=self.stream)
         else:
@@ -769,7 +771,7 @@ class Generator(object):
             return -1
         if loc_b is None:
             return 1
-        return aloc_a[0], loc_b[0]) or cmp(int(loc_a[1]), int(loc_b[1]))
+        return cmp(loc_a[0], loc_b[0]) or cmp(int(loc_a[1]), int(loc_b[1]))
     cmpitems = staticmethod(cmpitems)
 
     def generate_items(self, items):
