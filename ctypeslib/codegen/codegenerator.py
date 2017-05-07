@@ -4,6 +4,7 @@ Type descriptions are collections of typedesc instances.
 
 from __future__ import print_function
 from __future__ import unicode_literals
+from functools import cmp_to_key
 import textwrap
 from io import StringIO
 
@@ -771,7 +772,9 @@ class Generator(object):
             return -1
         if loc_b is None:
             return 1
-        return cmp(loc_a[0], loc_b[0]) or cmp(int(loc_a[1]), int(loc_b[1]))
+        # FIXME: PY3 - can we do simpler ?
+        _cmp = lambda x, y: (x > y) - (x < y)
+        return _cmp(loc_a[0], loc_b[0]) or _cmp(int(loc_a[1]), int(loc_b[1]))
     cmpitems = staticmethod(cmpitems)
 
     def generate_items(self, items):
@@ -780,7 +783,7 @@ class Generator(object):
         while items:
             loops += 1
             self.more = set()
-            self.generate_all(sorted(items, self.cmpitems))
+            self.generate_all(sorted(items, key=cmp_to_key(self.cmpitems)))
 
             items |= self.more
             items -= self.done
