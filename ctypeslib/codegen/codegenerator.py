@@ -2,6 +2,7 @@
 Type descriptions are collections of typedesc instances.
 '''
 
+from __future__ import print_function
 import textwrap
 import StringIO  # need unicode support, no cStringIO
 import sys
@@ -55,7 +56,7 @@ class Generator(object):
         from clang.cindex import TypeKind
         size = str(self.parser.get_ctypes_size(TypeKind.LONGDOUBLE) / 8)
         headers = headers.replace('__LONG_DOUBLE_SIZE__', size)
-        print >> self.imports, headers
+        print(headers, file=self.imports)
         return
 
     def enable_pointer_type(self):
@@ -80,7 +81,7 @@ class Generator(object):
         headers = headers.replace('__POINTER_SIZE__', str(word_size))
         headers = headers.replace('__REPLACEMENT_TYPE__', word_type)
         headers = headers.replace('__REPLACEMENT_TYPE_CHAR__', word_char)
-        print >> self.imports, headers
+        print(headers, file=self.imports)
         return
 
     def generate_headers(self, parser):
@@ -98,7 +99,7 @@ class Generator(object):
         headers = headers.replace('__WORD_SIZE__', str(word_size))
         headers = headers.replace('__POINTER_SIZE__', str(pointer_size))
         headers = headers.replace('__LONGDOUBLE_SIZE__', str(longdouble_size))
-        print >> self.imports, headers
+        print(headers, file=self.imports)
         return
 
     def type_name(self, t, generate=True):
@@ -150,7 +151,7 @@ class Generator(object):
         # FIXME
         if self.generate_comments:
             self.print_comment(alias)
-        print >> self.stream, "%s = %s # alias" % (alias.name, alias.alias)
+        print("%s = %s # alias" % (alias.name, alias.alias), file=self.stream)
         self._aliases += 1
         return
 
@@ -162,10 +163,10 @@ class Generator(object):
             log.info('Ignoring %s with no location', macro.name)
             return
         if self.generate_locations:
-            print >> self.stream, "# %s:%s" % (macro.location)
+            print("# %s:%s" % (macro.location), file=self.stream)
         if self.generate_comments:
             self.print_comment(macro)
-        print >> self.stream, "%s = %s # macro" % (macro.name, macro.body)
+        print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
         self.macros += 1
         return
         # We don't know if we can generate valid, error free Python
@@ -203,8 +204,8 @@ class Generator(object):
         name = self.type_name(tp)  # tp.name
         if (isinstance(tp.typ, typedesc.FundamentalType) and
                 tp.name in sized_types):
-            print >> self.stream, "%s = ctypes.%s" % \
-                (name, sized_types[tp.name])
+            print("%s = ctypes.%s" % \
+                (name, sized_types[tp.name]), file=self.stream)
             self.names.add(tp.name)
             return
         if tp.typ not in self.done:
@@ -217,8 +218,8 @@ class Generator(object):
             self._generate(tp.typ)
         # generate actual typedef code.
         if tp.name != self.type_name(tp.typ):
-            print >> self.stream, "%s = %s" % \
-                (name, self.type_name(tp.typ))
+            print("%s = %s" % \
+                (name, self.type_name(tp.typ)), file=self.stream)
         self.names.add(tp.name)
         self._typedefs += 1
         return
@@ -286,11 +287,10 @@ class Generator(object):
             self._generate(tp.typ)
             # calling convention does not matter for in_dll...
             libname = self.get_sharedlib(dllname, "cdecl")
-            print >> self.stream, \
-                "%s = (%s).in_dll(%s, '%s')" % (tp.name,
+            print("%s = (%s).in_dll(%s, '%s')" % (tp.name,
                                                 self.type_name(tp.typ),
                                                 libname,
-                                                tp.name)
+                                                tp.name), file=self.stream)
             self.names.add(tp.name)
             # wtypes.h contains IID_IProcessInitControl, for example
             return
@@ -305,10 +305,10 @@ class Generator(object):
         #    return
         # el
         if isinstance(tp.init, typedesc.FunctionType):
-            print >> self.stream, "%s = %s # args: %s" % (tp.name,
+            print("%s = %s # args: %s" % (tp.name,
                                                           self.type_name(
                                                               tp.init),
-                                                          [x for x in tp.typ.iterArgNames()])
+                                                          [x for x in tp.typ.iterArgNames()]), file=self.stream)
         else:
             init_value = tp.init
             if isinstance(tp.typ, typedesc.PointerType) or \
@@ -350,9 +350,9 @@ class Generator(object):
             #init_value = "%s(%s)"%(self.type_name(tp.typ, False), init_value)
             #
             # print it out
-            print >> self.stream, "%s = %s # Variable %s" % (tp.name,
+            print("%s = %s # Variable %s" % (tp.name,
                                                              init_value,
-                                                             self.type_name(tp.typ, False))
+                                                             self.type_name(tp.typ, False)), file=self.stream)
         #
         self.names.add(tp.name)
         # try:
@@ -370,8 +370,7 @@ class Generator(object):
     def EnumValue(self, tp):
         # FIXME should be in parser
         value = int(tp.value)
-        print >> self.stream, \
-            "%s = %d" % (tp.name, value)
+        print("%s = %d" % (tp.name, value), file=self.stream)
         self.names.add(tp.name)
         self._enumvalues += 1
         return
@@ -381,11 +380,11 @@ class Generator(object):
     def Enumeration(self, tp):
         if self.generate_comments:
             self.print_comment(tp)
-        print >> self.stream
+        print(file=self.stream)
         if tp.name:
-            print >> self.stream, "# values for enumeration '%s'" % tp.name
+            print("# values for enumeration '%s'" % tp.name, file=self.stream)
         else:
-            print >> self.stream, "# values for unnamed enumeration"
+            print("# values for unnamed enumeration", file=self.stream)
         # Some enumerations have the same name for the enum type
         # and an enum value.  Excel's XlDisplayShapes is such an example.
         # Since we don't have separate namespaces for the type and the values,
@@ -393,7 +392,7 @@ class Generator(object):
         for item in tp.values:
             self._generate(item)
         if tp.name:
-            print >> self.stream, "%s = ctypes.c_int # enum" % tp.name
+            print("%s = ctypes.c_int # enum" % tp.name, file=self.stream)
             self.names.add(tp.name)
         self._enumtypes += 1
         return
@@ -465,19 +464,19 @@ class Generator(object):
         basenames = [self.type_name(b) for b in head.struct.bases]
         if basenames:
             ### method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
-            print >> self.stream, "class %s(%s):" % (
-                head.struct.name, ", ".join(basenames))
+            print("class %s(%s):" % (
+                head.struct.name, ", ".join(basenames)), file=self.stream)
         else:
             ### methods = [m for m in head.struct.members if type(m) is typedesc.Method]
             if isinstance(head.struct, typedesc.Structure):
-                print >> self.stream, "class %s(ctypes.Structure):" % head.struct.name
+                print("class %s(ctypes.Structure):" % head.struct.name, file=self.stream)
             elif isinstance(head.struct, typedesc.Union):
-                print >> self.stream, "class %s(ctypes.Union):" % head.struct.name
+                print("class %s(ctypes.Union):" % head.struct.name, file=self.stream)
         if not inline:
-            print >> self.stream, "    pass\n"
+            print("    pass\n", file=self.stream)
         # special empty struct
         if inline and not head.struct.members:
-            print >> self.stream, "    pass\n"
+            print("    pass\n", file=self.stream)
         self.names.add(head.struct.name)
         log.debug('Head finished for %s', head.name)
 
@@ -512,8 +511,8 @@ class Generator(object):
         # LXJ: we pack all the time, because clang gives a precise field offset
         # per target architecture. No need to defer to ctypes logic for that.
         if fields:
-            print >> self.stream, "%s_pack_ = True # source:%s" % (
-                prefix, body.struct.packed)
+            print("%s_pack_ = True # source:%s" % (
+                prefix, body.struct.packed), file=self.stream)
 
         if body.struct.bases:
             if len(body.struct.bases) == 1:  # its a Struct or a simple Class
@@ -536,13 +535,13 @@ class Generator(object):
                     f.type, (typedesc.Structure, typedesc.Union)):
                 unnamed_fields[f] = "_%d" % len(unnamed_fields)
         if unnamed_fields:
-            print >> self.stream, "%s_anonymous_ = %r" % \
-                (prefix, unnamed_fields.values())
+            print("%s_anonymous_ = %r" % \
+                (prefix, unnamed_fields.values()), file=self.stream)
         if len(fields) > 0:
-            print >> self.stream, "%s_fields_ = [" % (prefix)
+            print("%s_fields_ = [" % (prefix), file=self.stream)
 
             if self.generate_locations and body.struct.location:
-                print >> self.stream, "    # %s %s" % body.struct.location
+                print("    # %s %s" % body.struct.location, file=self.stream)
             index = 0
             for f in fields:
                 fieldname = unnamed_fields.get(f, f.name)
@@ -552,22 +551,22 @@ class Generator(object):
                     type_name = "globals()['%s']" % type_name
                 # a bitfield needs a triplet
                 if f.is_bitfield is False:
-                    print >> self.stream, "    ('%s', %s)," % \
-                        (fieldname, type_name)
+                    print("    ('%s', %s)," % \
+                        (fieldname, type_name), file=self.stream)
                 else:
                     # FIXME: Python bitfield is int32 only.
                     #from clang.cindex import TypeKind
                     #print fieldname
                     #import code
                     #code.interact(local=locals())
-                    print >> self.stream, "    ('%s', %s, %s)," % \
+                    print("    ('%s', %s, %s)," % \
                         (fieldname,
                          # self.parser.get_ctypes_name(TypeKind.LONG),
                          self.type_name(f.type),
-                         f.bits)
+                         f.bits), file=self.stream)
             if inline:
-                print >> self.stream, prefix,
-            print >> self.stream, "]\n"
+                print(prefix, end=' ', file=self.stream)
+            print("]\n", file=self.stream)
         log.debug('Body finished for %s', body.name)
         return
 
@@ -592,7 +591,7 @@ class Generator(object):
         # it not yet exists. Will map library pathnames to loaded libs.
         if self._c_libraries is None:
             self._c_libraries = {}
-            print >> self.imports, "_libraries = {}"
+            print("_libraries = {}", file=self.imports)
         return
 
     _stdcall_libraries = None
@@ -602,15 +601,15 @@ class Generator(object):
         # it not yet exists. Will map library pathnames to loaded libs.
         if self._stdcall_libraries is None:
             self._stdcall_libraries = {}
-            print >> self.imports, "_stdcall_libraries = {}"
+            print("_stdcall_libraries = {}", file=self.imports)
         return
 
     def get_sharedlib(self, dllname, cc):
         if cc == "stdcall":
             self.need_WinLibraries()
             if dllname not in self._stdcall_libraries:
-                print >> self.imports, "_stdcall_libraries[%r] = ctypes.WinDLL(%r)" % (
-                    dllname, dllname)
+                print("_stdcall_libraries[%r] = ctypes.WinDLL(%r)" % (
+                    dllname, dllname), file=self.imports)
                 self._stdcall_libraries[dllname] = None
             return "_stdcall_libraries[%r]" % dllname
         self.need_CLibraries()
@@ -619,8 +618,8 @@ class Generator(object):
         else:
             global_flag = ""
         if dllname not in self._c_libraries:
-            print >> self.imports, "_libraries[%r] = ctypes.CDLL(%r%s)" % (
-                dllname, dllname, global_flag)
+            print("_libraries[%r] = ctypes.CDLL(%r%s)" % (
+                dllname, dllname, global_flag), file=self.imports)
             self._c_libraries[dllname] = None
         return "_libraries[%r]" % dllname
 
@@ -629,7 +628,7 @@ class Generator(object):
     def need_STRING(self):
         if self._STRING_defined:
             return
-        print >> self.imports, "STRING = c_char_p"
+        print("STRING = c_char_p", file=self.imports)
         self._STRING_defined = True
         return
 
@@ -638,7 +637,7 @@ class Generator(object):
     def need_WSTRING(self):
         if self._WSTRING_defined:
             return
-        print >> self.imports, "WSTRING = c_wchar_p"
+        print("WSTRING = c_wchar_p", file=self.imports)
         self._WSTRING_defined = True
         return
 
@@ -668,16 +667,16 @@ class Generator(object):
                     func.iterArgNames())]
 
             if self.generate_locations and func.location:
-                print >> self.stream, "# %s %s" % func.location
-            print >> self.stream, "%s = %s.%s" % (
-                func.name, libname, func.name)
-            print >> self.stream, "%s.restype = %s" % (
-                func.name, self.type_name(func.returns))
+                print("# %s %s" % func.location, file=self.stream)
+            print("%s = %s.%s" % (
+                func.name, libname, func.name), file=self.stream)
+            print("%s.restype = %s" % (
+                func.name, self.type_name(func.returns)), file=self.stream)
             if self.generate_comments:
-                print >> self.stream, "# %s(%s)" % (
-                    func.name, ", ".join(argnames))
-            print >> self.stream, "%s.argtypes = [%s]" % (
-                func.name, ", ".join(args))
+                print("# %s(%s)" % (
+                    func.name, ", ".join(argnames)), file=self.stream)
+            print("%s.argtypes = [%s]" % (
+                func.name, ", ".join(args)), file=self.stream)
 
             if self.generate_docstrings:
                 def typeString(typ):
@@ -689,7 +688,7 @@ class Generator(object):
                         return "unknown"
                 argsAndTypes = zip([typeString(t)
                                     for t in func.iterArgTypes()], argnames)
-                print >> self.stream, """%(funcname)s.__doc__ = \\
+                print("""%(funcname)s.__doc__ = \\
     \"\"\"%(ret)s %(funcname)s(%(args)s)
     %(file)s:%(line)s\"\"\"""" % \
                     {'funcname': func.name,
@@ -697,7 +696,7 @@ class Generator(object):
                      'file': func.location[0],
                      'line': func.location[1],
                      'ret': typeString(func.returns),
-                     }
+                     }, file=self.stream)
 
             self.names.add(func.name)
             self._functiontypes += 1
@@ -727,7 +726,7 @@ class Generator(object):
             return
         # verbose output with location.
         if self.generate_locations and item.location:
-            print >> self.stream, "# %s:%d" % item.location
+            print("# %s:%d" % item.location, file=self.stream)
         if self.generate_comments:
             self.print_comment(item)
         log.debug("generate %s, %s", item.__class__.__name__, item.name)
@@ -755,7 +754,7 @@ class Generator(object):
         if item.comment is None:
             return
         for l in textwrap.wrap(item.comment, 78):
-            print >> self.stream, "# %s" % (l)
+            print("# %s" % (l), file=self.stream)
         return
 
     def generate_all(self, items):
@@ -770,7 +769,7 @@ class Generator(object):
             return -1
         if loc_b is None:
             return 1
-        return cmp(loc_a[0], loc_b[0]) or cmp(int(loc_a[1]), int(loc_b[1]))
+        return aloc_a[0], loc_b[0]) or cmp(int(loc_a[1]), int(loc_b[1]))
     cmpitems = staticmethod(cmpitems)
 
     def generate_items(self, items):
@@ -790,9 +789,9 @@ class Generator(object):
         self.generate_code(items)
 
     def generate_code(self, items):
-        print >> self.imports, "\n".join(["ctypes.CDLL('%s', ctypes.RTLD_GLOBAL)" % preloaded_dll
+        print("\n".join(["ctypes.CDLL('%s', ctypes.RTLD_GLOBAL)" % preloaded_dll
                                           for preloaded_dll
-                                          in self.preloaded_dlls])
+                                          in self.preloaded_dlls]), file=self.imports)
         loops = self.generate_items(items)
 
         self.output.write(self.imports.getvalue())
@@ -801,35 +800,35 @@ class Generator(object):
 
         text = "__all__ = \\"
         # text Wrapper doesn't work for the first line in certain cases.
-        print >> self.output, text
+        print(text, file=self.output)
         # doesn't work for the first line in certain cases.
         wrapper = textwrap.TextWrapper(break_long_words=False, initial_indent="    ",
                                        subsequent_indent="    ")
         text = "[%s]" % ", ".join([repr(str(n)) for n in self.names])
         for line in wrapper.wrap(text):
-            print >> self.output, line
+            print(line, file=self.output)
 
         return loops
 
     def print_stats(self, stream):
         total = self._structures + self._functiontypes + self._enumtypes + self._typedefs +\
             self._pointertypes + self._arraytypes
-        print >> stream, "###########################"
-        print >> stream, "# Symbols defined:"
-        print >> stream, "#"
-        print >> stream, "# Variables:          %5d" % self._variables
-        print >> stream, "# Struct/Unions:      %5d" % self._structures
-        print >> stream, "# Functions:          %5d" % self._functiontypes
-        print >> stream, "# Enums:              %5d" % self._enumtypes
-        print >> stream, "# Enum values:        %5d" % self._enumvalues
-        print >> stream, "# Typedefs:           %5d" % self._typedefs
-        print >> stream, "# Pointertypes:       %5d" % self._pointertypes
-        print >> stream, "# Arraytypes:         %5d" % self._arraytypes
-        print >> stream, "# unknown functions:  %5d" % self._notfound_functiontypes
-        print >> stream, "# unknown variables:  %5d" % self._notfound_variables
-        print >> stream, "#"
-        print >> stream, "# Total symbols: %5d" % total
-        print >> stream, "###########################"
+        print("###########################", file=stream)
+        print("# Symbols defined:", file=stream)
+        print("#", file=stream)
+        print("# Variables:          %5d" % self._variables, file=stream)
+        print("# Struct/Unions:      %5d" % self._structures, file=stream)
+        print("# Functions:          %5d" % self._functiontypes, file=stream)
+        print("# Enums:              %5d" % self._enumtypes, file=stream)
+        print("# Enum values:        %5d" % self._enumvalues, file=stream)
+        print("# Typedefs:           %5d" % self._typedefs, file=stream)
+        print("# Pointertypes:       %5d" % self._pointertypes, file=stream)
+        print("# Arraytypes:         %5d" % self._arraytypes, file=stream)
+        print("# unknown functions:  %5d" % self._notfound_functiontypes, file=stream)
+        print("# unknown variables:  %5d" % self._notfound_variables, file=stream)
+        print("#", file=stream)
+        print("# Total symbols: %5d" % total, file=stream)
+        print("###########################", file=stream)
         return
 
 ################################################################
@@ -901,7 +900,7 @@ def generate_code(srcfiles,
                 if match and match.group() == i.name:
                     todo.append(i)
                     break
-                # if we follow our own documentation, 
+                # if we follow our own documentation,
                 # allow regular expression match of any part of name:
                 match = s.search(i.name)
                 if match:
@@ -925,4 +924,4 @@ def generate_code(srcfiles,
     loops = gen.generate_code(items)
     if verbose:
         gen.print_stats(sys.stderr)
-        print >> sys.stderr, "needed %d loop(s)" % loops
+        print("needed %d loop(s)" % loops, file=sys.stderr)
