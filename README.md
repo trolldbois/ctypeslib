@@ -35,6 +35,10 @@ See the LLVM Clang instructions at http://llvm.org/apt/.
 
 ## Examples
 
+Look at `test/test_example_script.py`
+
+Other example:
+
 Source file:
 ```
 $ cat t.c 
