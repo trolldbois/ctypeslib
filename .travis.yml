@@ -25,10 +25,7 @@ install:
 
 script:
 # we need clang2py in the path. also installs python clang
-  - python setup.py install
-  - which clang2py
-  - /home/travis/virtualenv/python2.7.13/bin/clang2py -h
-  - clang2py -h
+  - python setup.py develop
 # run tests
   - python setup.py test
 
