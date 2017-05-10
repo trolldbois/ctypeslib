@@ -26,12 +26,15 @@ install:
 script:
 # we need clang2py in the path. also installs python clang
   - python setup.py install
+  - which clang2py
+  - /home/travis/virtualenv/python2.7.13/bin/clang2py -h
+  - clang2py -h
 # run tests
   - python setup.py test
-  - coverage run --source=ctypeslib setup.py test
 
 after_success:
-  coveralls
+  - coverage run --source=ctypeslib setup.py test
+  - coveralls
 
 # disable email notifications
 notifications:
