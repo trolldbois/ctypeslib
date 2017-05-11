@@ -95,8 +95,6 @@ class ArgumentHelper(ClangTest):
                   stderr=PIPE,
                   bufsize=-1)
         output, error = p.communicate()
-        print("error "+error)
-        print("output "+output)
         self.assertEquals(p.returncode, 0)
         self.assertIn("Cross-architecture:", output)
         self.assertIn("usage:", output)

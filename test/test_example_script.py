@@ -77,17 +77,17 @@ struct example {
         except ValueError:
             print(output)
         # print the python code.
-        print(output)
+        #print(output)
         # use the module
         one = example.struct_example()
-        print("Allocating struct detail one: %s" % type(one))
+        #print("Allocating struct detail one: %s" % type(one))
         one.count = 1
         one.details[0].first = 12
         assert(one.count == 1)
         assert(one.details[0].first == 12)
-        print("Sizeof structure one: %d" % ctypes.sizeof(one))
-        print("\tone.count == %d" % one.count)
-        print("\tone.details[0].first == %d" % one.details[0].first)
+        #print("Sizeof structure one: %d" % ctypes.sizeof(one))
+        #print("\tone.count == %d" % one.count)
+        #print("\tone.details[0].first == %d" % one.details[0].first)
         return
 
 if __name__ == "__main__":
