@@ -79,6 +79,45 @@ __all__ = \
     ['struct_my_bitfield']
 ```
 
+Other example with headers:
+
+Source file:
+```
+$ cat test-stdbool.c 
+#include <stdbool.h>
+
+typedef struct s_foo {
+	  bool bar1;
+	    bool bar2;
+	      bool bar3;
+} foo;
+```
+Run c-to-python script (with any relevant include folder):
+`clang2py --clang-args="-I/usr/include/clang/4.0/include" test-stdbool.c`
+Output:
+```
+# -*- coding: utf-8 -*-
+#
+# TARGET arch is: ['-I/usr/include/clang/4.0/include']
+# WORD_SIZE is: 8
+# POINTER_SIZE is: 8
+# LONGDOUBLE_SIZE is: 16
+#
+import ctypes
+
+class struct_s_foo(ctypes.Structure):
+    _pack_ = True # source:False
+    _fields_ = [
+    ('bar1', ctypes.c_bool),
+    ('bar2', ctypes.c_bool),
+    ('bar3', ctypes.c_bool),
+     ]
+
+foo = struct_s_foo
+__all__ = \
+    ['struct_s_foo', 'foo']
+```
+
 
 
 
