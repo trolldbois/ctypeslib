@@ -5,13 +5,10 @@ import os
 import platform
 import re
 import sys
-import pkg_resources
 
 import ctypeslib
 from ctypeslib.codegen.codegenerator import generate_code
 from ctypeslib.codegen import typedesc
-
-log = logging.getLogger('clang2py')
 
 ################################################################
 windows_dll_names = """\
@@ -133,10 +130,10 @@ def main(argv=None):
                         default=[])
 
     parser.add_argument("-q","--quiet",
-                        action="store_true",
-                        dest="quiet",
+                        action="store_const",
+                        const="quiet",
                         help="Shut down warnings and below",
-                        default="False")
+                        default=False)
 
     parser.add_argument("-r","--regex",
                         dest="expressions",
