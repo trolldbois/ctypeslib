@@ -149,6 +149,9 @@ class CursorHandler(ClangHandler):
         obj = self.register(name, typedesc.Enumeration(name, size, align))
         self.set_location(obj, cursor)
         self.set_comment(obj, cursor)
+        # parse all children
+        for child in cursor.get_children():
+            self.parse_cursor(child) # FIXME, where is the starElement
         return obj
 
     @log_entity
@@ -548,7 +551,7 @@ class CursorHandler(ClangHandler):
         align = cursor.type.get_align()
         if size < 0 or align < 0:
             #CXTypeLayoutError_Invalid = -1,
-            #CXTypeLayoutError_Incomplete = -2,
+            #CXTypeLayoutError_Incomplete = -2,q
             #CXTypeLayoutError_Dependent = -3,
             #CXTypeLayoutError_NotConstantSize = -4,
             #CXTypeLayoutError_InvalidFieldName = -5
