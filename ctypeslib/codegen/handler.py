@@ -113,9 +113,8 @@ class ClangHandler(object):
         name = '%s_%d'%(_premainer,_i)
         return name
 
-
     def get_unique_name(self, cursor):
-        '''get the spelling or create a unique name for a cursor'''
+        """get the spelling or create a unique name for a cursor"""
         name = ''
         if cursor.kind in [CursorKind.UNEXPOSED_DECL]:
             return ''
@@ -146,7 +145,6 @@ class ClangHandler(object):
             name = '%s_%s'%(names[cursor.kind],name)
         log.debug('get_unique_name: name "%s"',name)
         return name
-
 
     def is_fundamental_type(self, t):
         return (not self.is_pointer_type(t) and

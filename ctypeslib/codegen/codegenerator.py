@@ -91,7 +91,7 @@ class Generator(object):
         # fix parser in self for later use
         self.parser = parser
         import pkgutil
-        headers = pkgutil.get_data('ctypeslib', 'data/headers.tpl')
+        headers = pkgutil.get_data('ctypeslib', 'data/headers.tpl').decode()
         from clang.cindex import TypeKind
         # get sizes from clang library
         word_size = self.parser.get_ctypes_size(TypeKind.LONG) / 8
