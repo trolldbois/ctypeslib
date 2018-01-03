@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
+import ctypes
 import unittest
 
-import ctypes
-
-from util import ClangTest
+from test.util import ClangTest
 
 
 class ConstantsTest(ClangTest):
@@ -74,7 +73,8 @@ class ConstantsTest(ClangTest):
         wchar_t w_zero = 0;
         """, ['-x', 'c++'])  # force c++ lang for wchar
         self.assertEqual(self.namespace.X, 'X')
-        self.assertEqual(type(self.namespace.X), unicode)
+        # self.assertEqual(type(self.namespace.X), unicode)
+        self.assertEqual(type(self.namespace.X), str)
         self.assertEqual(self.namespace.w_zero, 0)
         # type cast will not work.
         #self.assertEqual(type(self.namespace.w_zero), unicode)
@@ -86,8 +86,8 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.aa, '\xc0\xe9\xee\xf5\xfc')  # "Àéîõü")
         self.assertEqual(self.namespace.a, "Кошка")
         # NULL terminated
-        self.assertEqual(len(self.namespace.aa), 6 * 8 / 8 - 1)
-        self.assertEqual(len(self.namespace.a), 11 * 8 / 8 - 1)
+        self.assertEqual(len(self.namespace.aa), 6 * 8 // 8 - 1)
+        self.assertEqual(len(self.namespace.a), 11 * 8 // 8 - 1)
 
     @unittest.expectedFailure
     def test_unicode_wchar(self):
@@ -104,8 +104,8 @@ class ConstantsTest(ClangTest):
         self.gen('test/data/test-strings.cpp', ['-x', 'c++', '--std=c++11'])
         # force c++ lang for wchar
         # source code failures , wchar_16_t, u8 and u8R not recognised
-        self.assertEqual(len(self.namespace.c.encode('utf-8')), 12 * 8 / 8 - 1)
-        self.assertEqual(len(self.namespace.d.encode('utf-8')), 12 * 8 / 8 - 1)
+        self.assertEqual(len(self.namespace.c.encode('utf-8')), 12 * 8 // 8 - 1)
+        self.assertEqual(len(self.namespace.d.encode('utf-8')), 12 * 8 // 8 - 1)
         # should be 6*16/8
         self.assertEqual(len(self.namespace.e.encode('utf-8')), 11)
         # should be 6*32/8
@@ -456,8 +456,6 @@ typedef union MY_ROOT_UNION {
         self.failUnless("malloc.h" in self.namespace.malloc.__doc__)
 
 
-import logging
-import sys
 if __name__ == "__main__":
     #logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
     unittest.main()

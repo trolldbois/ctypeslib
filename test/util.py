@@ -105,7 +105,6 @@ def get_cursors(source, spelling):
 
 
 class ADict(dict):
-
     def __getattr__(self, name):
         try:
             return self[name]
@@ -165,7 +164,7 @@ class ClangTest(unittest.TestCase):
         hfile = mktemp(".h")
         open(hfile, "w").write(src_code)
         try:
-            self.gen(hfile, flags,debug)
+            self.gen(hfile, flags, debug)
         finally:
             os.unlink(hfile)
         return
@@ -189,9 +188,9 @@ class ClangTest(unittest.TestCase):
             name)
         _clang = target.type.get_size()
         _python = ctypes.sizeof(getattr(self.namespace, name))
-        self.assertEquals(_clang, _python,
-                          'Sizes for target: %s Clang:%d Python:%d flags:%s' % (name, _clang,
-                                                                                _python, self.parser.flags))
+        self.assertEqual(_clang, _python,
+                         'Sizes for target: %s Clang:%d Python:%d flags:%s' % (name, _clang,
+                                                                               _python, self.parser.flags))
         return
 
     def assertOffsets(self, name):
@@ -206,7 +205,7 @@ class ClangTest(unittest.TestCase):
             target is not None,
             '%s was not found in source' %
             name)
-        members = [(c.displayname,c) for c in target.type.get_fields()]
+        members = [(c.displayname, c) for c in target.type.get_fields()]
         _clang_type = target.type
         _python_type = getattr(self.namespace, name)
         # let'shandle bitfield - precalculate offsets
@@ -226,14 +225,15 @@ class ClangTest(unittest.TestCase):
             # anonymous fields
             if membername == '':
                 membername = '_%d' % i
-            #_c_offset = _clang_type.get_offset(member)
+            # _c_offset = _clang_type.get_offset(member)
             _c_offset = field.get_field_offsetof()
-            #_p_offset = 8*getattr(_python_type, member).offset
+            # _p_offset = 8*getattr(_python_type, member).offset
             _p_offset = fields_offsets[membername]
-            self.assertEquals(_c_offset, _p_offset,
-                              'Offsets for target: %s.%s Clang:%d Python:%d flags:%s' % (
-                                  name, membername, _c_offset, _p_offset, self.parser.flags))
+            self.assertEqual(_c_offset, _p_offset,
+                             'Offsets for target: %s.%s Clang:%d Python:%d flags:%s' % (
+                                 name, membername, _c_offset, _p_offset, self.parser.flags))
         return
+
 
 __all__ = [
     'get_cursor',

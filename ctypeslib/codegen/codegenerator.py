@@ -55,9 +55,9 @@ class Generator(object):
         import pkgutil
         headers = pkgutil.get_data(
             'ctypeslib',
-            'data/fundamental_type_name.tpl')
+            'data/fundamental_type_name.tpl').decode()
         from clang.cindex import TypeKind
-        size = str(self.parser.get_ctypes_size(TypeKind.LONGDOUBLE) / 8)
+        size = str(self.parser.get_ctypes_size(TypeKind.LONGDOUBLE) // 8)
         headers = headers.replace('__LONG_DOUBLE_SIZE__', size)
         print(headers, file=self.imports)
         return
@@ -72,11 +72,11 @@ class Generator(object):
         # return # FIXME ignore
         self.enable_pointer_type = lambda: True
         import pkgutil
-        headers = pkgutil.get_data('ctypeslib', 'data/pointer_type.tpl')
+        headers = pkgutil.get_data('ctypeslib', 'data/pointer_type.tpl').decode()
         import ctypes
         from clang.cindex import TypeKind
         # assuming a LONG also has the same sizeof than a pointer.
-        word_size = self.parser.get_ctypes_size(TypeKind.POINTER) / 8
+        word_size = self.parser.get_ctypes_size(TypeKind.POINTER) // 8
         word_type = self.parser.get_ctypes_name(TypeKind.ULONG)
         # pylint: disable=protected-access
         word_char = getattr(ctypes, word_type)._type_
@@ -94,9 +94,9 @@ class Generator(object):
         headers = pkgutil.get_data('ctypeslib', 'data/headers.tpl').decode()
         from clang.cindex import TypeKind
         # get sizes from clang library
-        word_size = self.parser.get_ctypes_size(TypeKind.LONG) / 8
-        pointer_size = self.parser.get_ctypes_size(TypeKind.POINTER) / 8
-        longdouble_size = self.parser.get_ctypes_size(TypeKind.LONGDOUBLE) / 8
+        word_size = self.parser.get_ctypes_size(TypeKind.LONG) // 8
+        pointer_size = self.parser.get_ctypes_size(TypeKind.POINTER) // 8
+        longdouble_size = self.parser.get_ctypes_size(TypeKind.LONGDOUBLE) // 8
         # replacing template values
         headers = headers.replace('__FLAGS__', str(self.parser.flags))
         headers = headers.replace('__WORD_SIZE__', str(word_size))

@@ -485,7 +485,7 @@ class CursorHandler(ClangHandler):
                 # then we strip encoding
                 for encoding in ['u8', 'L', 'u', 'U']:
                     if encoding in prefix:  # could be Ru ou uR
-                        value = unicode(value, 'utf-8')
+                        # value = unicode(value, 'utf-8') # FIXME PY3
                         break  # just one prefix is possible
             # add token
             final_value.append(value)
@@ -772,7 +772,7 @@ class CursorHandler(ClangHandler):
                 length = member.offset - offset
                 log.debug(
                     'Fixup_struct: create padding for %d bits %d bytes',
-                    length, length / 8)
+                    length, length // 8)
                 padding_nb = self._make_padding(
                     members,
                     padding_nb,
@@ -789,7 +789,7 @@ class CursorHandler(ClangHandler):
             length = s.size * 8 - offset
             log.debug(
                 'Fixup_struct: s:%d create tail padding for %d bits %d bytes',
-                s.size, length, length / 8)
+                s.size, length, length // 8)
             padding_nb = self._make_padding(
                 members,
                 padding_nb,
@@ -832,7 +832,7 @@ class CursorHandler(ClangHandler):
             #                            (length//8)*8, prev_member=padding)
             return padding_nb
         elif length > 8:
-            pad_bytes = length / 8
+            pad_bytes = length // 8
             padding = typedesc.Field(name,
                                      typedesc.ArrayType(
                                          typedesc.FundamentalType(

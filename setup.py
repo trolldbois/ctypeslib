@@ -27,7 +27,10 @@ setup(
     package_data={'ctypeslib': ['data/fundamental_type_name.tpl',
                                 'data/pointer_type.tpl',
                                 'data/headers.tpl']},
-    scripts=['scripts/clang2py'],
+    entry_points={
+            'console_scripts': [
+                'clang2py = ctypeslib.clang2py:main',
+                ]},
     test_suite="test.alltests",
     install_requires=[
        'clang>=3.7',
