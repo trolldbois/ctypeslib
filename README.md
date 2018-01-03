@@ -89,13 +89,15 @@ $ cat test-stdbool.c
 #include <stdbool.h>
 
 typedef struct s_foo {
-	  bool bar1;
-	    bool bar2;
-	      bool bar3;
+    bool bar1;
+    bool bar2;
+    bool bar3;
 } foo;
 ```
+
 Run c-to-python script (with any relevant include folder):
 `clang2py --clang-args="-I/usr/include/clang/4.0/include" test-stdbool.c`
+
 Output:
 ```
 # -*- coding: utf-8 -*-
