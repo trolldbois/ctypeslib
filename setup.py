@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name="ctypeslib2",
-    version="2.1.5",
+    version="2.2.0",
     description="ctypeslib2 - FFI toolkit, relies on clang",
     long_description=open("README.md").read(),
     author="Loic Jaquemet",
@@ -15,7 +15,7 @@ setup(
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 2.7",
-        # "Programming Language :: Python :: 3.6", # clang not ready
+        "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     url="https://github.com/trolldbois/ctypeslib",
@@ -28,11 +28,11 @@ setup(
                                 'data/pointer_type.tpl',
                                 'data/headers.tpl']},
     entry_points={
-            'console_scripts': [
-                'clang2py = ctypeslib.clang2py:main',
-                ]},
+        'console_scripts': [
+            'clang2py = ctypeslib.clang2py:main',
+        ]},
     test_suite="test.alltests",
     install_requires=[
-       'clang>=3.7',
+        'clang>=3.7',
     ]
 )
