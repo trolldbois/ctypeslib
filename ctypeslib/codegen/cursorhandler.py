@@ -1,20 +1,20 @@
 """Handler for Cursor nodes from the clang AST tree."""
 
+import logging
+
 from clang.cindex import CursorKind, TypeKind, TokenKind
 
 from ctypeslib.codegen import typedesc
-from ctypeslib.codegen.util import log_entity
 from ctypeslib.codegen.handler import ClangHandler
-from ctypeslib.codegen.handler import InvalidDefinitionError
 from ctypeslib.codegen.handler import CursorKindException
 from ctypeslib.codegen.handler import DuplicateDefinitionException
+from ctypeslib.codegen.handler import InvalidDefinitionError
+from ctypeslib.codegen.util import log_entity
 
-import logging
 log = logging.getLogger('cursorhandler')
 
 
 class CursorHandler(ClangHandler):
-
     """
     Factory objects that handles Cursor Kind and transform them into typedesc.
 
@@ -36,29 +36,30 @@ class CursorHandler(ClangHandler):
         mth = getattr(self, cursor.kind.name)
         return mth(cursor)
 
-    ##########################################################################
-    ##### CursorKind handlers#######
-    ##########################################################################
+        ##########################################################################
+        ##### CursorKind handlers#######
+        ##########################################################################
 
-    ###########################################
-    # ATTRIBUTES
+        ###########################################
+        # ATTRIBUTES
 
-    #@log_entity
-    #def UNEXPOSED_ATTR(self, cursor):
+        # @log_entity
+        # def UNEXPOSED_ATTR(self, cursor):
         # FIXME: do we do something with these ?
         # parent = cursor.semantic_parent
         # print 'parent is',parent.displayname, parent.location, parent.extent
         # TODO until attr is exposed by clang:
         # readlines()[extent] .split(' ') | grep {inline,packed}
-    #    return
+        #    return
 
-    #@log_entity
-    #def PACKED_ATTR(self, cursor):
+        # @log_entity
+        # def PACKED_ATTR(self, cursor):
         # FIXME: do we do something with these ?
         # parent = cursor.semantic_parent
         # print 'parent is',parent.displayname, parent.location, parent.extent
         # TODO until attr is exposed by clang:
         # readlines()[extent] .split(' ') | grep {inline,packed}
+
     #    return
 
     ################################
@@ -151,7 +152,7 @@ class CursorHandler(ClangHandler):
         self.set_comment(obj, cursor)
         # parse all children
         for child in cursor.get_children():
-            self.parse_cursor(child) # FIXME, where is the starElement
+            self.parse_cursor(child)  # FIXME, where is the starElement
         return obj
 
     @log_entity
@@ -191,7 +192,7 @@ class CursorHandler(ClangHandler):
             _argtype_decl = _type.get_declaration()
             _argtype_name = self.get_unique_name(_argtype_decl)
             if not self.is_registered(_argtype_name):
-                log.info('This param type is not declared: %s',_argtype_name)
+                log.info('This param type is not declared: %s', _argtype_name)
                 _argtype = self.parse_cursor_type(_type)
             else:
                 _argtype = self.get_registered(_argtype_name)
@@ -301,7 +302,7 @@ class CursorHandler(ClangHandler):
             # string are not exposed
             init_value = '%s # UNEXPOSED TYPE. PATCH NEEDED.' % (init_value)
         elif (self.is_pointer_type(_ctype) and
-                _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO):
+                      _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO):
             # Function pointers argument are handled at type creation time
             # but we need to put a CFUNCTYPE as a value of the name variable
             init_value = _type
@@ -312,6 +313,7 @@ class CursorHandler(ClangHandler):
             # FIXME Move that code into typedesc
             def countof(k, l):
                 return [item[0] for item in l].count(k)
+
             if (countof(CursorKind.INIT_LIST_EXPR, init_value) == 1):
                 init_value = dict(init_value)[CursorKind.INIT_LIST_EXPR]
             elif (countof(CursorKind.STRING_LITERAL, init_value) == 1):
@@ -426,8 +428,8 @@ class CursorHandler(ClangHandler):
             # Punctuation is probably not part of the init_value,
             # but only in specific case: ';' endl, or part of list_expr
             if (token.kind == TokenKind.PUNCTUATION and
-                (token.cursor.kind == CursorKind.INVALID_FILE or
-                 token.cursor.kind == CursorKind.INIT_LIST_EXPR)):
+                    (token.cursor.kind == CursorKind.INVALID_FILE or
+                             token.cursor.kind == CursorKind.INIT_LIST_EXPR)):
                 log.debug('IGNORE token %s', value)
                 continue
             elif token.kind == TokenKind.COMMENT:
@@ -464,7 +466,7 @@ class CursorHandler(ClangHandler):
                 value = value.replace('f', '').replace('F', '')
                 value = float(value)
             elif (token.cursor.kind == CursorKind.CHARACTER_LITERAL or
-                  token.cursor.kind == CursorKind.STRING_LITERAL):
+                          token.cursor.kind == CursorKind.STRING_LITERAL):
                 # strip wchar_t type prefix for string/character
                 # indicatively: u8 for utf-8, u for utf-16, U for utf32
                 # assume that the source file is utf-8
@@ -539,7 +541,7 @@ class CursorHandler(ClangHandler):
         # TODO unittest: try redefinition.
         # Find if a record definition was already parsed and registered
         if (self.is_registered(name) and
-                self.get_registered(name).members is not None):
+                    self.get_registered(name).members is not None):
             log.debug(
                 '_record_decl: %s is already registered with members',
                 name)
@@ -549,20 +551,30 @@ class CursorHandler(ClangHandler):
         bases = []  # FIXME: support CXX
         size = cursor.type.get_size()
         align = cursor.type.get_align()
-        if size < 0 or align < 0:
-            #CXTypeLayoutError_Invalid = -1,
-            #CXTypeLayoutError_Incomplete = -2,q
-            #CXTypeLayoutError_Dependent = -3,
-            #CXTypeLayoutError_NotConstantSize = -4,
-            #CXTypeLayoutError_InvalidFieldName = -5
-            errs = dict([(-1,"Invalid"),(-2,"Incomplete"),(-3,"Dependent"),
-                     (-4,"NotConstantSize"),(-5,"InvalidFieldName")])
-            loc = "%s:%s"%(cursor.location.file,cursor.location.line)
+        if size == -2: #
+            # CXTypeLayoutError_Incomplete = -2
+            # produce an empty structure declaration
+            size = align = 0
+            log.debug('_record_decl: name: %s CXTypeLayoutError_Incomplete', name)
+            obj = _output_type(name, align, None, bases, size, packed=False)
+            self.set_location(obj, cursor)
+            self.set_comment(obj, cursor)
+            return self.register(name, obj)
+
+        elif size < 0 or align < 0:
+            # CXTypeLayoutError_Invalid = -1,
+            # CXTypeLayoutError_Dependent = -3,
+            # CXTypeLayoutError_NotConstantSize = -4,
+            # CXTypeLayoutError_InvalidFieldName = -5
+            errs = dict([(-1, "Invalid"), (-3, "Dependent"),
+                         (-4, "NotConstantSize"), (-5, "InvalidFieldName")])
+            loc = "%s:%s" % (cursor.location.file, cursor.location.line)
             log.error('Structure %s is %s %s align:%d size:%d',
                       name, errs[size], loc, align, size)
             raise InvalidDefinitionError('Structure %s is %s %s align:%d size:%d',
                                          name, errs[size], loc, align, size)
-        log.debug('_record_decl: name: %s size:%d', name, size)
+        else:
+            log.debug('_record_decl: name: %s size:%d', name, size)
         # Declaration vs Definition point
         # when a struct decl happen before the definition, we have no members
         # in the first declaration instance.
@@ -589,7 +601,7 @@ class CursorHandler(ClangHandler):
         members = []
         # Go and recurse through fields
         fields = list(cursor.type.get_fields())
-        decl_f=[f.type.get_declaration() for f in fields]
+        decl_f = [f.type.get_declaration() for f in fields]
         log.debug('Fields: %s',
                   str(['%s/%s' % (f.kind.name, f.spelling) for f in fields]))
         for field in fields:
@@ -619,7 +631,7 @@ class CursorHandler(ClangHandler):
             log.debug('_record_decl: %s was previously registered', name)
         obj = self.get_registered(name)
         obj.members = members
-        #obj.packed = packed
+        # obj.packed = packed
         # final fixup
         self._fixup_record(obj)
         return obj
@@ -856,7 +868,7 @@ class CursorHandler(ClangHandler):
     CLASS_DECL = STRUCT_DECL
     _fixup_Class = _fixup_record
 
-    #@log_entity DEBUG
+    # @log_entity DEBUG
     def FIELD_DECL(self, cursor):
         """
         Handles Field declarations.
@@ -877,7 +889,7 @@ class CursorHandler(ClangHandler):
         if cursor.is_anonymous() or (name == '' and cursor.is_bitfield()):
             # get offset by iterating all fields of parent
             # corner case for anonymous fields
-            #if offset == -5: use field.get_offset_of()
+            # if offset == -5: use field.get_offset_of()
             offset = cursor.get_field_offsetof()
             prev = fieldnum = -1
             for i, _f in enumerate(parent.type.get_fields()):
@@ -924,7 +936,7 @@ class CursorHandler(ClangHandler):
         else:
             children = list(cursor.get_children())
             log.debug('FIELD_DECL: we now look for the declaration name.'
-                      'kind %s',_decl.kind)
+                      'kind %s', _decl.kind)
             if len(children) > 0 and _decl.kind == CursorKind.NO_DECL_FOUND:
                 # constantarray of typedef of pointer , and other cases ?
                 _decl_name = self.get_unique_name(
@@ -932,10 +944,10 @@ class CursorHandler(ClangHandler):
                         cursor.get_children())[0])
             else:
                 _decl_name = self.get_unique_name(_decl)
-            log.debug('FIELD_DECL: the declaration name %s',_decl_name)
+            log.debug('FIELD_DECL: the declaration name %s', _decl_name)
             # rename anonymous field type name
             # 2015-06-26 handled in get_name
-            #if cursor.is_anonymous():
+            # if cursor.is_anonymous():
             #    _decl_name += name
             #    log.debug('FIELD_DECL: IS_ANONYMOUS the declaration name %s',_decl_name)
             if self.is_registered(_decl_name):

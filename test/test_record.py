@@ -1,9 +1,9 @@
-import unittest
 import ctypes
+import logging
+import sys
+import unittest
 
-from util import get_cursor
-from util import get_tu
-from util import ClangTest
+from test.util import ClangTest
 
 
 class RecordTest(ClangTest):
@@ -11,10 +11,10 @@ class RecordTest(ClangTest):
     """Test if records are correctly generated for different target archictecture.
     """
 
-    #@unittest.skip('')
     def test_records_x32(self):
         """Test sizes for simple records on i386.
         """
+        # others size tests are in test_fast_clang
         flags = ['-target', 'i386-linux']
         self.gen('test/data/test-records.c', flags)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_Name), 18)
@@ -26,9 +26,6 @@ class RecordTest(ClangTest):
         self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 4)
         self.assertEquals(ctypes.sizeof(self.namespace.mystruct), 5)
 
-    # others size tests are in test_fast_clang
-
-    #@unittest.skip('')
     def test_padding_x32(self):
         """Test padding for simple records on i386.
         """
@@ -88,9 +85,9 @@ class RecordTest(ClangTest):
     def test_record_in_record(self):
         self.convert('''
 typedef struct _complex {
-	struct {
-		int a;
-	};
+    struct {
+        int a;
+    };
 } complex, *pcomplex;
         ''', ['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 4)
@@ -98,12 +95,12 @@ typedef struct _complex {
     def test_record_in_record_2(self):
         self.convert('''
 typedef struct _complex {
-	struct {
-		int a;
-	};
-	struct {
+    struct {
+        int a;
+    };
+    struct {
         long b;
-	};
+    };
 } complex, *pcomplex;
         ''', ['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 8)
@@ -112,10 +109,10 @@ typedef struct _complex {
         self.convert('''
 typedef struct _complex {
     union {
-	    struct {
-		    int a;
-	    };
-	    struct {
+        struct {
+            int a;
+        };
+        struct {
             long b;
             union {
                 int c;
@@ -124,11 +121,11 @@ typedef struct _complex {
                     char e;
                 };
             };
-	    };
-	    struct {
+        };
+        struct {
             long f;
-	    };
-	    int g;
+        };
+        int g;
     };
 } complex, *pcomplex;
         ''', ['-target', 'i386-linux'])
@@ -137,12 +134,12 @@ typedef struct _complex {
     def test_record_in_record_packed(self):
         self.convert('''
 typedef struct _complex {
-	struct {
-		char a;
-	};
-	struct __attribute__((packed)) {
-		char b;
-	};
+    struct {
+        char a;
+    };
+    struct __attribute__((packed)) {
+        char b;
+    };
 } complex, *pcomplex;
         ''', ['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 2)
@@ -168,9 +165,15 @@ struct entry {
         self.assertEquals(ctypes.sizeof(self.namespace.struct_example_detail), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_example), 12)
 
+    def test_incomplete_struct(self):
+        self.convert('''
+struct Foo;
+void do_something(struct Foo* foo);
+        ''')
+        self.assertTrue(hasattr(self.namespace, 'struct_Foo'))
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_Foo), 0)
 
-import logging
-import sys
+
 if __name__ == "__main__":
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     # logging.getLogger('codegen').setLevel(logging.INFO)

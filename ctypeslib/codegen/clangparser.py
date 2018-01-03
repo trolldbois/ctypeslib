@@ -164,6 +164,7 @@ class Clang_Parser(object):
             for child in node.get_children():
                 self.startElement(child)
         except InvalidDefinitionError:
+            # if the definition is invalid
             pass
         # startElement returns None.
         return None
@@ -339,6 +340,7 @@ typedef void* pointer_t;''', flags=_flags)
             elif location is None:
                 # FIXME make this optional to be able to see internals
                 # FIXME macro/alias are here
+                log.warning("No source location in %s - ignoring", _id)
                 remove.append(_id)
 
         for _x in remove:
