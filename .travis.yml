@@ -8,7 +8,6 @@ python:
   - "2.7"
   - "3.6"
 
-
 install:
 # travis-ci 201801 use Trusty and comes with py27 py34 and clang 5, but not libclang1-5
   - sudo apt-add-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main" --yes

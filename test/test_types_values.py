@@ -103,18 +103,18 @@ class ConstantsTest(ClangTest):
         self.gen('test/data/test-strings.cpp', ['-x', 'c++', '--std=c++11'])
         # force c++ lang for wchar
         # source code failures , wchar_16_t, u8 and u8R not recognised
-        self.assertEqual(len(self.namespace.c.encode('utf-8')), 12 * 8 // 8 - 1)
-        self.assertEqual(len(self.namespace.d.encode('utf-8')), 12 * 8 // 8 - 1)
+        self.assertEqual(len(self.namespace.c), 12 * 8 // 8 - 1)
+        self.assertEqual(len(self.namespace.d), 12 * 8 // 8 - 1)
         # should be 6*16/8
-        self.assertEqual(len(self.namespace.e.encode('utf-8')), 11)
+        self.assertEqual(len(self.namespace.e), 11)
         # should be 6*32/8
-        self.assertEqual(len(self.namespace.f.encode('utf-8')), 11)
+        self.assertEqual(len(self.namespace.f), 11)
         # should be 6*16/8
-        self.assertEqual(len(self.namespace.g.encode('utf-8')), 11)
+        self.assertEqual(len(self.namespace.g), 11)
         # should be 6*32/8
-        self.assertEqual(len(self.namespace.h.encode('utf-8')), 11)
+        self.assertEqual(len(self.namespace.h), 11)
         # should be 6*16/8
-        self.assertEqual(len(self.namespace.i.encode('utf-8')), 11)
+        self.assertEqual(len(self.namespace.i), 11)
 
     def test_char(self):
         self.convert("""
