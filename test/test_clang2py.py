@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import unittest
 
 from test.util import ClangTest
@@ -39,8 +40,10 @@ class InputOutput(ClangTest):
         """run cat  test/data/test-includes.h | clang2py"""
         p, output, stderr = run(['clang2py', '-o', '/dev/null'])
         self.assertEqual(p.returncode, 2)
-        # self.assertIn("error: too few arguments", stderr) # py2
-        self.assertIn("error: the following arguments are required", stderr)
+        if sys.version_info[0] < 3:
+            self.assertIn("error: too few arguments", stderr) # py2
+        else:
+            self.assertIn("error: the following arguments are required", stderr)
 
 
 class ArgumentInclude(ClangTest):

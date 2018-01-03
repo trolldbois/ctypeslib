@@ -402,10 +402,12 @@ typedef union MY_ROOT_UNION {
         self.assertEqual(ctypes.sizeof(self.namespace.union_MY_ROOT_UNION), 16)
         self.assertSizes("union_MY_ROOT_UNION")
 
-    #@unittest.skip('')
-    # no macro support yet
+    # L"string" not supported
+    # -1 literal is split as ['-','1']
     @unittest.expectedFailure
     def test_defines(self):
+        # we need macros
+        self.full_parsing_options = True
         self.convert("""
         #define zero 0
         #define one 1
