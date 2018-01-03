@@ -3,7 +3,8 @@
 [![Build Status](https://travis-ci.org/trolldbois/ctypeslib.svg?branch=master)](https://travis-ci.org/trolldbois/ctypeslib)
 [![Coverage Status](https://coveralls.io/repos/trolldbois/ctypeslib/badge.svg)](https://coveralls.io/r/trolldbois/ctypeslib)
 [![Code Health](https://landscape.io/github/trolldbois/ctypeslib/master/landscape.svg?style=flat)](https://landscape.io/github/trolldbois/ctypeslib/master)
-[![pypi](https://img.shields.io/pypi/dm/ctypeslib.svg)](https://pypi.python.org/pypi/ctypeslib2)
+[![Latest release](https://img.shields.io/github/tag/trolldbois/ctypeslib.svg)]()
+[![Supported versions](https://img.shields.io/pypi/pyversions/ctypeslib2.svg)]()
 
 [Quick usage guide](docs/ctypeslib_2.0_Introduction.ipynb) in the docs/ folder.
 
