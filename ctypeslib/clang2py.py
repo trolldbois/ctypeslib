@@ -7,8 +7,8 @@ import re
 import sys
 
 import ctypeslib
-from ctypeslib.codegen.codegenerator import generate_code
 from ctypeslib.codegen import typedesc
+from ctypeslib.codegen.codegenerator import generate_code
 
 ################################################################
 windows_dll_names = """\
@@ -39,6 +39,7 @@ msimg32
 netapi32
 rpcrt4""".split()
 
+
 # rpcndr
 # ntdll
 
@@ -47,7 +48,7 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
 
-    local_platform_triple = "%s-%s"%(platform.machine(),platform.system())
+    local_platform_triple = "%s-%s" % (platform.machine(), platform.system())
     clang_opts = []
     files = None
 
@@ -63,7 +64,7 @@ def main(argv=None):
                         action="store_true",
                         help="include source doxygen-style comments",
                         default=False)
-    parser.add_argument("-d","--doc",
+    parser.add_argument("-d", "--doc",
                         dest="generate_docstrings", action="store_true",
                         help="include docstrings containing C prototype and source file location",
                         default=False)
@@ -79,16 +80,16 @@ def main(argv=None):
     parser.add_argument("-k", "--kind",
                         action="store",
                         dest="kind", help="kind of type descriptions to include: "
-                        "a = Alias,\n"
-                        "c = Class,\n"
-                        "d = Variable,\n"
-                        "e = Enumeration,\n"
-                        "f = Function,\n"
-                        "m = Macro, #define\n"
-                        "s = Structure,\n"
-                        "t = Typedef,\n"
-                        "u = Union\n"
-                        "default = 'cdefstu'\n",
+                                          "a = Alias,\n"
+                                          "c = Class,\n"
+                                          "d = Variable,\n"
+                                          "e = Enumeration,\n"
+                                          "f = Function,\n"
+                                          "m = Macro, #define\n"
+                                          "s = Structure,\n"
+                                          "t = Typedef,\n"
+                                          "u = Union\n"
+                                          "default = 'cdefstu'\n",
                         metavar="TYPEKIND",
                         default="cdefstu")
 
@@ -98,7 +99,7 @@ def main(argv=None):
                         help="include declaration defined outside of the sourcefiles",
                         default=False)
 
-    parser.add_argument("-l","--include-library",
+    parser.add_argument("-l", "--include-library",
                         dest="dll",
                         help="library to search for exported functions. Add multiple times if required",
                         action="append",
@@ -109,70 +110,70 @@ def main(argv=None):
     else:
         default_modules = []  # ctypes is already imported
 
-    parser.add_argument("-m","--module",
+    parser.add_argument("-m", "--module",
                         dest="modules",
                         metavar="module",
                         help="Python module(s) containing symbols which will "
-                        "be imported instead of generated",
+                             "be imported instead of generated",
                         action="append",
                         default=default_modules)
 
-    parser.add_argument("-o","--output",
+    parser.add_argument("-o", "--output",
                         dest="output",
                         help="output filename (if not specified, standard output will be used)",
                         default="-")
 
-    parser.add_argument("-p","--preload",
+    parser.add_argument("-p", "--preload",
                         dest="preload",
                         metavar="DLL",
                         help="dll to be loaded before all others (to resolve symbols)",
                         action="append",
                         default=[])
 
-    parser.add_argument("-q","--quiet",
+    parser.add_argument("-q", "--quiet",
                         action="store_const",
                         const="quiet",
                         help="Shut down warnings and below",
                         default=False)
 
-    parser.add_argument("-r","--regex",
+    parser.add_argument("-r", "--regex",
                         dest="expressions",
                         metavar="EXPRESSION",
                         action="append",
                         help="regular expression for symbols to include "
-                        "(if neither symbols nor expressions are specified,"
-                        "everything will be included)",
+                             "(if neither symbols nor expressions are specified,"
+                             "everything will be included)",
                         default=None)
 
-    parser.add_argument("-s","--symbol",
+    parser.add_argument("-s", "--symbol",
                         dest="symbols",
                         metavar="SYMBOL",
                         action="append",
                         help="symbol to include "
-                        "(if neither symbols nor expressions are specified,"
-                        "everything will be included)",
+                             "(if neither symbols nor expressions are specified,"
+                             "everything will be included)",
                         default=None)
 
-    parser.add_argument("-t","--target",
+    parser.add_argument("-t", "--target",
                         dest="target",
                         help="target architecture (default: %s)" % local_platform_triple,
-                        default=None) # actually let clang alone decide.
+                        default=None)  # actually let clang alone decide.
 
-    parser.add_argument("-v","--verbose",
+    parser.add_argument("-v", "--verbose",
                         action="store_true",
                         dest="verbose",
                         help="verbose output",
                         default=False)
     parser.add_argument('-V', '--version',
                         action='version',
-                        version="%(prog)s version "+version)
+                        version="%(prog)s version " + version)
 
     parser.add_argument("-w",
                         action="store",
                         default=windows_dlls,
                         help="add all standard windows dlls to the searched dlls list")
 
-    parser.add_argument("-x","--exclude-includes",
+    parser.add_argument("-x", "--exclude-includes",
                         action="store_true",
                         default=False,
                         help="Parse object in sources files only. Ignore includes")
@@ -212,9 +213,9 @@ def main(argv=None):
             raise ValueError('stdin is not supported')
         files.append(f.name)
         f.close()
-    #files = [f.name for f in options.files]
+    # files = [f.name for f in options.files]
     if options.target is not None:
-        clang_opts = ["-target",options.target]
+        clang_opts = ["-target", options.target]
     if options.clang_args is not None:
         clang_opts.extend(options.clang_args.split(" "))
 
@@ -285,11 +286,9 @@ def main(argv=None):
         for char in options.kind:
             try:
                 typ = type_table[char]
+                types.extend(typ)
             except KeyError:
-                parser.error(
-                    "%s is not a valid choice for a TYPEKIND" %
-                    (char))
-            types.extend(typ)
+                parser.error("%s is not a valid choice for a TYPEKIND" % char)
         options.kind = tuple(types)
 
     generate_code(files, stream,
