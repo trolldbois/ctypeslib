@@ -1,21 +1,21 @@
 """clangparser - use clang to get preprocess a source code."""
 
+import logging
+
 from clang.cindex import Index, TranslationUnit
 from clang.cindex import TypeKind
 
-from ctypeslib.codegen import typedesc
 from ctypeslib.codegen import cursorhandler
+from ctypeslib.codegen import typedesc
 from ctypeslib.codegen import typehandler
 from ctypeslib.codegen import util
-from ctypeslib.codegen.handler import InvalidDefinitionError
 from ctypeslib.codegen.handler import DuplicateDefinitionException
+from ctypeslib.codegen.handler import InvalidDefinitionError
 
-import logging
 log = logging.getLogger('clangparser')
 
 
 class Clang_Parser(object):
-
     """
     Will parse libclang AST tree to create a representation of Types and
     different others source code objects objets as described in Typedesc.
@@ -24,10 +24,10 @@ class Clang_Parser(object):
     declaration will be cached and saved.
     """
 
-    has_values = set(["Enumeration", "Function", "FunctionType",
-                      "OperatorFunction", "Method", "Constructor",
-                      "Destructor", "OperatorMethod",
-                      "Converter"])
+    has_values = {"Enumeration", "Function", "FunctionType",
+                  "OperatorFunction", "Method", "Constructor",
+                  "Destructor", "OperatorMethod",
+                  "Converter"}
 
     # FIXME, macro definition __SIZEOF_DOUBLE__
     ctypes_typename = {
