@@ -6,7 +6,6 @@ from test.util import ClangTest
 
 
 class ConstantsTest(ClangTest):
-
     """Tests from the original ctypeslib.
     """
 
@@ -77,10 +76,10 @@ class ConstantsTest(ClangTest):
         self.assertEqual(type(self.namespace.X), str)
         self.assertEqual(self.namespace.w_zero, 0)
         # type cast will not work.
-        #self.assertEqual(type(self.namespace.w_zero), unicode)
+        # self.assertEqual(type(self.namespace.w_zero), unicode)
 
     def test_unicode(self):
-        ''' unicode conversion test from unittest in clang'''
+        """ unicode conversion test from unittest in clang"""
         self.gen('test/data/test-strings.cpp', ['-x', 'c++'])
         # force c++ lang for wchar
         self.assertEqual(self.namespace.aa, '\xc0\xe9\xee\xf5\xfc')  # "Àéîõü")
@@ -91,16 +90,16 @@ class ConstantsTest(ClangTest):
 
     @unittest.expectedFailure
     def test_unicode_wchar(self):
-        ''' unicode conversion test from unittest in clang'''
+        """ unicode conversion test from unittest in clang"""
         self.gen('test/data/test-strings.cpp', ['-x', 'c++'])
         # should be 10 or 20
         self.assertEqual(len(self.namespace.b.encode("utf-8")), 10)
         # utf-32, not supported. Should be 6 or 12
         self.assertEqual(len(self.namespace.b2.encode("utf-8")), 6)
 
-    #@unittest.expectedFailure
+    # @unittest.expectedFailure
     def test_unicode_cpp11(self):
-        ''' unicode conversion test from unittest in clang'''
+        """ unicode conversion test from unittest in clang"""
         self.gen('test/data/test-strings.cpp', ['-x', 'c++', '--std=c++11'])
         # force c++ lang for wchar
         # source code failures , wchar_16_t, u8 and u8R not recognised
@@ -126,7 +125,7 @@ class ConstantsTest(ClangTest):
         self.assertEqual(type(self.namespace.x), str)
         self.assertEqual(self.namespace.zero, 0)
         # type casting will not work in ctypes anyway
-        #self.assertEqual(type(self.namespace.zero), str)
+        # self.assertEqual(type(self.namespace.zero), str)
 
     def test_char_p(self):
         self.convert("""
@@ -153,14 +152,14 @@ class ConstantsTest(ClangTest):
         self.assertSizes("union_u")
 
     def test_array(self):
-        self.convert('''
+        self.convert("""
         char c1[];
         char c2[3] = {'a','b','c'};
         char c3[] = {'a','b','c'};
         int tab1[];
         int tab2[3] = {1,2,3};
         int tab3[] = {1,2,3};
-        ''')
+        """)
         self.assertEqual(self.namespace.c1, [])
         self.assertEqual(self.namespace.c2, ['a', 'b', 'c'])
         self.assertEqual(self.namespace.c3, ['a', 'b', 'c'])
@@ -189,18 +188,18 @@ class ConstantsTest(ClangTest):
         self.assertSizes("struct_tagEMPTY")
 
     def test_struct_named_twice(self):
-        self.convert('''
+        self.convert("""
         typedef struct xyz {
             int a;
         } xyz;
-        ''')
+        """)
         self.assertEqual(ctypes.sizeof(self.namespace.struct_xyz), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.xyz), 4)
         self.assertSizes('xyz')
         self.assertSizes("struct_xyz")
 
     def test_struct_with_pointer(self):
-        self.convert('''
+        self.convert("""
         struct x {
             int y;
         };
@@ -209,7 +208,7 @@ class ConstantsTest(ClangTest):
         typedef struct p {
             x_n_t g[1];
         } *p_t;
-        ''', flags=['-target', 'x86_64'])
+        """, flags=['-target', 'x86_64'])
         self.assertEqual(ctypes.sizeof(self.namespace.struct_x), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.x_n_t), 8)
         self.assertEqual(ctypes.sizeof(self.namespace.struct_p), 8)
@@ -218,7 +217,7 @@ class ConstantsTest(ClangTest):
         self.assertSizes('p_t')
 
     def test_struct_with_struct_array_member_type(self):
-        self.convert('''
+        self.convert("""
         struct foo {
              int bar;
         };
@@ -226,7 +225,7 @@ class ConstantsTest(ClangTest):
         typedef struct {
             foo_t baz;
         } somestruct;
-        ''', flags=['-target', 'i386-linux'])
+        """, flags=['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.struct_foo), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.foo_t), 4 * 256)
         self.assertEqual(ctypes.sizeof(self.namespace.somestruct), 4 * 256)
@@ -235,14 +234,14 @@ class ConstantsTest(ClangTest):
         self.assertSizes("somestruct")
 
     def test_struct_with_struct_array_member(self):
-        self.convert('''
+        self.convert("""
         typedef struct A {
             int x
         } structA_t;
         struct B {
             structA_t x[8];
         };
-        ''', flags=['-target', 'i386-linux'])
+        """, flags=['-target', 'i386-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.struct_A), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.structA_t), 4)
         self.assertEqual(ctypes.sizeof(self.namespace.struct_B), 4 * 8)
@@ -251,30 +250,30 @@ class ConstantsTest(ClangTest):
         self.assertSizes("struct_B")
 
     def test_var_decl_and_scope(self):
-        self.convert('''
+        self.convert("""
         int zig;
 
         inline void foo() {
           int zig;
         };
-        ''')
+        """)
         # FIXME: TranslationUnit PARSE_SKIP_FUNCTION_BODIES
         self.assertEqual(self.namespace.zig, None)
-        #self.assertEqual(type(self.namespace.foo), None)
+        # self.assertEqual(type(self.namespace.foo), None)
 
     def test_extern_function_pointer(self):
-        self.convert('''
+        self.convert("""
         extern int (*func_ptr)(const char *arg);
-        ''')
+        """)
         self.assertEqual(self.namespace.func_ptr._restype_, ctypes.c_int)
         self.assertEqual(
             self.namespace.func_ptr._argtypes_[0].__name__,
             'LP_c_char')
 
     def test_extern_function_pointer_multiarg(self):
-        self.convert('''
+        self.convert("""
         extern int (*func_ptr)(const char *arg, int c);
-        ''')
+        """)
         self.assertEqual(self.namespace.func_ptr._restype_, ctypes.c_int)
         self.assertEqual(
             self.namespace.func_ptr._argtypes_[0].__name__,
@@ -284,12 +283,12 @@ class ConstantsTest(ClangTest):
             'c_int')
 
     def test_operation(self):
-        self.convert('''
+        self.convert("""
         int i = -1;
         int i2 = -1+2*3/2-3;
         int i3 = -((1-2)*(1-2));
         int j = -i;
-        ''')
+        """)
         self.assertEqual(self.namespace.i, -1)
         self.assertEqual(self.namespace.i2, -1)
         self.assertEqual(self.namespace.i3, -1)
@@ -297,12 +296,12 @@ class ConstantsTest(ClangTest):
 
     @unittest.expectedFailure
     def test_array_operation(self):
-        self.convert('''
+        self.convert("""
         int i = 1;
         int a[2] = {1,-2};
         int b[2] = {+1,-2-2+2};
         int c[2] = {+i,-i*2};
-        ''')
+        """)
         self.assertEqual(self.namespace.a, [1, -2])
         self.assertEqual(self.namespace.b, [1, -2])
         self.assertEqual(self.namespace.c, [1, -2])  # unsuported ref_expr
@@ -315,8 +314,8 @@ class ConstantsTest(ClangTest):
         """)
         self.assertEqual(self.namespace.minusone, 4294967295)
 
-    # no macro support yet
-    #@unittest.expectedFailure
+        # no macro support yet
+        # @unittest.expectedFailure
         self.full_parsing_options = True
         self.convert("""
     def test_macro(self):
@@ -331,7 +330,7 @@ class ConstantsTest(ClangTest):
     def test_anonymous_struct(self):
         flags = ['-target', 'i386-linux']
         self.convert(
-            '''
+            """
         struct X {
             struct {
                 long cancel_jmp_buf[8];
@@ -339,8 +338,8 @@ class ConstantsTest(ClangTest):
             } cancel_jmp_buf[8];
             void * pad[4];
         };
-        ''', flags)
-        #import code
+        """, flags)
+        # import code
         # code.interact(local=locals())
         self.assertEqual(ctypes.sizeof(self.namespace.struct_X), 304)
         self.assertSizes("struct_X")
@@ -348,7 +347,7 @@ class ConstantsTest(ClangTest):
     def test_anonymous_struct_extended(self):
         flags = ['-target', 'x86_64-linux']
         self.convert(
-            '''
+            """
 typedef unsigned long int uint64_t;
 typedef uint64_t ULONGLONG;
 typedef union MY_ROOT_UNION {
@@ -390,7 +389,7 @@ typedef union MY_ROOT_UNION {
  };
 } __attribute__((packed)) MY_ROOT_UNION, *PMY_ROOT_UNION, **PPMY_ROOT_UNION ;
         };
-        ''', flags)
+        """, flags)
         self.assertIn("MY_ROOT_UNION", self.namespace.keys())
         self.assertIn("struct_MY_ROOT_UNION_0", self.namespace.keys())
         self.assertIn("struct_MY_ROOT_UNION_1", self.namespace.keys())
@@ -428,8 +427,8 @@ typedef union MY_ROOT_UNION {
         self.assertEqual(self.namespace.minusone, -1)
         self.assertEqual(self.namespace.maxint, 2147483647)
         self.assertEqual(self.namespace.LARGE, 0xFFFFFFFF)
-##        self.assertEqual(self.namespace.VERYLARGE, 0xFFFFFFFFFFFFFFFF)
-##        self.assertEqual(self.namespace.minint, -2147483648)
+        ##        self.assertEqual(self.namespace.VERYLARGE, 0xFFFFFFFFFFFFFFFF)
+        ##        self.assertEqual(self.namespace.minint, -2147483648)
 
         self.assertEqual(self.namespace.spam, "spam")
         self.assertEqual(type(self.namespace.spam), str)
@@ -459,5 +458,5 @@ typedef union MY_ROOT_UNION {
 
 
 if __name__ == "__main__":
-    #logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
+    # logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
     unittest.main()
