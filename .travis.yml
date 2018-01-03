@@ -10,13 +10,11 @@ python:
 
 
 install:
-# travis-ci 201801 use Trusty and comes with py27 py34 and clang 5
-#  - sudo apt-add-repository "deb http://apt.llvm.org/precise/ llvm-toolchain-precise-5.0 main" --yes
-#  - sudo apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main"  --yes
-#  - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
-#  - sudo apt-get update
-# arrrh... http://docs.travis-ci.com/user/languages/python/.
-# system python package will not be used. Can't use python-clang, have to use pip.
+# travis-ci 201801 use Trusty and comes with py27 py34 and clang 5, but not libclang1-5
+  - sudo apt-add-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main" --yes
+  - sudo apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu trusty main"  --yes
+  - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
+  - sudo apt-get update
   - sudo apt-get install libclang1-5.0 libclang-5.0-dev --yes --force-yes
 #permission denied  - sudo echo `echo "/usr/lib/llvm-4.0/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
 #  - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang-5.0.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
@@ -25,6 +23,8 @@ install:
   - pip install coveralls
 
 script:
+# http://docs.travis-ci.com/user/languages/python/.
+# system python package will not be used. Can't use python-clang, have to use pip.
 # we need clang2py in the path. also installs python clang
   - python setup.py develop
 # run tests
