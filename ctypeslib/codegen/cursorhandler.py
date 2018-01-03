@@ -593,7 +593,7 @@ class CursorHandler(ClangHandler):
         log.debug('Fields: %s',
                   str(['%s/%s' % (f.kind.name, f.spelling) for f in fields]))
         for field in fields:
-            log.debug('creating FIELD_DECL for %s/%s',f.kind.name, f.spelling)
+            log.debug('creating FIELD_DECL for %s/%s', field.kind.name, field.spelling)
             members.append(self.FIELD_DECL(field))
         # FIXME BUG clang: anonymous structure field with only one anonymous field
         # is not a FIELD_DECL. does not appear in get_fields() !!!
