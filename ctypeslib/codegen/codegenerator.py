@@ -809,7 +809,7 @@ class Generator(object):
         # doesn't work for the first line in certain cases.
         wrapper = textwrap.TextWrapper(break_long_words=False, initial_indent="    ",
                                        subsequent_indent="    ")
-        text = "[%s]" % ", ".join([repr(str(n)) for n in self.names])
+        text = "[%s]" % ", ".join([repr(str(n)) for n in sorted(self.names)])
         for line in wrapper.wrap(text):
             print(line, file=self.output)
 
