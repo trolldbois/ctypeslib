@@ -227,6 +227,7 @@ class Generator(object):
             if isinstance(tp.typ, typedesc.Enumeration):
                 print("%s__enumvalues = %s__enumvalues" % \
                     (name, self.type_name(tp.typ)), file=self.stream)
+                self.names.add("%s__enumvalues" % name)
 
         self.names.add(tp.name)
         self._typedefs += 1
