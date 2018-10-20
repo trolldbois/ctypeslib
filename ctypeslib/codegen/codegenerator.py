@@ -171,6 +171,7 @@ class Generator(object):
             self.print_comment(macro)
         print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
         self.macros += 1
+        self.names.add(macro.name)
         return
         # We don't know if we can generate valid, error free Python
         # code. All we can do is to try to compile the code.  If the
