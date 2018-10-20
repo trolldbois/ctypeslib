@@ -223,6 +223,12 @@ class Generator(object):
         if tp.name != self.type_name(tp.typ):
             print("%s = %s" % \
                 (name, self.type_name(tp.typ)), file=self.stream)
+
+            if isinstance(tp.typ, typedesc.Enumeration):
+                print("%s__enumvalues = %s__enumvalues" % \
+                    (name, self.type_name(tp.typ)), file=self.stream)
+                self.names.add("%s__enumvalues" % name)
+
         self.names.add(tp.name)
         self._typedefs += 1
         return
@@ -388,6 +394,11 @@ class Generator(object):
             print("# values for enumeration '%s'" % tp.name, file=self.stream)
         else:
             print("# values for unnamed enumeration", file=self.stream)
+        print("%s__enumvalues = {" % tp.name, file=self.stream)
+        for item in tp.values:
+            print("    %s: '%s'," % (int(item.value), item.name), file=self.stream)
+        print("}", file=self.stream)
+
         # Some enumerations have the same name for the enum type
         # and an enum value.  Excel's XlDisplayShapes is such an example.
         # Since we don't have separate namespaces for the type and the values,
