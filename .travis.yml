@@ -14,7 +14,8 @@ install:
   - sudo apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu trusty main"  --yes
   - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
   - sudo apt-get update
-  - sudo apt-get install libclang1-5.0 libclang-5.0-dev --yes --force-yes
+  - sudo apt-get install libclang1-5.0 libclang-5.0-dev python-clang-5.0 --yes --force-yes
+  - sudo cp -r /usr/lib/python2.7/dist-packages/clang $VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/site-packages/
 #permission denied  - sudo echo `echo "/usr/lib/llvm-4.0/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
 #  - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang-5.0.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
 #  - sudo ldconfig
