@@ -162,7 +162,8 @@ class ClangTest(unittest.TestCase):
         """Take a string input, write it into a temp file and the code.
         """
         hfile = mktemp(".h")
-        open(hfile, "w").write(src_code)
+        with open(hfile, "w") as f:
+            f.write(src_code)
         try:
             self.gen(hfile, flags, debug)
         finally:

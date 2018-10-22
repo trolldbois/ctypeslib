@@ -31,8 +31,5 @@ setup(
         'console_scripts': [
             'clang2py = ctypeslib.clang2py:main',
         ]},
-    test_suite="test.alltests",
-    install_requires=[
-        'clang>=3.7',
-    ]
+    test_suite="test.alltests"
 )
