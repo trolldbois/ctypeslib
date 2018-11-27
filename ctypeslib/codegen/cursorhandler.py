@@ -393,8 +393,8 @@ class CursorHandler(ClangHandler):
         else:  # literal or others
             _v = self.parse_cursor(child)
             if isinstance(
-                    _v, list) and child.kind != CursorKind.INIT_LIST_EXPR:
-                log.debug(
+                    _v, list) and child.kind not in [CursorKind.INIT_LIST_EXPR, CursorKind.STRING_LITERAL]:
+                log.warning(
                     '_get_var_decl_init_value_single: TOKENIZATION BUG CHECK: %s',
                     _v)
                 _v = _v[0]
@@ -403,6 +403,31 @@ class CursorHandler(ClangHandler):
             '_get_var_decl_init_value_single: returns %s',
             str(init_value))
         return init_value
+
+    def _clean_string_literal(self, cursor, value):
+        # strip wchar_t type prefix for string/character
+        # indicatively: u8 for utf-8, u for utf-16, U for utf32
+        # assume that the source file is utf-8
+        # utf-32 not supported in 2.7, lets keep all in utf8
+        # FIXME python 3
+        if cursor.kind == CursorKind.CHARACTER_LITERAL:
+            prefix = value[:3].split("'")[0]
+        elif cursor.kind == CursorKind.STRING_LITERAL:
+            prefix = value[:3].split('"')[0]
+        # max prefix len is 3 char
+        value = value[len(prefix) + 1:-1]  # strip delimitors
+        # string literal only: R for raw strings
+        # we need to remove the raw-char-sequence prefix,suffix
+        if 'R' in prefix:
+            # if there is no '(' in the 17 first char, its not valid
+            offset = value[:17].index('(')
+            value = value[offset + 1:-offset - 1]
+        # then we strip encoding
+        for encoding in ['u8', 'L', 'u', 'U']:
+            if encoding in prefix:  # could be Ru ou uR
+                # value = unicode(value, 'utf-8') # FIXME PY3
+                break  # just one prefix is possible
+        return value
 
     @log_entity
     def _literal_handling(self, cursor):
@@ -414,6 +439,11 @@ class CursorHandler(ClangHandler):
             # init_value = ' '.join([t.spelling for t in children[0].get_tokens()
             # if t.spelling != ';'])
         because some literal might need cleaning."""
+        # use a shortcut
+        if cursor.kind == CursorKind.STRING_LITERAL:
+            value = cursor.displayname
+            value = self._clean_string_literal(cursor, value)
+            return value
         tokens = list(cursor.get_tokens())
         log.debug('literal has %d tokens.[ %s ]', len(tokens),
                   str([str(t.spelling) for t in tokens]))
@@ -467,34 +497,16 @@ class CursorHandler(ClangHandler):
                 value = float(value)
             elif (token.cursor.kind == CursorKind.CHARACTER_LITERAL or
                           token.cursor.kind == CursorKind.STRING_LITERAL):
-                # strip wchar_t type prefix for string/character
-                # indicatively: u8 for utf-8, u for utf-16, U for utf32
-                # assume that the source file is utf-8
-                # utf-32 not supported in 2.7, lets keep all in utf8
-                # FIXME python 3
-                # max prefix len is 3 char
-                if token.cursor.kind == CursorKind.CHARACTER_LITERAL:
-                    prefix = value[:3].split("'")[0]
-                elif token.cursor.kind == CursorKind.STRING_LITERAL:
-                    prefix = value[:3].split('"')[0]
-                value = value[len(prefix) + 1:-1]  # strip delimitors
-                # string literal only: R for raw strings
-                # we need to remove the raw-char-sequence prefix,suffix
-                if 'R' in prefix:
-                    # if there is no '(' in the 17 first char, its not valid
-                    offset = value[:17].index('(')
-                    value = value[offset + 1:-offset - 1]
-                # then we strip encoding
-                for encoding in ['u8', 'L', 'u', 'U']:
-                    if encoding in prefix:  # could be Ru ou uR
-                        # value = unicode(value, 'utf-8') # FIXME PY3
-                        break  # just one prefix is possible
+                value = self._clean_string_literal(token.cursor, value)
             # add token
             final_value.append(value)
         # return the EXPR
         # code.interact(local=locals())
         if len(final_value) == 1:
             return final_value[0]
+        # Macro definition of a string using multiple macro
+        if isinstance(final_value, list) and cursor.kind == CursorKind.STRING_LITERAL:
+            final_value = ''.join(final_value)
         return final_value
 
     INTEGER_LITERAL = _literal_handling
@@ -1025,3 +1037,11 @@ class CursorHandler(ClangHandler):
         # set the comment in the obj
         obj.comment = comment
         return True
+
+    # @log_entity
+    # def MACRO_INSTANTIATION(self, cursor):
+    #     log.debug("I was here")
+    #     self.set_location(obj, cursor)
+    #     # set the comment in the obj
+    #     obj.comment = comment
+    #     return True
