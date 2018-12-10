@@ -84,6 +84,9 @@ class Clang_Parser(object):
         """Activates the comment parsing options in the Translation Unit."""
         self.tu_options |= TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION
 
+    def deactivate_function_body_parsing(self):
+        self.tu_options |= TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
+
     def filter_location(self, src_files):
         self.__filter_location = list(src_files)
 

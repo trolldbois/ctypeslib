@@ -414,8 +414,22 @@ class CursorHandler(ClangHandler):
             prefix = value[:3].split("'")[0]
         elif cursor.kind == CursorKind.STRING_LITERAL:
             prefix = value[:3].split('"')[0]
+        elif cursor.kind == CursorKind.MACRO_INSTANTIATION:
+            # prefix = value[:3].split('"')[0]
+            return value
+        elif cursor.kind == CursorKind.MACRO_DEFINITION:
+            # prefix = value[:3].split('"')[0]
+            return value
+        else:
+            prefix = 1
+            pass
         # max prefix len is 3 char
-        value = value[len(prefix) + 1:-1]  # strip delimitors
+        _tmp = value[len(prefix) + 1:-1]  # strip
+        if len(_tmp) == 0:
+            # there was no prefix, this is not a string.
+            return value
+        # value is a string literal
+        value = _tmp
         # string literal only: R for raw strings
         # we need to remove the raw-char-sequence prefix,suffix
         if 'R' in prefix:
@@ -439,18 +453,18 @@ class CursorHandler(ClangHandler):
             # init_value = ' '.join([t.spelling for t in children[0].get_tokens()
             # if t.spelling != ';'])
         because some literal might need cleaning."""
-        # use a shortcut
-        if cursor.kind == CursorKind.STRING_LITERAL:
-            value = cursor.displayname
-            value = self._clean_string_literal(cursor, value)
-            return value
+        # use a shortcut - does not work on unicode var_decl
+        # if cursor.kind == CursorKind.STRING_LITERAL:
+        #     value = cursor.displayname
+        #     value = self._clean_string_literal(cursor, value)
+        #     return value
         tokens = list(cursor.get_tokens())
         log.debug('literal has %d tokens.[ %s ]', len(tokens),
                   str([str(t.spelling) for t in tokens]))
         final_value = []
         # code.interact(local=locals())
         log.debug('cursor.type:%s', cursor.type.kind.name)
-        for token in tokens:
+        for i, token in enumerate(tokens):
             value = token.spelling
             log.debug('token:%s tk.kd:%11s tk.cursor.kd:%15s cursor.kd:%15s',
                       token.spelling, token.kind.name, token.cursor.kind.name,
@@ -498,6 +512,21 @@ class CursorHandler(ClangHandler):
             elif (token.cursor.kind == CursorKind.CHARACTER_LITERAL or
                           token.cursor.kind == CursorKind.STRING_LITERAL):
                 value = self._clean_string_literal(token.cursor, value)
+            elif token.cursor.kind == CursorKind.MACRO_INSTANTIATION:
+                # get the macro value
+                value = self.get_registered(value).body
+                # already cleaned value = self._clean_string_literal(token.cursor, value)
+            elif token.cursor.kind == CursorKind.MACRO_DEFINITION:
+                if i == 0:
+                    # ignore, macro name
+                    pass
+                elif token.kind == TokenKind.LITERAL:
+                    # and just clean it
+                    value = self._clean_string_literal(token.cursor, value)
+                elif token.kind == TokenKind.IDENTIFIER:
+                    # parse that, try to see if there is another Macro in there.
+                    value = self.get_registered(value).body
+
             # add token
             final_value.append(value)
         # return the EXPR
@@ -999,6 +1028,10 @@ class CursorHandler(ClangHandler):
         used with TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD.
         """
         # TODO: optionalize macro parsing. It takes a LOT of time.
+        # ignore system macro
+        if (not hasattr(cursor, 'location') or cursor.location is None or
+                cursor.location.file is None):
+            return False
         name = self.get_unique_name(cursor)
         # if name == 'A':
         #    code.interact(local=locals())
@@ -1013,7 +1046,8 @@ class CursorHandler(ClangHandler):
             if len(tokens) == 2:
                 value = tokens[1]
             else:
-                value = tokens[1:]
+                # just merge the list of tokens
+                value = ''.join(tokens[1:])
         # macro comment maybe in tokens. Not in cursor.raw_comment
         for t in cursor.get_tokens():
             if t.kind == TokenKind.COMMENT:

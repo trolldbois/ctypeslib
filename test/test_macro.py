@@ -37,8 +37,8 @@ char c[] = PRE POST;
 char d[] = PREPOST;''', flags)
         self.assertEquals(self.namespace.a, "what")
         self.assertEquals(self.namespace.b, "why though")
-        self.assertEquals(self.namespace.c, "before after")
-        self.assertEquals(self.namespace.d, "before after")
+        self.assertEquals(self.namespace.c, '"before"" after"')
+        self.assertEquals(self.namespace.d, '"before"" after"')
 
 
 if __name__ == "__main__":

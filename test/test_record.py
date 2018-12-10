@@ -159,6 +159,7 @@ struct entry {
         self.gen('test/data/test-zero-length-array.c', flags)
         self.assertEquals(self.namespace.struct_example_detail.first.offset, 0)
         self.assertEquals(self.namespace.struct_example_detail.last.offset, 4)
+        # FIXME 201801 - Clang still returns members offset as -2 , see bug #28
         self.assertEquals(self.namespace.struct_example.argsz.offset, 0)
         self.assertEquals(self.namespace.struct_example.flags.offset, 4)
         self.assertEquals(self.namespace.struct_example.count.offset, 8)
