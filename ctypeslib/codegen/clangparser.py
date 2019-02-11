@@ -60,6 +60,7 @@ class Clang_Parser(object):
 
     def __init__(self, flags):
         self.all = {}
+        self.all_set = set()
         self.cpp_data = {}
         self._unhandled = []
         self.fields = {}
@@ -178,13 +179,24 @@ class Clang_Parser(object):
 
     def register(self, name, obj):
         """Registers an unique type description"""
+        if (name, obj) in self.all_set:
+            log.debug('register: %s already defined: %s', name, obj.name)
+            return self.all[name]
         if name in self.all:
-            log.debug('register: %s already existed: %s', name, obj.name)
-            # code.interact(local=locals())
-            raise DuplicateDefinitionException(
-                'register: %s already existed: %s' % (name, obj.name))
+            if not isinstance(self.all[name], typedesc.Structure) or (
+                    self.all[name].members is not None):
+                # code.interact(local=locals())
+                raise DuplicateDefinitionException(
+                    'register: %s which has a previous incompatible definition: %s'
+                    '\ndefined here: %s'
+                    '\npreviously defined here: %s'
+                    % (name, obj.name, obj.location, self.all[name].location))
+            if isinstance(self.all[name], typedesc.Structure) and (
+                    self.all[name].members is None):
+                return obj
         log.debug('register: %s ', name)
         self.all[name] = obj
+        self.all_set.add((name, obj))
         return obj
 
     def get_registered(self, name):
@@ -198,6 +210,7 @@ class Clang_Parser(object):
     def remove_registered(self, name):
         """Removes a named type"""
         log.debug('Unregister %s', name)
+        self.all_set.remove((name, self.all[name]))
         del self.all[name]
 
     def make_ctypes_convertor(self, _flags):
@@ -351,7 +364,7 @@ typedef void* pointer_t;''', flags=_flags)
                 remove.append(_id)
 
         for _x in remove:
-            del self.all[_x]
+            self.remove_registered(_x)
 
         # Now we can build the namespace.
         namespace = {}
