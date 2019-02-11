@@ -900,6 +900,8 @@ def generate_code(srcfiles,
             if i.name in syms:
                 todo.append(i)
                 syms.remove(i.name)
+            else:
+                log.debug('not generating {}: not a symbol'.format(i.name))
 
         if syms:
             log.warning("symbols not found %s",
