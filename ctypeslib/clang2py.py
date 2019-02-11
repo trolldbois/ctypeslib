@@ -1,10 +1,15 @@
-#!/usr/bin/python -E
+#!/usr/bin/env python3
 import argparse
 import logging
 import os
 import platform
 import re
+import subprocess
+import six
 import sys
+import traceback
+
+from ctypes import RTLD_LOCAL, RTLD_GLOBAL
 
 import ctypeslib
 from ctypeslib.codegen import typedesc
@@ -42,6 +47,54 @@ rpcrt4""".split()
 
 # rpcndr
 # ntdll
+
+
+class LibraryMeta(type):
+
+    def __call__(cls, name, mode=RTLD_LOCAL, nm=None):
+
+        if os.name == "nt":
+            from ctypes import WinDLL
+            # WinDLL does demangle the __stdcall names, so use that.
+            return WinDLL(name, mode=mode)
+        if os.path.exists(name) and mode != RTLD_GLOBAL and nm is not None:
+            # Use 'nm' on Unixes to load native and cross-compiled libraries
+            # (this is only possible if mode != RTLD_GLOBAL)
+            return super().__call__(name, nm)
+        from ctypes import CDLL
+        from ctypes.util import find_library
+        path = find_library(name)
+        if path is None:
+            # Maybe 'name' is not a library name in the linker style,
+            # give CDLL a last chance to find the library.
+            path = name
+        return CDLL(path, mode=mode)
+
+
+class Library(six.with_metaclass(LibraryMeta)):
+
+    def __init__(self, filepath, nm):
+        self.filepath = filepath
+        self._name = os.path.basename(self.filepath)
+        self.symbols = {}
+        self._get_symbols(nm)
+
+    # nm will print lines like this:
+    # <addr> <kind> <name>
+    def _get_symbols(self, nm):
+        cmd = [nm, "--defined-only", "--extern-only", self.filepath]
+        output = subprocess.check_output(cmd, universal_newlines=True)
+        for line in output.split('\n'):
+            fields = line.split(' ', 2)
+            if len(fields) >= 3 and fields[1] == "T":
+                self.symbols[fields[2]] = fields[0]
+
+    def __getattr__(self, name):
+        try:
+            return self.symbols[name]
+        except KeyError:
+            pass
+        raise AttributeError(name)
 
 
 def main(argv=None):
@@ -117,6 +170,11 @@ def main(argv=None):
                              "be imported instead of generated",
                         action="append",
                         default=default_modules)
+
+    parser.add_argument("--nm",
+                        dest="nm",
+                        default="nm",
+                        help="nm program to use to extract symbols from libraries")
 
     parser.add_argument("-o", "--output",
                         dest="output",
@@ -217,7 +275,7 @@ def main(argv=None):
     if options.target is not None:
         clang_opts = ["-target", options.target]
     if options.clang_args is not None:
-        clang_opts.extend(options.clang_args.split(" "))
+        clang_opts.extend(re.split("\s+", options.clang_args))
 
     level = logging.INFO
     if options.debug:
@@ -228,8 +286,10 @@ def main(argv=None):
 
     if options.output == "-":
         stream = sys.stdout
+        output_file = None
     else:
         stream = open(options.output, "w")
+        output_file = stream
 
     if options.expressions:
         options.expressions = map(re.compile, options.expressions)
@@ -240,28 +300,13 @@ def main(argv=None):
 
     known_symbols = {}
 
-    from ctypes import CDLL, RTLD_LOCAL, RTLD_GLOBAL
-    from ctypes.util import find_library
+    # Preload libraries
+    [Library(
+        name,
+        mode=RTLD_GLOBAL) for name in options.preload]
 
-    # local library finding
-    def load_library(name, mode=RTLD_LOCAL):
-        if os.name == "nt":
-            from ctypes import WinDLL
-            # WinDLL does demangle the __stdcall names, so use that.
-            return WinDLL(name, mode=mode)
-        path = find_library(name)
-        if path is None:
-            # Maybe 'name' is not a library name in the linker style,
-            # give CDLL a last chance to find the library.
-            path = name
-        return CDLL(path, mode=mode)
-
-    preloaded_dlls = [
-        load_library(
-            name,
-            mode=RTLD_GLOBAL) for name in options.preload]
-
-    dlls = [load_library(name) for name in options.dll]
+    # List exported symbols from libraries
+    dlls = [Library(name, nm=options.nm) for name in options.dll]
 
     for name in options.modules:
         mod = __import__(name)
@@ -291,21 +336,32 @@ def main(argv=None):
                 parser.error("%s is not a valid choice for a TYPEKIND" % char)
         options.kind = tuple(types)
 
-    generate_code(files, stream,
-                  symbols=options.symbols,
-                  expressions=options.expressions,
-                  verbose=options.verbose,
-                  generate_comments=options.generate_comments,
-                  generate_docstrings=options.generate_docstrings,
-                  generate_locations=options.generate_locations,
-                  filter_location=not options.generate_includes,
-                  known_symbols=known_symbols,
-                  searched_dlls=dlls,
-                  preloaded_dlls=options.preload,
-                  types=options.kind,
-                  flags=clang_opts)
+    try:
+        generate_code(files, stream,
+                      symbols=options.symbols,
+                      expressions=options.expressions,
+                      verbose=options.verbose,
+                      generate_comments=options.generate_comments,
+                      generate_docstrings=options.generate_docstrings,
+                      generate_locations=options.generate_locations,
+                      filter_location=not options.generate_includes,
+                      known_symbols=known_symbols,
+                      searched_dlls=dlls,
+                      preloaded_dlls=options.preload,
+                      types=options.kind,
+                      flags=clang_opts)
+    except:
+        if output_file is not None:
+            output_file.close()
+            os.remove(options.output)
+        raise
+    return 0
 
 
 if __name__ == "__main__":
-    # sys.exit(main())
-    main()
+    try:
+        sys.exit(main())
+    except Exception:
+        # return non-zero exit status in case of an unhandled exception
+        traceback.print_exc()
+        sys.exit(1)
