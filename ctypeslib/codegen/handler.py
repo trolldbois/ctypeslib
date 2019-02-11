@@ -8,6 +8,7 @@ from ctypeslib.codegen.util import log_entity
 import logging
 log = logging.getLogger('handler')
 
+
 class CursorKindException(TypeError):
 
     """When a child node of a VAR_DECL is parsed as an initialization value,
@@ -19,6 +20,12 @@ class InvalidDefinitionError(TypeError):
 
     """When a structure is invalid in the source code,  sizeof, alignof returns
     negatives value. We detect it and do our best."""
+    pass
+
+
+class InvalidTranslationUnitException(TypeError):
+
+    """When a translation unit is invalid"""
     pass
 
 

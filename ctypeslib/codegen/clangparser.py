@@ -11,6 +11,7 @@ from ctypeslib.codegen import typehandler
 from ctypeslib.codegen import util
 from ctypeslib.codegen.handler import DuplicateDefinitionException
 from ctypeslib.codegen.handler import InvalidDefinitionError
+from ctypeslib.codegen.handler import InvalidTranslationUnitException
 
 log = logging.getLogger('clangparser')
 
@@ -109,12 +110,14 @@ class Clang_Parser(object):
             return
         if len(self.tu.diagnostics) > 0:
             for x in self.tu.diagnostics:
-                log.warning(x.spelling)
+                msg = "{} ({}:{}:{})".format(
+                    x.spelling, filename,
+                    x.location.line, x.location.column)
+                log.warning(msg)
                 if x.severity > 2:
                     log.warning("Source code has some error. Please fix.")
-                    log.warning(x.spelling)
                     # code.interact(local=locals())
-                    break
+                    raise InvalidTranslationUnitException(msg)
         root = self.tu.cursor
         for node in root.get_children():
             self.startElement(node)
@@ -167,6 +170,7 @@ class Clang_Parser(object):
             for child in node.get_children():
                 self.startElement(child)
         except InvalidDefinitionError:
+            log.exception('Invalid definition')
             # if the definition is invalid
             pass
         # startElement returns None.
