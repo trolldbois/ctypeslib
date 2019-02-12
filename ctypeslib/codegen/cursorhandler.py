@@ -873,19 +873,18 @@ class CursorHandler(ClangHandler):
         padding_nb += 1
         log.debug("_make_padding: for %d bits", length)
         if (length % 8) != 0 or (prev_member is not None and prev_member.is_bitfield):
-            # add a padding to align with the bitfield type
-            # then multiple bytes if required.
-            # pad_length = (length % 8)
-            typename = prev_member.type.name
+            if length > 32:
+                typename = "c_uint64"
+            elif length > 16:
+                typename = "c_uint32"
+            elif length > 8:
+                typename = "c_uint16"
+            else:
+                typename = "c_uint8"
             padding = typedesc.Field(name,
                                      typedesc.FundamentalType(typename, 1, 1),
-                                     # offset, pad_length, is_bitfield=True)
                                      offset, length, is_bitfield=True, is_padding=True)
             members.append(padding)
-            # check for multiple bytes
-            # if (length//8) > 0:
-            #    padding_nb = self._make_padding(members, padding_nb, offset+pad_length,
-            #                            (length//8)*8, prev_member=padding)
             return padding_nb
         elif length > 8:
             pad_bytes = length // 8
