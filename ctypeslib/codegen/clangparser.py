@@ -1,6 +1,7 @@
 """clangparser - use clang to get preprocess a source code."""
 
 import logging
+import os
 
 from clang.cindex import Index, TranslationUnit
 from clang.cindex import TypeKind
@@ -72,6 +73,7 @@ class Clang_Parser(object):
         self.cursorkind_handler = cursorhandler.CursorHandler(self)
         self.typekind_handler = typehandler.TypeHandler(self)
         self.__filter_location = None
+        self.__processed_location = set()
 
     def init_parsing_options(self):
         """Set the Translation Unit to skip functions bodies per default."""
@@ -90,7 +92,8 @@ class Clang_Parser(object):
         self.tu_options |= TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
 
     def filter_location(self, src_files):
-        self.__filter_location = list(src_files)
+        self.__filter_location = list(
+            map(lambda f: os.path.abspath(f), src_files))
 
     def parse(self, filename):
         """
@@ -104,6 +107,8 @@ class Clang_Parser(object):
         . for each VAR_DECL, register a Variable
         . for each TYPEREF ??
         """
+        if os.path.abspath(filename) in self.__processed_location:
+            return
         index = Index.create()
         self.tu = index.parse(filename, self.flags, options=self.tu_options)
         if not self.tu:
@@ -151,7 +156,10 @@ class Clang_Parser(object):
             # FIXME: go back on dependencies ?
             if node.location.file is None:
                 return
-            elif node.location.file.name not in self.__filter_location:
+            filepath = os.path.abspath(node.location.file.name)
+            if filepath not in self.__filter_location:
+                if not filepath.startswith('/usr'):
+                    log.debug("skipping include '%s'", filepath)
                 return
         # find and call the handler for this element
         log.debug(
@@ -164,6 +172,9 @@ class Clang_Parser(object):
         # build stuff.
         try:
             stop_recurse = self.parse_cursor(node)
+            if node.location.file is not None:
+                filepath = os.path.abspath(node.location.file.name)
+                self.__processed_location.add(filepath)
             # Signature of parse_cursor is:
             # if the fn returns True, do not recurse into children.
             # anything else will be ignored.

@@ -120,6 +120,14 @@ struct complex2 {
     int h;
 };
 
+struct complex3 {
+    unsigned int a1:1;
+    unsigned int b1:1;
+    // len(long long)-2 bits padding
+    // x64: 62 bits padding
+    unsigned long long a2;
+};
+
 
 // anonymous field
 struct anonfield {
