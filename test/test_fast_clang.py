@@ -16,7 +16,7 @@ class CompareSizes(ClangTest):
         """Test sizes of pod."""
         targets = ['_char', '_short', '_int', '_uint', '_long', '_ulong',
                    '_double', '_longdouble', '_float', '_ptr']
-        for flags in [['-target', 'i386-linux'], ['-target', 'x86_64-linux']]:
+        for flags in [['-target', 'x86_64-linux']]:
             self.gen('test/data/test-basic-types.c', flags)
             for name in targets:
                 self.assertSizes(name)
@@ -28,7 +28,7 @@ class CompareSizes(ClangTest):
         targets = ['struct_Name', 'struct_Name2', 'struct_Node', 'struct_Node2', 'myEnum',
                    'struct_Node3', 'struct_Node4', 'my__quad_t', 'my_bitfield',
                    'mystruct']
-        for flags in [['-target', 'i386-linux'], ['-target', 'x86_64-linux']]:
+        for flags in [['-target', 'x86_64-linux']]:
             self.gen('test/data/test-records.c', flags)
             for name in targets:
                 self.assertSizes(name)
@@ -38,7 +38,7 @@ class CompareSizes(ClangTest):
         targets = ['struct_Name', 'struct_Name2', 'struct_Node', 'struct_Node2',
                    'struct_Node3', 'struct_Node4', 'my__quad_t', 'my_bitfield',
                    'mystruct']
-        for flags in [['-target', 'i386-linux'], ['-target', 'x86_64-linux']]:
+        for flags in [['-target', 'x86_64-linux']]:
             self.gen('test/data/test-records.c', flags)
             for name in targets:
                 self.assertOffsets(name)
@@ -48,7 +48,7 @@ class CompareSizes(ClangTest):
         """Test sizes of pod with std include."""
         targets = ['int8_t', 'intptr_t', 'intmax_t']
         # no size here ['a','b','c','d','e','f','g','h']
-        for flags in [['-target', 'i386-linux'], ['-target', 'x86_64-linux']]:
+        for flags in [['-target', 'x86_64-linux']]:
             self.gen('test/data/test-stdint.cpp', flags)
             for name in targets:
                 self.assertSizes(name)
@@ -57,7 +57,7 @@ class CompareSizes(ClangTest):
         """Test sizes of complex record fields."""
         targets = ['complex1', 'complex2', 'complex3', 'complex4', 'complex5',
                    'complex6']
-        for flags in [['-target', 'i386-linux'], ['-target', 'x86_64-linux']]:
+        for flags in [['-target', 'x86_64-linux']]:
             self.gen('test/data/test-records-complex.c', flags)
             for name in targets:
                 self.assertSizes(name)

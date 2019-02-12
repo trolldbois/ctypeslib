@@ -1,5 +1,6 @@
 
 
+
 // case 4 bytes on int32
 struct bytes4 {
     unsigned int a1;
@@ -118,6 +119,13 @@ struct complex2 {
     unsigned int c2:10;
     unsigned long long d2:3;
     int h;
+};
+
+struct complex3 {
+    unsigned int a1:1;
+    unsigned int b1:1;
+    // 62 bits padding
+    unsigned long long a2;
 };
 
 

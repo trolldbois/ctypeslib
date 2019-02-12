@@ -25,6 +25,7 @@ class RecordTest(ClangTest):
         self.assertSizes("struct_complex")
         self.assertSizes("struct_complex1")
         self.assertSizes("struct_complex2")
+        self.assertSizes("struct_complex3")
         self.assertSizes("struct_anonfield")
 
     def _check_offsets(self):
@@ -39,9 +40,10 @@ class RecordTest(ClangTest):
         self.assertOffsets("struct_complex")
         self.assertOffsets("struct_complex1")
         self.assertOffsets("struct_complex2")
+        self.assertOffsets("struct_complex3")
         self.assertOffsets("struct_anonfield")
 
-    #@unittest.skip('')
+    @unittest.skip('')
     def test_simple_x32(self):
         """Test sizes for simple POD types on i386.
         """

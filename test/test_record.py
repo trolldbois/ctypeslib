@@ -3,7 +3,7 @@ import logging
 import sys
 import unittest
 
-from test.util import ClangTest
+from util import ClangTest
 
 
 class RecordTest(ClangTest):
@@ -11,19 +11,19 @@ class RecordTest(ClangTest):
     """Test if records are correctly generated for different target archictecture.
     """
 
-    def test_records_x32(self):
-        """Test sizes for simple records on i386.
+    def test_records_x64(self):
+        """Test sizes for simple records on x64.
         """
         # others size tests are in test_fast_clang
-        flags = ['-target', 'i386-linux']
+        flags = ['-target', 'x86_64-linux']
         self.gen('test/data/test-records.c', flags)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_Name), 18)
         self.assertEquals(ctypes.sizeof(self.namespace.struct_Name2), 20)
-        self.assertEquals(ctypes.sizeof(self.namespace.struct_Node), 16)
-        self.assertEquals(ctypes.sizeof(self.namespace.struct_Node2), 8)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_Node), 32)
+        self.assertEquals(ctypes.sizeof(self.namespace.struct_Node2), 16)
         self.assertEquals(ctypes.sizeof(self.namespace.myEnum), 4)
-        self.assertEquals(ctypes.sizeof(self.namespace.my__quad_t), 8)
-        self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 4)
+        self.assertEquals(ctypes.sizeof(self.namespace.my__quad_t), 16)
+        self.assertEquals(ctypes.sizeof(self.namespace.my_bitfield), 8)
         self.assertEquals(ctypes.sizeof(self.namespace.mystruct), 5)
 
     def test_padding_x32(self):
@@ -89,7 +89,7 @@ typedef struct _complex {
         int a;
     };
 } complex, *pcomplex;
-        ''', ['-target', 'i386-linux'])
+        ''', ['-target', 'x86_64-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 4)
 
     def test_record_in_record_2(self):
@@ -102,8 +102,8 @@ typedef struct _complex {
         long b;
     };
 } complex, *pcomplex;
-        ''', ['-target', 'i386-linux'])
-        self.assertEqual(ctypes.sizeof(self.namespace.complex), 8)
+        ''', ['-target', 'x86_64-linux'])
+        self.assertEqual(ctypes.sizeof(self.namespace.complex), 16)
 
     def test_record_in_record_3(self):
         self.convert('''
@@ -128,8 +128,8 @@ typedef struct _complex {
         int g;
     };
 } complex, *pcomplex;
-        ''', ['-target', 'i386-linux'])
-        self.assertEqual(ctypes.sizeof(self.namespace.complex), 16)
+        ''', ['-target', 'x86_64-linux'])
+        self.assertEqual(ctypes.sizeof(self.namespace.complex), 24)
 
     def test_record_in_record_packed(self):
         self.convert('''
@@ -141,7 +141,7 @@ typedef struct _complex {
         char b;
     };
 } complex, *pcomplex;
-        ''', ['-target', 'i386-linux'])
+        ''', ['-target', 'x86_64-linux'])
         self.assertEqual(ctypes.sizeof(self.namespace.complex), 2)
 
     def test_forward_decl(self):
@@ -151,8 +151,8 @@ struct entry {
   Entry * flink;
   Entry * blink;
 };
-        ''', ['-target', 'i386-linux'])
-        self.assertEqual(ctypes.sizeof(self.namespace.struct_entry), 8)
+        ''', ['-target', 'x86_64-linux'])
+        self.assertEqual(ctypes.sizeof(self.namespace.struct_entry), 16)
 
     def test_zero_length_array(self):
         flags = ['-target', 'x86_64-linux']
@@ -176,6 +176,6 @@ void do_something(struct Foo* foo);
 
 
 if __name__ == "__main__":
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+    # logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     # logging.getLogger('codegen').setLevel(logging.INFO)
     unittest.main()

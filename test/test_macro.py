@@ -3,7 +3,7 @@ import ctypes
 
 from ctypeslib.codegen.util import get_cursor
 from ctypeslib.codegen.util import get_tu
-from test.util import ClangTest
+from util import ClangTest
 
 '''Test if macro are correctly generated.
 '''
@@ -43,5 +43,5 @@ char d[] = PREPOST;''', flags)
 
 if __name__ == "__main__":
     import logging
-    logging.basicConfig(level=logging.DEBUG)
+    # logging.basicConfig(level=logging.DEBUG)
     unittest.main()

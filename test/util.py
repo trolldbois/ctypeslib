@@ -151,8 +151,9 @@ class ClangTest(unittest.TestCase):
         try:
             # PY3 change
             exec(output, namespace)
-        except ValueError:
+        except Exception:
             print(output)
+            raise
         self.namespace = ADict(namespace)
         if debug:
             print(output)

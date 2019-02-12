@@ -1,6 +1,6 @@
-#include <stdint.h>
-//#include <inttypes.h>
-#include <stdio.h>
+//#include <stdint.h>
+#include <inttypes.h>
+//#include <stdio.h>
 
 typedef struct p { int __Y;} __mb;
 
