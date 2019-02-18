@@ -87,6 +87,16 @@ class Generator(object):
         print(headers, file=self.imports)
         return
 
+    def enable_structure_type(self):
+        """
+        If a structure type is used, declare our ctypes.Structure extension type
+        """
+        self.enable_structure_type = lambda: True
+        import pkgutil
+        headers = pkgutil.get_data('ctypeslib', 'data/structure_type.tpl').decode()
+        print(headers, file=self.imports)
+        return
+
     def generate_headers(self, parser):
         # fix parser in self for later use
         self.parser = parser
@@ -431,6 +441,7 @@ class Generator(object):
     _structures = 0
 
     def Structure(self, struct):
+        self.enable_structure_type()
         self._structures += 1
         depends = set()
         # We only print a empty struct.
@@ -484,7 +495,8 @@ class Generator(object):
         else:
             ### methods = [m for m in head.struct.members if type(m) is typedesc.Method]
             if isinstance(head.struct, typedesc.Structure):
-                print("class %s(ctypes.Structure):" % head.struct.name, file=self.stream)
+                # Inherit from our ctypes.Structure extension
+                print("class %s(Structure):" % head.struct.name, file=self.stream)
             elif isinstance(head.struct, typedesc.Union):
                 print("class %s(ctypes.Union):" % head.struct.name, file=self.stream)
         if not inline:
