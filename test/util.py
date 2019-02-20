@@ -5,11 +5,13 @@
 import ctypes
 import os
 from io import StringIO
+from ctypes import RTLD_GLOBAL
 
 from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
 import unittest
 from ctypeslib.codegen import clangparser, codegenerator
+from ctypeslib.library import Library
 
 import tempfile
 
@@ -116,9 +118,12 @@ class ClangTest(unittest.TestCase):
     namespace = None
     full_parsing_options = False
 
-    def _gen(self, ofi, fname, flags=[]):
+    def _gen(self, ofi, fname, flags=None, dlls=None):
         """Take a file input and generate the code.
         """
+        flags = flags or []
+        dlls = dlls or []
+        dlls = [Library(name, RTLD_GLOBAL, nm=None) for name in dlls]
         # leave the new parser accessible for tests
         self.parser = clangparser.Clang_Parser(flags)
         if self.full_parsing_options:
@@ -129,16 +134,18 @@ class ClangTest(unittest.TestCase):
         self.parser.parse(fname)
         items = self.parser.get_result()
         # gen code
-        gen = codegenerator.Generator(ofi)
+        gen = codegenerator.Generator(ofi, searched_dlls=dlls)
         gen.generate_headers(self.parser)
         gen.generate_code(items)
         return gen
 
-    def gen(self, fname, flags=[], debug=False):
+    def gen(self, fname, flags=None, dlls=[], debug=False):
         """Take a file input and generate the code.
         """
+        flags = flags or []
+        dlls = dlls or []
         ofi = StringIO()
-        gen = self._gen(ofi, fname, flags)
+        gen = self._gen(ofi, fname, flags=flags, dlls=dlls)
         # load code
         namespace = {}
         # DEBUG
