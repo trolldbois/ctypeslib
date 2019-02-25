@@ -18,6 +18,7 @@ LOCAL_COPY_FILES := \
 	ctypeslib/data/fundamental_type_name.tpl:usr/lib/python/site-packages/ctypeslib/data/ \
 	ctypeslib/data/headers.tpl:usr/lib/python/site-packages/ctypeslib/data/ \
 	ctypeslib/data/pointer_type.tpl:usr/lib/python/site-packages/ctypeslib/data/ \
+	ctypeslib/data/string_cast.tpl:usr/lib/python/site-packages/ctypeslib/data/ \
 	ctypeslib/data/structure_type.tpl:usr/lib/python/site-packages/ctypeslib/data/ \
 	ctypeslib/dynamic_module.py:usr/lib/python/site-packages/ctypeslib/ \
 	ctypeslib/experimental/byref_at.py:usr/lib/python/site-packages/ctypeslib/experimental/ \
