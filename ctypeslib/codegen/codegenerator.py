@@ -97,6 +97,16 @@ class Generator(object):
         print(headers, file=self.imports)
         return
 
+    def enable_string_cast(self):
+        """
+        If a structure type is used, declare our ctypes.Structure extension type
+        """
+        self.enable_string_cast = lambda: True
+        import pkgutil
+        headers = pkgutil.get_data('ctypeslib', 'data/string_cast.tpl').decode()
+        print(headers, file=self.imports)
+        return
+
     def generate_headers(self, parser):
         # fix parser in self for later use
         self.parser = parser
@@ -137,6 +147,8 @@ class Generator(object):
             return self.type_name(t.typ, generate)
         elif isinstance(t, typedesc.PointerType):
             self.enable_pointer_type()
+            if t.typ.name == "c_char":
+                self.enable_string_cast()
             return "POINTER_T(%s)" % (self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.FunctionType):
             args = [
