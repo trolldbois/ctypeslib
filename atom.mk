@@ -7,6 +7,7 @@ LOCAL_HOST_MODULE := pybinding
 
 LOCAL_COPY_FILES := \
 	ctypeslib/clang2py.py:usr/lib/python/site-packages/ctypeslib/ \
+	ctypeslib/library.py:usr/lib/python/site-packages/ctypeslib/ \
 	ctypeslib/codegen/clangparser.py:usr/lib/python/site-packages/ctypeslib/codegen/ \
 	ctypeslib/codegen/codegenerator.py:usr/lib/python/site-packages/ctypeslib/codegen/ \
 	ctypeslib/codegen/cursorhandler.py:usr/lib/python/site-packages/ctypeslib/codegen/ \
