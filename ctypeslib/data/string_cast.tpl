@@ -9,6 +9,6 @@ def char_pointer_cast(string, encoding='utf-8'):
     if encoding is not None:
         string = string.encode(encoding)
     string = ctypes.c_char_p(string)
-    return ctypes.cast(string, POINTER_T(c_char))
+    return ctypes.cast(string, POINTER_T(ctypes.c_char))
 
 
