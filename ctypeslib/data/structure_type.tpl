@@ -1,5 +1,16 @@
 class Structure(ctypes.Structure):
 
+    def __init__(self, *args, **kwds):
+        # We don't want to use positional arguments fill PADDING_* fields
+
+        args = dict(zip(self.__class__._field_names_(), args))
+        args.update(kwds)
+        super(Structure, self).__init__(**args)
+
+    @classmethod
+    def _field_names_(cls):
+        return (f[0] for f in cls._fields_ if not f[0].startswith('PADDING'))
+
     @classmethod
     def get_type(cls, field):
         for f in cls._fields_:
