@@ -25,6 +25,17 @@ LOCAL_COPY_FILES := \
 	ctypeslib/experimental/byref_at.py:usr/lib/python/site-packages/ctypeslib/experimental/ \
 	ctypeslib/__init__.py:usr/lib/python/site-packages/ctypeslib/
 
+$(foreach __pair,$(LOCAL_COPY_FILES), \
+	$(eval __w1 := $(firstword $(subst :,$(space),$(__pair)))) \
+	$(eval __w2 := $(patsubst $(__w1):%,%,$(__pair))) \
+	$(eval __src := $(call copy-get-src-path,$(__w1))) \
+	$(eval __dst := $(call copy-get-dst-path-host$(_mode_suffix),$(__w2))) \
+	$(if $(call is-path-dir,$(__dst)), \
+		$(eval __dst := $(__dst)$(notdir $(__src))) \
+	) \
+	$(eval PRIVATE_CTYPESLIB_STAGED_FILES += $(__dst)) \
+)
+
 include $(BUILD_CUSTOM)
 
 # $1: name of the python module to generate.
@@ -43,6 +54,7 @@ define pybinding-macro
 
 PRIVATE_SO_FILES = $(shell echo "$4" | sed "s#:# #g")
 $(call local-get-build-dir)/$1.py: PRIVATE_SO_FILES := $$(PRIVATE_SO_FILES)
+$(call local-get-build-dir)/$1.py: PRIVATE_CTYPESLIB_STAGED_FILES := $$(PRIVATE_CTYPESLIB_STAGED_FILES)
 $(call local-get-build-dir)/$1.py: PRIVATE_SRC_FILES = \
 	$$(foreach header, $$(shell echo "$3" | sed "s#:# #g"), \
 		$$(if $$(findstring undefined,$$(origin PRIVATE_CUSTOM_$$(header))), \
@@ -50,7 +62,7 @@ $(call local-get-build-dir)/$1.py: PRIVATE_SRC_FILES = \
 		) \
 	)
 $(call local-get-build-dir)/$1.py: PRIVATE_OBJECT_FLAGS := $$(foreach lib, $$(shell echo "$2" | sed "s#:# #g"), $$(call module-get-build-dir,$$(lib))/$$(lib).objects.flags)
-$(call local-get-build-dir)/$1.py: $(shell echo "$4" | sed "s#:# #g")
+$(call local-get-build-dir)/$1.py: $$(PRIVATE_CTYPESLIB_STAGED_FILES) $(shell echo "$4" | sed "s#:# #g")
 	@echo "$$(PRIVATE_MODULE): Generating $1 python binding"
 	@echo "Private object flags: $$(PRIVATE_OBJECT_FLAGS)"
 	@echo "Private so files: $$(PRIVATE_SO_FILES)"
