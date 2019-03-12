@@ -7,7 +7,11 @@ def string_cast(char_pointer, encoding='utf-8'):
 
 def char_pointer_cast(string, encoding='utf-8'):
     if encoding is not None:
-        string = string.encode(encoding)
+        try:
+            string = string.encode(encoding)
+        except AttributeError:
+            # In Python3, bytes has no encode attribute
+            pass
     string = ctypes.c_char_p(string)
     return ctypes.cast(string, POINTER_T(ctypes.c_char))
 
