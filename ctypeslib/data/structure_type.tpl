@@ -31,7 +31,11 @@ class Structure(ctypes.Structure):
                     del bound_fields[name]
                 else:
                     # default callback implementation (does nothing)
-                    fields.append(type_(lambda *args: None))
+                    try:
+                        default_ = type_(0).restype().value
+                    except TypeError:
+                        default_ = None
+                    fields.append(type_((lambda default_: lambda *args: default_)(default_)))
             else:
                 # not a callback function, use default initialization
                 if name in bound_fields:
