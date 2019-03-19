@@ -9,7 +9,10 @@ class Structure(ctypes.Structure):
 
     @classmethod
     def _field_names_(cls):
-        return (f[0] for f in cls._fields_ if not f[0].startswith('PADDING'))
+        if hasattr(cls, '_fields_'):
+            return (f[0] for f in cls._fields_ if not f[0].startswith('PADDING'))
+        else:
+            return ()
 
     @classmethod
     def get_type(cls, field):
