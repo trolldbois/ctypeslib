@@ -2,7 +2,8 @@
 # ctypeslib package
 
 from pkg_resources import get_distribution, DistributionNotFound
-import os.path
+import os
+import sys
 
 try:
     _dist = get_distribution('ctypeslib2')
@@ -27,6 +28,11 @@ try:
             from clang import cindex
             cindex.Config.set_library_file(find_library(version))
             break
+    else:
+        if os.name == "posix" and sys.platform == "darwin":
+            # On darwin, consider that Xcode should be installed in its default path.
+            from clang import cindex
+            cindex.Config.set_library_file('/Applications/Xcode.app/Contents/Frameworks/libclang.dylib')
 except ImportError as e:
     print(e)
 

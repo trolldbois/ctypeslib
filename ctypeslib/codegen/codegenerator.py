@@ -8,6 +8,7 @@ from functools import cmp_to_key
 import textwrap
 from io import StringIO
 
+import os
 import sys
 
 from ctypeslib.codegen import clangparser
@@ -615,6 +616,8 @@ class Generator(object):
         if hasattr(func, "dllname"):
             return func.dllname
         name = func.name
+        if os.name == "posix" and sys.platform == "darwin":
+            name = "_%s" % name
         for dll in self.searched_dlls:
             try:
                 getattr(dll, name)

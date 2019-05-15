@@ -73,14 +73,14 @@ $(call local-get-build-dir)/$1.py: $$(PRIVATE_CTYPESLIB_STAGED_FILES) $(shell ec
 		$(HOST_OUT_STAGING)/usr/lib/python/site-packages/ctypeslib/clang2py.py \
 		--kind acdefstu \
 		$$(PRIVATE_SRC_FILES) \
-		$$$$(echo $$(PRIVATE_SO_FILES) | tr ' ' '\n' | sed -e 's/^\(.\+\)/-l \1/') \
+		$$$$(echo $$(PRIVATE_SO_FILES) | tr ' ' '\n' | sed -E 's/^(.+)/-l \1/') \
 		--target=$(if $(call streq,$(TARGET_ARCH),x64),x86_64,$(TARGET_ARCH)) \
 		-o $$@ \
 		\
 		--clang-args=" \
-			$$$$(echo | $(TARGET_CC) $(TARGET_GLOBAL_CFLAGS) -E -Wp,-v - 2>&1 | grep '^ /' | sed -e 's/^ \(.\+\)/-I\1/' | tr '\n' ' ') \
-			$$$$(sed -n -e 's/PRIVATE_C_INCLUDES :=//p' $$(PRIVATE_OBJECT_FLAGS) | tr ' ' '\n' | sed -e 's/^\(.\+\)/-I\1/') \
-			$$$$(sed -n -e 's/TARGET_GLOBAL_C_INCLUDES :=//p' $$(PRIVATE_OBJECT_FLAGS) | tr ' ' '\n' | sed -e 's/^\(.\+\)/-I\1/') \
+			$$$$(echo | $(TARGET_CC) $(TARGET_GLOBAL_CFLAGS) -E -Wp,-v - 2>&1 | grep '^ /' | sed -E 's/^ (.+)/-I\1/' | tr '\n' ' ') \
+			$$$$(sed -n -e 's/PRIVATE_C_INCLUDES :=//p' $$(PRIVATE_OBJECT_FLAGS) | tr ' ' '\n' | sed -E 's/^(.+)/-I\1/') \
+			$$$$(sed -n -e 's/TARGET_GLOBAL_C_INCLUDES :=//p' $$(PRIVATE_OBJECT_FLAGS) | tr ' ' '\n' | sed -E 's/^(.+)/-I\1/') \
 			$$$$(sed -n -e 's/PRIVATE_GLOBAL_CFLAGS :=//p' $$(PRIVATE_OBJECT_FLAGS)) \
 			$$$$(sed -n -e 's/PRIVATE_CFLAGS :=//p' $$(PRIVATE_OBJECT_FLAGS)) \
 			-D__PYBINDING_MACRO__=1 \
