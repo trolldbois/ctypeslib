@@ -50,6 +50,8 @@ define pybinding-macro
 # - We force -fno-unsigned-char to make sure the binding uses ctype.c_char
 #   for the type char even on arm where it is supposed to be unsigned
 #   This assumes that the library does not depend on this...
+# - the define "__PYBINDING_MACRO__" is passed to the headers in the goal of
+#   adapting some code parts for python when necessary.
 
 
 PRIVATE_SO_FILES = $(shell echo "$4" | sed "s#:# #g")
@@ -81,6 +83,7 @@ $(call local-get-build-dir)/$1.py: $$(PRIVATE_CTYPESLIB_STAGED_FILES) $(shell ec
 			$$$$(sed -n -e 's/TARGET_GLOBAL_C_INCLUDES :=//p' $$(PRIVATE_OBJECT_FLAGS) | tr ' ' '\n' | sed -e 's/^\(.\+\)/-I\1/') \
 			$$$$(sed -n -e 's/PRIVATE_GLOBAL_CFLAGS :=//p' $$(PRIVATE_OBJECT_FLAGS)) \
 			$$$$(sed -n -e 's/PRIVATE_CFLAGS :=//p' $$(PRIVATE_OBJECT_FLAGS)) \
+			-D__PYBINDING_MACRO__=1 \
 			-fno-unsigned-char \
 		"
 
