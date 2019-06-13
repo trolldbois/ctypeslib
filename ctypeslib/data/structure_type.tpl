@@ -1,4 +1,32 @@
-class Structure(ctypes.Structure):
+class AsDictMixin:
+    @classmethod
+    def as_dict(cls, self):
+        result = {}
+        if not isinstance(self, AsDictMixin):
+            # not a structure, assume it's already a python object
+            return self
+        for (field, *_) in self._fields_:
+            if field.startswith('PADDING_'):
+                continue
+            value = getattr(self, field)
+            if hasattr(value, "_length_") and hasattr(value, "_type_"):
+                # array
+                value = [cls.as_dict(v) for v in value]
+            elif hasattr(value, "contents") and hasattr(value, "_type_"):
+                # pointer
+                try:
+                    value = cls.as_dict(value.content)
+                except ValueError:
+                    # nullptr
+                    value = None
+            elif isinstance(value, AsDictMixin):
+                # other structure
+                value = cls.as_dict(value)
+            result[field] = value
+        return result
+
+
+class Structure(ctypes.Structure, AsDictMixin):
 
     def __init__(self, *args, **kwds):
         # We don't want to use positional arguments fill PADDING_* fields
@@ -51,5 +79,9 @@ class Structure(ctypes.Structure):
                 cls.__name__, bound_fields.keys()
             ))
         return cls(*fields)
+
+
+class Union(ctypes.Union, AsDictMixin):
+    pass
 
 

@@ -512,7 +512,7 @@ class Generator(object):
                 # Inherit from our ctypes.Structure extension
                 print("class %s(Structure):" % head.struct.name, file=self.stream)
             elif isinstance(head.struct, typedesc.Union):
-                print("class %s(ctypes.Union):" % head.struct.name, file=self.stream)
+                print("class %s(Union):" % head.struct.name, file=self.stream)
         if not inline:
             print("    pass\n", file=self.stream)
         # special empty struct
