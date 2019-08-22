@@ -226,7 +226,9 @@ def main(argv=None):
     if options.target is not None:
         clang_opts = ["-target", options.target]
     if options.clang_args is not None:
-        clang_opts.extend(re.split("\s+", options.clang_args))
+        filtered_args = ' '.join([arg for arg in re.split("\s+", options.clang_args)
+                if not arg.startswith('-mcpu=')])
+        clang_opts.extend(re.split("\s+", filtered_args))
 
     level = logging.INFO
     if options.debug:
