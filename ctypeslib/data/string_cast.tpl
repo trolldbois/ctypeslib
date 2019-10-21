@@ -1,6 +1,6 @@
 def string_cast(char_pointer, encoding='utf-8'):
     value = ctypes.cast(char_pointer, ctypes.c_char_p).value
-    if encoding is not None:
+    if value is not None and encoding is not None:
         value = value.decode(encoding)
     return value
 
