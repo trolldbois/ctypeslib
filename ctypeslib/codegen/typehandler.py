@@ -99,6 +99,20 @@ class TypeHandler(ClangHandler):
         return obj
 
     @log_entity
+    def ELABORATED(self, _cursor_type):
+        """
+        Handles elaborated types eg. enum return.
+        """
+        _decl = _cursor_type.get_declaration()
+        name = self.get_unique_name(_decl)
+        if self.is_registered(name):
+            obj = self.get_registered(name)
+        else:
+            log.warning('Was in ELABORATED but had to parse record declaration ')
+            obj = self.parse_cursor(_decl)
+        return obj
+
+    @log_entity
     def POINTER(self, _cursor_type):
         """
         Handles POINTER types.
