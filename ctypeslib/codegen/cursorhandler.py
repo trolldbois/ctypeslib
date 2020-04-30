@@ -917,33 +917,37 @@ class CursorHandler(ClangHandler):
         # name, type
         parent = cursor.semantic_parent
         # field name:
-        # either its cursor.spelling or it is an anonymous field
-        # we do NOT rely on get_unique_name for a Field name.
+        # either its cursor.spelling or it is an anonymous bitfield
+        # we do NOT rely on get_unique_name for a bitfield name.
         # Anonymous Field:
         #    We have to create a name
         #    it will be the indice of the field (_0,_1,...)
         # offset of field:
         #    we will need it late. get the offset of the field in the record
+        # Note: cursor.is_anonymous seems to be unreliable/inconsistent across
+        # libclang versions so we will consider the field as anonymous if
+        # cursor.spelling is empty
         name = cursor.spelling
-        # after dealing with anon bitfields, it could happen. an unnammed bitfield member is not is_anonymous()
-        if cursor.is_anonymous() or (name == '' and cursor.is_bitfield()):
+        offset = parent.type.get_offset(name)
+        if not name and not cursor.is_bitfield():
+            # anonymous non-bitfield field case:
+            offset = cursor.get_field_offsetof()
+            name = self.get_unique_name(cursor)
+        if not name:
+            # anonymous bitfield case:
             # get offset by iterating all fields of parent
             # corner case for anonymous fields
             # if offset == -5: use field.get_offset_of()
             offset = cursor.get_field_offsetof()
-            prev = fieldnum = -1
             for i, _f in enumerate(parent.type.get_fields()):
                 if _f == cursor:
                     fieldnum = i
                     break
-                prev = _f
             # make a name
             if fieldnum == -1:
                 raise ValueError("Anonymous field was not found in get_fields()")
             name = "_%d" % fieldnum
             log.debug("FIELD_DECL: anonymous field renamed to %s", name)
-        else:
-            offset = parent.type.get_offset(name)
         # some debug
         if offset < 0:
             log.error('FIELD_DECL: BAD RECORD, Bad offset: %d for %s', offset, name)
