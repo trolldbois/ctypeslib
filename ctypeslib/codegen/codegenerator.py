@@ -317,8 +317,10 @@ class Generator(object):
         self._variables += 1
         if self.generate_comments:
             self.print_comment(tp)
-        dllname = self.find_dllname(tp)
-        if dllname:
+        if tp.extern:
+            dllname = self.find_dllname(tp)
+            if not dllname:
+                raise TypeError('Cannot find extern variable definition: %s' % (tp.name))
             self._generate(tp.typ)
             # calling convention does not matter for in_dll...
             libname = self.get_sharedlib(dllname, "cdecl")
@@ -364,8 +366,13 @@ class Generator(object):
                     #init_value_type = self.type_name(tp.typ, False)
                     #init_value = ','.join([str(x) for x in tp.init])
                     #init_value = "(%s)(%s)"%(init_value_type,init_value)
+                elif isinstance(tp.typ.typ, typedesc.Structure):
+                    self._generate(tp.typ.typ)
+                    init_value = self.type_name(tp.typ, False) + "()"
                 else:
-                    init_value = self.type_name(tp.typ, False)
+                    init_value = tp.init if tp.init is not None else (
+                        self.type_name(tp.typ, False)
+                    ) + "()"
             elif (isinstance(tp.typ, typedesc.FundamentalType) and
                   (tp.typ.name == "c_char" or tp.typ.name == "c_wchar")):
                 # char
@@ -374,7 +381,9 @@ class Generator(object):
                 init_value = self.type_name(tp.typ, False)
             else:
                 # DEBUG int() float()
-                init_value = tp.init
+                init_value = tp.init if tp.init is not None else (
+                    self.type_name(tp.typ, False)
+                ) + "()"
                 # print init_value
                 #init_value = repr(tp.init)
             # Partial --
@@ -732,15 +741,14 @@ class Generator(object):
                         return "unknown"
                 argsAndTypes = zip([typeString(t)
                                     for t in func.iterArgTypes()], argnames)
-                print("""%(funcname)s.__doc__ = \\
-    \"\"\"%(ret)s %(funcname)s(%(args)s)
-    %(file)s:%(line)s\"\"\"""" % \
-                    {'funcname': func.name,
-                     'args': ", ".join(["%s %s" % i for i in argsAndTypes]),
-                     'file': func.location[0],
-                     'line': func.location[1],
-                     'ret': typeString(func.returns),
-                     }, file=self.stream)
+                print('{funcname}.__doc__ = """{ret} {funcname}({args})\n'
+                      '    {file}:{line}"""'.format(
+                          funcname=func.name,
+                          args=", ".join(["%s %s" % i for i in argsAndTypes]),
+                          file=func.location[0],
+                          line=func.location[1],
+                          ret=typeString(func.returns),
+                      ), file=self.stream)
 
             self.names.add(func.name)
             self._functiontypes += 1

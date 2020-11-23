@@ -2,7 +2,7 @@
 
 import logging
 
-from clang.cindex import CursorKind, TypeKind, TokenKind
+from clang.cindex import CursorKind, LinkageKind, TypeKind, TokenKind
 
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.handler import ClangHandler
@@ -244,14 +244,14 @@ class CursorHandler(ClangHandler):
         if self.is_registered(name):
             return self.get_registered(name)
         # get the typedesc object
-        _type = self._VAR_DECL_type(cursor)
+        _type, extern = self._VAR_DECL_type(cursor)
         # transform the ctypes values into ctypeslib
         init_value = self._VAR_DECL_value(cursor, _type)
         # finished
         log.debug('VAR_DECL: _type:%s', _type.name)
         log.debug('VAR_DECL: _init:%s', init_value)
         log.debug('VAR_DECL: location:%s', getattr(cursor, 'location'))
-        obj = self.register(name, typedesc.Variable(name, _type, init_value))
+        obj = self.register(name, typedesc.Variable(name, _type, init_value, extern))
         self.set_location(obj, cursor)
         self.set_comment(obj, cursor)
         return True
@@ -260,6 +260,7 @@ class CursorHandler(ClangHandler):
         """Generates a typedesc object from a Variable declaration."""
         # Get the type
         _ctype = cursor.type.get_canonical()
+        extern = cursor.linkage in (LinkageKind.EXTERNAL, LinkageKind.UNIQUE_EXTERNAL)
         log.debug('VAR_DECL: _ctype: %s ', _ctype.kind)
         # FIXME: Need working int128, long_double, etc.
         if self.is_fundamental_type(_ctype):
@@ -289,7 +290,7 @@ class CursorHandler(ClangHandler):
                 'What other type of variable? %s' %
                 (_ctype.kind))
         log.debug('VAR_DECL: _type: %s ', _type)
-        return _type
+        return _type, extern
 
     def _VAR_DECL_value(self, cursor, _type):
         """Handles Variable value initialization."""

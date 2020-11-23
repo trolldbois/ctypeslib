@@ -268,9 +268,10 @@ class EnumValue(T):
 
 class Variable(T):
 
-    def __init__(self, name, typ, init=None):
+    def __init__(self, name, typ, init=None, extern=False):
         self.name = name
         self.typ = typ
         self.init = init
+        self.extern = extern
 
 ################################################################
