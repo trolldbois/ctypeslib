@@ -37,11 +37,11 @@ class Library(six.with_metaclass(LibraryMeta)):
     # nm will print lines like this:
     # <addr> <kind> <name>
     def _get_symbols(self, nm):
-        cmd = [nm, "--defined-only", "--extern-only", self._filepath]
+        cmd = [nm, "--dynamic", "--defined-only", self._filepath]
         output = subprocess.check_output(cmd, universal_newlines=True)
         for line in output.split('\n'):
             fields = line.split(' ', 2)
-            if len(fields) >= 3 and fields[1] == "T":
+            if len(fields) >= 3 and fields[1] in ("T", "D", "G", "R", "S"):
                 self.symbols[fields[2]] = fields[0]
 
     def __getattr__(self, name):
