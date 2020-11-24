@@ -5,23 +5,34 @@ class AsDictMixin:
         if not isinstance(self, AsDictMixin):
             # not a structure, assume it's already a python object
             return self
-        for (field, *_) in self._fields_:
+        if not hasattr(cls, "_fields_"):
+            return result
+        for (field, *_) in cls._fields_:  # noqa
             if field.startswith('PADDING_'):
                 continue
             value = getattr(self, field)
+            type_ = type(value)
             if hasattr(value, "_length_") and hasattr(value, "_type_"):
                 # array
-                value = [cls.as_dict(v) for v in value]
+                if not hasattr(type_, "as_dict"):
+                    value = [v for v in value]
+                else:
+                    type_ = type_._type_
+                    value = [type_.as_dict(v) for v in value]
             elif hasattr(value, "contents") and hasattr(value, "_type_"):
                 # pointer
                 try:
-                    value = cls.as_dict(value.content)
+                    if not hasattr(type_, "as_dict"):
+                        value = value.contents
+                    else:
+                        type_ = type_._type_
+                        value = type_.as_dict(value.contents)
                 except ValueError:
                     # nullptr
                     value = None
             elif isinstance(value, AsDictMixin):
                 # other structure
-                value = cls.as_dict(value)
+                value = type_.as_dict(value)
             result[field] = value
         return result
 
