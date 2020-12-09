@@ -62,13 +62,14 @@ class Structure(ctypes.Structure, AsDictMixin):
 
     @classmethod
     def bind(cls, bound_fields):
-        fields = []
+        fields = {}
         for name, type_ in cls._fields_:
             if hasattr(type_, "restype"):
                 if name in bound_fields:
                     # use a closure to capture the callback from the loop scope
-                    fields.append(
-                        type_((lambda callback: lambda *args: callback(*args))(bound_fields[name]))
+                    fields[name] = (
+                        type_((lambda callback: lambda *args: callback(*args))(
+                            bound_fields[name]))
                     )
                     del bound_fields[name]
                 else:
@@ -77,19 +78,21 @@ class Structure(ctypes.Structure, AsDictMixin):
                         default_ = type_(0).restype().value
                     except TypeError:
                         default_ = None
-                    fields.append(type_((lambda default_: lambda *args: default_)(default_)))
+                    fields[name] = type_((
+                        lambda default_: lambda *args: default_)(default_))
             else:
                 # not a callback function, use default initialization
                 if name in bound_fields:
-                    fields.append(bound_fields[name])
+                    fields[name] = bound_fields[name]
                     del bound_fields[name]
                 else:
-                    fields.append(type_())
+                    fields[name] = type_()
         if len(bound_fields) != 0:
-            raise ValueError("Cannot bind the following unknown callback(s) {}.{}".format(
-                cls.__name__, bound_fields.keys()
+            raise ValueError(
+                "Cannot bind the following unknown callback(s) {}.{}".format(
+                    cls.__name__, bound_fields.keys()
             ))
-        return cls(*fields)
+        return cls(**fields)
 
 
 class Union(ctypes.Union, AsDictMixin):
