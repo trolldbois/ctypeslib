@@ -133,6 +133,8 @@ class Generator(object):
             return self.FundamentalType(t)
         elif isinstance(t, typedesc.ArrayType):
             return "%s * %s" % (self.type_name(t.typ, generate), t.size)
+        elif isinstance(t, typedesc.PointerType) and isinstance(t.typ, typedesc.FunctionType):
+            return self.type_name(t.typ, generate)
         elif isinstance(t, typedesc.PointerType):
             self.enable_pointer_type()
             return "POINTER_T(%s)" % (self.type_name(t.typ, generate))
