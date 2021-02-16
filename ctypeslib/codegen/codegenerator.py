@@ -317,10 +317,10 @@ class Generator(object):
         self._variables += 1
         if self.generate_comments:
             self.print_comment(tp)
-        if tp.extern:
+
+        # 2021-02 give me a test case for this. it breaks all extern variables otherwise.
+        if tp.extern and self.find_dllname(tp):
             dllname = self.find_dllname(tp)
-            if not dllname:
-                raise TypeError('Cannot find extern variable definition: %s' % (tp.name))
             self._generate(tp.typ)
             # calling convention does not matter for in_dll...
             libname = self.get_sharedlib(dllname, "cdecl")
@@ -380,18 +380,18 @@ class Generator(object):
             elif isinstance(tp.typ, typedesc.Structure):
                 init_value = self.type_name(tp.typ, False)
             else:
-                # DEBUG int() float()
-                init_value = tp.init if tp.init is not None else (
-                    self.type_name(tp.typ, False)
-                ) + "()"
-                # print init_value
-                #init_value = repr(tp.init)
-            # Partial --
-            # now we do want to have FundamentalType variable use the actual
-            # type, and not be a python object
-            # if init_value is None:
-            #    init_value = ''; # use default ctypes object constructor
-            #init_value = "%s(%s)"%(self.type_name(tp.typ, False), init_value)
+                # we want to have FundamentalType variable use the actual
+                # type default, and not be a python ctypes object
+                # if init_value is None:
+                #    init_value = ''; # use default ctypes object constructor
+                # init_value = "%s(%s)"%(self.type_name(tp.typ, False), init_value)
+                if tp.init is not None:
+                    init_value = tp.init
+                elif tp.typ.name in ['c_float', 'c_double', 'c_longdouble']:
+                    init_value = 0.0
+                else:
+                    # integers
+                    init_value = 0
             #
             # print it out
             print("%s = %s # Variable %s" % (tp.name,
