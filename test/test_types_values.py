@@ -171,6 +171,7 @@ class ConstantsTest(ClangTest):
         self.convert("""
         typedef char array[];
         struct blah {
+            int N;
             char varsize[];
         };
         """)
