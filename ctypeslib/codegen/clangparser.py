@@ -177,8 +177,9 @@ class Clang_Parser(object):
         if name in self.all:
             log.debug('register: %s already existed: %s', name, obj.name)
             # code.interact(local=locals())
-            raise DuplicateDefinitionException(
-                'register: %s already existed: %s' % (name, obj.name))
+            #raise DuplicateDefinitionException(
+            #    'register: %s already existed: %s' % (name, obj.name))
+            return self.all[name]
         log.debug('register: %s ', name)
         self.all[name] = obj
         return obj

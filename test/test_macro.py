@@ -40,6 +40,18 @@ char d[] = PREPOST;''', flags)
         self.assertEquals(self.namespace.c, '"before"" after"')
         self.assertEquals(self.namespace.d, '"before"" after"')
 
+    def test_long(self):
+        
+        flags = ['-target', 'i386-linux']
+        self.convert('''#define BIG_NUM_L 1000000L''', flags)
+        self.assertEquals(getattr(self.namespace,"BIG_NUM_L"), 1000000)
+
+    def test_unsigned_long_long(self):
+        
+        flags = ['-target', 'i386-linux']
+        self.convert('''#define BIG_NUM_ULL 0x0000000080000000ULL''', flags)
+        self.assertEquals(getattr(self.namespace,"BIG_NUM_ULL"), 0x0000000080000000)
+
 
 if __name__ == "__main__":
     import logging
