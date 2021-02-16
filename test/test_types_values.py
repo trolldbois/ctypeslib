@@ -15,8 +15,18 @@ class ConstantsTest(ClangTest):
         """
         self.convert("""
         int i1;
+        static const long i2;
+        long double f1;
+        static float f2;
+        char c;
         """)
-        self.assertIsNone(self.namespace.i1)
+        self.assertEqual(self.namespace.i1, 0)
+        self.assertEqual(self.namespace.i2, 0)
+        self.assertEqual(self.namespace.f1, 0.0)
+        self.assertEqual(self.namespace.f2, 0.0)
+        self.assertEqual(self.namespace.c, '\x00')
+
+
 
     def test_longlong(self):
         """Basic POD test variable on longlong values'
@@ -254,18 +264,12 @@ class ConstantsTest(ClangTest):
     def test_var_decl_and_scope(self):
         self.convert("""
         int zig;
-        static const int zag = 2;
-        long double zug;
-
-
         inline void foo() {
           int zig;
         };
         """)
         # FIXME: TranslationUnit PARSE_SKIP_FUNCTION_BODIES
-        self.assertEqual(self.namespace.zag, 2)
         self.assertEqual(self.namespace.zig, 0)
-        self.assertEqual(self.namespace.zug, 0.0)
         # self.assertEqual(type(self.namespace.foo), None)
 
     def test_extern_function_pointer(self):
