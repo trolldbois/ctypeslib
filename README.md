@@ -10,6 +10,10 @@
 
 ## Status update
 
+ - 2021-02:
+    Thanks for the pull requests
+    libclang-xx-dev must be installed for stddef and other reasons.
+    bump to libclang-11
  - 2018-01-03: master branch works with libclang-5.0 HEAD, python clang from pypi, python3
  - 2017-05-01: master branch works with libclang-4.0 HEAD
 
