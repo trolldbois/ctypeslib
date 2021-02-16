@@ -389,7 +389,6 @@ typedef union MY_ROOT_UNION {
   } HeaderX64;
  };
 } __attribute__((packed)) MY_ROOT_UNION, *PMY_ROOT_UNION, **PPMY_ROOT_UNION ;
-        };
         """, flags)
         self.assertIn("MY_ROOT_UNION", self.namespace.keys())
         self.assertIn("struct_MY_ROOT_UNION_0", self.namespace.keys())
