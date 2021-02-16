@@ -204,7 +204,7 @@ def main(argv=None):
     parser.epilog = """Cross-architecture: You can pass target modifiers to clang.
     For example, try --clang-args="-target x86_64" or "-target i386-linux" to change the target CPU arch."""
 
-    options = parser.parse_args(argv)
+    options = parser.parse_args()
 
     # handle stdin, just in case
     files = []
