@@ -45,6 +45,15 @@ class InputOutput(ClangTest):
         else:
             self.assertIn("error: the following arguments are required", stderr)
 
+    def test_multiple_source_files(self):
+        """run clang2py -i test/data/test-basic-types.c test/data/test-bitfield.c"""
+        p, output, stderr = run(['clang2py', '-i', 'test/data/test-basic-types.c', 'test/data/test-bitfield.c'])
+        self.assertEqual(p.returncode, 0)
+        self.assertIn("WORD_SIZE is:", output)
+        self.assertIn("_long = ", output)
+        self.assertIn("my__quad_t ", output)
+        self.assertIn("class struct_bytes4(", output)
+
 
 class ArgumentInclude(ClangTest):
     def test_include_with(self):
