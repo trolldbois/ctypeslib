@@ -1,9 +1,9 @@
 import unittest
 import ctypes
 
-from util import get_cursor
-from util import get_tu
-from util import ClangTest
+from test.util import get_cursor
+from test.util import get_tu
+from test.util import ClangTest
 
 
 class CompareSizes(ClangTest):
@@ -48,6 +48,7 @@ class CompareSizes(ClangTest):
         """Test sizes of pod with std include."""
         targets = ['int8_t', 'intptr_t', 'intmax_t']
         # no size here ['a','b','c','d','e','f','g','h']
+        # Todo: struct__IO_FILE is used in gen in POINTER before typedef
         for flags in [['-target', 'i386-linux'], ['-target', 'x86_64-linux']]:
             self.gen('test/data/test-stdint.cpp', flags)
             for name in targets:

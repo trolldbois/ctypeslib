@@ -153,6 +153,8 @@ class ClangTest(unittest.TestCase):
             exec(output, namespace)
         except ValueError:
             print(output)
+        # except NameError:
+        #     print(output)
         self.namespace = ADict(namespace)
         if debug:
             print(output)

@@ -14,6 +14,7 @@
     Thanks for the pull requests
     libclang-xx-dev must be installed for stddef and other reasons.
     bump to libclang-11
+    Todo: struct__IO_FILE is used in gen in POINTER before typedef
  - 2018-01-03: master branch works with libclang-5.0 HEAD, python clang from pypi, python3
  - 2017-05-01: master branch works with libclang-4.0 HEAD
 
