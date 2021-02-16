@@ -1,6 +1,7 @@
 """Handler for Cursor nodes from the clang AST tree."""
 
 import logging
+import re
 
 from clang.cindex import CursorKind, TypeKind, TokenKind
 
@@ -419,6 +420,8 @@ class CursorHandler(ClangHandler):
             return value
         elif cursor.kind == CursorKind.MACRO_DEFINITION:
             # prefix = value[:3].split('"')[0]
+            # unsigned int / long int / unsigned long int / long long int / unsigned long long int
+            value = re.sub("(u|U|l|L|ul|UL|ll|LL|ull|ULL)$", "", value)
             return value
         else:
             prefix = 1
