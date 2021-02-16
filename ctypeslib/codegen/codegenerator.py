@@ -916,13 +916,13 @@ def generate_code(srcfiles,
                 # if we only want complete matches:
                 if match and match.group() == i.name:
                     todo.append(i)
-                    break
+                    continue
                 # if we follow our own documentation,
                 # allow regular expression match of any part of name:
                 match = s.search(i.name)
                 if match:
                      todo.append(i)
-                     break
+                     continue
     if symbols or expressions:
         items = todo
 
