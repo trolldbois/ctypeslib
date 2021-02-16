@@ -109,15 +109,18 @@ class Clang_Parser(object):
             log.warning("unable to load input")
             return
         if len(self.tu.diagnostics) > 0:
+            errors = []
             for x in self.tu.diagnostics:
                 msg = "{} ({}:{}:{})".format(
                     x.spelling, filename,
                     x.location.line, x.location.column)
                 log.warning(msg)
                 if x.severity > 2:
-                    log.warning("Source code has some error. Please fix.")
-                    # code.interact(local=locals())
-                    raise InvalidTranslationUnitException(msg)
+                    errors.append(msg)
+            if len(errors) > 0:
+                log.warning("Source code has %d error. Please fix.", len(errors))
+                # code.interact(local=locals())
+                raise InvalidTranslationUnitException(errors[0])
         root = self.tu.cursor
         for node in root.get_children():
             self.startElement(node)
@@ -181,7 +184,7 @@ class Clang_Parser(object):
         if name in self.all:
             log.debug('register: %s already existed: %s', name, obj.name)
             # code.interact(local=locals())
-            #raise DuplicateDefinitionException(
+            # raise DuplicateDefinitionException(
             #    'register: %s already existed: %s' % (name, obj.name))
             return self.all[name]
         log.debug('register: %s ', name)

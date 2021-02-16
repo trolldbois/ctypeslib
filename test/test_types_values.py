@@ -284,10 +284,10 @@ class ConstantsTest(ClangTest):
 
     def test_operation(self):
         self.convert("""
-        int i = -1;
-        int i2 = -1+2*3/2-3;
-        int i3 = -((1-2)*(1-2));
-        int j = -i;
+        const int i = -1;
+        const int i2 = -1+2*3/2-3;
+        const int i3 = -((1-2)*(1-2));
+        const int j = -i;
         """)
         self.assertEqual(self.namespace.i, -1)
         self.assertEqual(self.namespace.i2, -1)
