@@ -25,6 +25,6 @@ class EnumTest(ClangTest):
 
 
 if __name__ == "__main__":
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+    # logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     # logging.getLogger('codegen').setLevel(logging.INFO)
     unittest.main()

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import ctypes
+import sys
 import unittest
 
-from test.util import ClangTest
+from util import ClangTest
 
 
 class ConstantsTest(ClangTest):
