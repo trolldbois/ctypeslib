@@ -94,19 +94,8 @@ class TypeHandler(ClangHandler):
         if self.is_registered(name):
             obj = self.get_registered(name)
         else:
-            #log.warning('Was in ENUM but had to parse record declaration ')
-            # FIXME: function returning an enum type
-            # obj = self.parse_cursor(_decl)
-            obj = typedesc.FundamentalType("c_int", 32, 32)
-        return obj
-
-    @log_entity
-    def ELABORATED(self, _cursor_type):
-        """
-        Handles ELABORATED
-        """
-        # FIXME: function returning an enum type
-        obj = typedesc.FundamentalType("c_int", 32, 32)
+            log.warning('Was in ENUM but had to parse record declaration ')
+            obj = self.parse_cursor(_decl)
         return obj
 
     @log_entity
