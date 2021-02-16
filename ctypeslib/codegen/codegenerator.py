@@ -376,7 +376,10 @@ class Generator(object):
             elif isinstance(tp.typ, typedesc.Structure):
                 init_value = self.type_name(tp.typ, False)
             elif isinstance(tp.typ, typedesc.FundamentalType) and tp.typ.name in ["c_char","c_wchar"]:
-                init_value = '\'\\x00\''
+                if tp.init is not None:
+                    init_value = repr(tp.init)
+                else:
+                    init_value = '\'\\x00\''
             else:
                 # we want to have FundamentalType variable use the actual
                 # type default, and not be a python ctypes object
