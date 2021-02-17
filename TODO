@@ -21,3 +21,4 @@ Test clang2py for
  --clang-args with a variety of args (targets ?)
 
 
+- Todo: struct__IO_FILE is used in gen in POINTER before typedef

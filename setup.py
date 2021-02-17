@@ -8,6 +8,7 @@ setup(
     version="2.2.3",
     description="ctypeslib2 - FFI toolkit, relies on clang",
     long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     author="Loic Jaquemet",
     author_email="loic.jaquemet+python@gmail.com",
     classifiers=[

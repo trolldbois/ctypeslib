@@ -11,10 +11,9 @@
 ## Status update
 
  - 2021-02:
-    Thanks for the pull requests
-    libclang-xx-dev must be installed for stddef and other reasons.
-    bump to libclang-11
-    Todo: struct__IO_FILE is used in gen in POINTER before typedef
+    - Thanks for the pull requests
+    - Note: libclang-xx-dev must be installed for stddef and other reasons.
+    - bump to libclang-11
  - 2018-01-03: master branch works with libclang-5.0 HEAD, python clang from pypi, python3
  - 2017-05-01: master branch works with libclang-4.0 HEAD
 
@@ -25,9 +24,9 @@ This library tries to load a few different versions to help you out. (`__init__.
 But if you encounter a version compatibility issue, you might have to fix the problem
 using one of the following solutions:
 
-1. Install libclang-5.0-dev to get libclang.so (maybe)
-2. OR create a link to libclang-5.0.so.1 named libclang.so
-3. OR hardcode a call to clang.cindex.Config.load_library_file('libclang-5.0.so.1') in your code
+1. Install libclang-11-dev to get libclang.so (maybe)
+2. OR create a link to libclang-11.so.1 named libclang.so
+3. OR hardcode a call to clang.cindex.Config.load_library_file('libclang-10.so.1') in your code
 
 
 ### Pypi
@@ -44,7 +43,7 @@ See the LLVM Clang instructions at http://apt.llvm.org/ or use your distribution
 
 Look at `test/test_example_script.py`
 
-Other example:
+## Other example
 
 Source file:
 ```
