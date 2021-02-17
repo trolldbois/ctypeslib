@@ -13,6 +13,7 @@ import ctypeslib
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.codegenerator import generate_code
 from ctypeslib.library import Library
+from ctypeslib import ctypes_version
 
 ################################################################
 windows_dll_names = """\
@@ -175,7 +176,7 @@ def main(argv=None):
                         default=False)
     parser.add_argument('-V', '--version',
                         action='version',
-                        version="%(prog)s version " + version)
+                        version="%(prog)s version " + version + " clang: " + ctypes_version())
 
     parser.add_argument("-w",
                         action="store",

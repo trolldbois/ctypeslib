@@ -23,7 +23,10 @@ else:
 try:
     from ctypes.util import find_library
     # debug for python-haystack travis-ci
-    for version in ["libclang", "clang", "clang-11", "clang-5.0", "clang-4.0", "clang-3.9", "clang-3.8", "clang-3.7"]:
+    v1 = ["clang-%d" % _ for _ in range(14, 6, -1)]
+    v2 = ["clang-%f" % _ for _ in range(6, 3, -1)]
+    v_list = v1 + v2 + ["clang-3.9", "clang-3.8", "clang-3.7"]
+    for version in ["libclang", "clang"] + v_list:
         if find_library(version) is not None:
             from clang import cindex
             cindex.Config.set_library_file(find_library(version))
@@ -33,6 +36,9 @@ try:
             # On darwin, consider that Xcode should be installed in its default path.
             from clang import cindex
             cindex.Config.set_library_file('/Applications/Xcode.app/Contents/Frameworks/libclang.dylib')
+
+    def ctypes_version():
+        return cindex.Config.library_file
 except ImportError as e:
     print(e)
 
