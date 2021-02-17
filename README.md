@@ -1,7 +1,7 @@
 # ctypeslib with libclang
 
 [![Build Status](https://travis-ci.org/trolldbois/ctypeslib.svg?branch=master)](https://travis-ci.org/trolldbois/ctypeslib)
-[![Coverage Status](https://coveralls.io/repos/trolldbois/ctypeslib/badge.svg)](https://coveralls.io/r/trolldbois/ctypeslib)
+[![Coverage Status](https://coveralls.io/repos/github/trolldbois/ctypeslib/badge.svg?branch=master)](https://coveralls.io/github/trolldbois/ctypeslib?branch=master)
 [![Latest release](https://img.shields.io/github/tag/trolldbois/ctypeslib.svg)]()
 [![Supported versions](https://img.shields.io/pypi/pyversions/ctypeslib2.svg)]()
 
