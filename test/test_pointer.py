@@ -16,12 +16,12 @@ class Pointer(ClangTest):
     def test_x32_pointer(self):
         flags = ['-target', 'i386-linux']
         self.convert('''typedef int* A;''', flags)
-        self.assertEquals(ctypes.sizeof(self.namespace.A), 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.A), 4)
 
     def test_x64_pointer(self):
         flags = ['-target', 'x86_64-linux']
         self.convert('''typedef int* A;''', flags)
-        self.assertEquals(ctypes.sizeof(self.namespace.A), 8)
+        self.assertEqual(ctypes.sizeof(self.namespace.A), 8)
 
     @unittest.expectedFailure
     def test_member_pointer(self):
@@ -32,7 +32,7 @@ class Pointer(ClangTest):
         };
         int Blob::*member_pointer;
         ''', flags)
-        self.assertEquals(self.namespace.struct_Blob.i.size, 4)
+        self.assertEqual(self.namespace.struct_Blob.i.size, 4)
         # FIXME
         self.fail('member pointer')
         #self.assertTrue(isinstance(self.namespace.member_pointer,POINTER_T) )

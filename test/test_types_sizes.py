@@ -106,10 +106,10 @@ class CompareTypes(ClangTest):
         typedef PB* PC;
         typedef PC PD;
         ''', flags)
-        self.assertEquals(self.namespace.A, self.namespace.B)
-        self.assertEquals(self.namespace.A, self.namespace.C)
-        self.assertEquals(self.namespace.PA, self.namespace.PB)
-        self.assertEquals(self.namespace.PC, self.namespace.PD)
+        self.assertEqual(self.namespace.A, self.namespace.B)
+        self.assertEqual(self.namespace.A, self.namespace.C)
+        self.assertEqual(self.namespace.PA, self.namespace.PB)
+        self.assertEqual(self.namespace.PC, self.namespace.PD)
 
 
 if __name__ == "__main__":

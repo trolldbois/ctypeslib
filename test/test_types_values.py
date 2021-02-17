@@ -39,11 +39,11 @@ class ConstantsTest(ClangTest):
         unsigned long long ui2 = 0x8000000000000000ULL;
         unsigned long long ui1 = 0x7FFFFFFFFFFFFFFFULL;
         """, flags=['-target', 'x86_64'])
-        self.assertEquals(self.namespace.i1, 0x7FFFFFFFFFFFFFFF)
-        self.assertEquals(self.namespace.i2, -1)
-        self.assertEquals(self.namespace.ui1, 0x7FFFFFFFFFFFFFFF)
-        self.assertEquals(self.namespace.ui3, 0xFFFFFFFFFFFFFFFF)
-        self.assertEquals(self.namespace.ui2, 0x8000000000000000)
+        self.assertEqual(self.namespace.i1, 0x7FFFFFFFFFFFFFFF)
+        self.assertEqual(self.namespace.i2, -1)
+        self.assertEqual(self.namespace.ui1, 0x7FFFFFFFFFFFFFFF)
+        self.assertEqual(self.namespace.ui3, 0xFFFFFFFFFFFFFFFF)
+        self.assertEqual(self.namespace.ui2, 0x8000000000000000)
 
     def test_int(self):
         self.convert("""

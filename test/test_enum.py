@@ -18,10 +18,10 @@ class EnumTest(ClangTest):
         """
         flags = ['-target', 'i386-linux']
         self.gen('test/data/test-enum.c', flags)
-        self.assertEquals(ctypes.sizeof(self.namespace.myEnum), 4)
-        self.assertEquals(self.namespace.ZERO, 0)
-        self.assertEquals(self.namespace.ONE, 1)
-        self.assertEquals(self.namespace.FOUR, 4)
+        self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 4)
+        self.assertEqual(self.namespace.ZERO, 0)
+        self.assertEqual(self.namespace.ONE, 1)
+        self.assertEqual(self.namespace.FOUR, 4)
 
 
 if __name__ == "__main__":
