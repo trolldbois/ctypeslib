@@ -33,7 +33,7 @@ using one of the following solutions:
 
 Stable Distribution is available through PyPi at https://pypi.python.org/pypi/ctypeslib2/
 
-    sudo pip install ctypeslib2
+`sudo pip install ctypeslib2`
 
 ### Setting up clang >= 3.7 dependency
 
@@ -48,14 +48,13 @@ Look at `test/test_example_script.py`
 Source file:
 
     $ cat t.c 
-    struct my_bitfield
-    {
-      long a:3;
-      long b:4;
-      unsigned long long c:3;
-      unsigned long long d:3;
-      long f:2;
-    } ;
+    struct my_bitfield {
+    long a:3;
+    long b:4;
+    unsigned long long c:3;
+    unsigned long long d:3;
+    long f:2;
+    };
 
 Run c-to-python script:
 
@@ -80,13 +79,12 @@ Output:
         ('c', ctypes.c_int64, 3),
         ('d', ctypes.c_int64, 3),
         ('f', ctypes.c_int64, 2),
-        ('PADDING_0', ctypes.c_int64, 49),
-         ]
+        ('PADDING_0', ctypes.c_int64, 49)]
     
     __all__ = \
         ['struct_my_bitfield']
 
-Other example with headers:
+## Other example with headers:
 
 Source file:
 
@@ -94,10 +92,11 @@ Source file:
     #include <stdbool.h>
     
     typedef struct s_foo {
-        bool bar1;
-        bool bar2;
-        bool bar3;
+    bool bar1;
+    bool bar2;
+    bool bar3;
     } foo;
+
 
 Run c-to-python script (with any relevant include folder):
 
@@ -119,12 +118,11 @@ Output:
         _fields_ = [
         ('bar1', ctypes.c_bool),
         ('bar2', ctypes.c_bool),
-        ('bar3', ctypes.c_bool),
-         ]
+        ('bar3', ctypes.c_bool),]
     
     foo = struct_s_foo
-    __all__ = \
-        ['struct_s_foo', 'foo']
+    __all__ = ['struct_s_foo', 'foo']
+
 
 
 ## Usage
@@ -200,12 +198,9 @@ Output:
 - clang2py.py is mostly the old xml2py.py module forked to use libclang.
 - clang2py.py calls ctypeslib/ctypeslib/codegen/codegenerator.py
 - codegenerator.py calls ctypeslib/ctypeslib/codegen/clangparser.py
-- clangparser.py uses libclang's python binding to access the clang internal 
- representation of the C source code. 
- It then translate each child of the AST tree to python objects as listed in 
- typedesc.
-- codegenerator.py then uses these python object to generate ctypes-based python
- source code.
+- clangparser.py uses libclang's python binding to access the clang internal representation of the C source code. 
+    - It then translate each child of the AST tree to python objects as listed in typedesc.
+- codegenerator.py then uses these python object to generate ctypes-based python source code.
  
 Because clang is capable to handle different target architecture, this fork 
  {is/should be} able to produce cross-platform memory representation if needed.
@@ -223,10 +218,8 @@ the original ctypeslib contains these packages:
  - ``ctypeslib.test``          - unittests
 
 This fork of ctypeslib is heavily patched for clang.
-- https://github.com/trolldbois/ctypeslib is based on 
- rev77594 of the original ctypeslib.
-- git-svn-id: http://svn.python.org/projects/ctypes/trunk/ctypeslib@77594 
- 6015fed2-1504-0410-9fe1-9d1591cc4771
+- https://github.com/trolldbois/ctypeslib is based on rev77594 of the original ctypeslib.
+- git-svn-id: http://svn.python.org/projects/ctypes/trunk/ctypeslib@775946015fed2-1504-0410-9fe1-9d1591cc4771
 
 The original ctypeslib is written by
 - author="Thomas Heller",
