@@ -25,8 +25,11 @@ setup(
               'ctypeslib.codegen',
               ],
     package_data={'ctypeslib': ['data/fundamental_type_name.tpl',
+                                'data/headers.tpl',
                                 'data/pointer_type.tpl',
-                                'data/headers.tpl']},
+                                'data/string_cast.tpl',
+                                'data/structure_type.tpl',
+                                ]},
     entry_points={
         'console_scripts': [
             'clang2py = ctypeslib.clang2py:main',
