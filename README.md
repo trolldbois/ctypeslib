@@ -33,7 +33,7 @@ using one of the following solutions:
 
 Stable Distribution is available through PyPi at https://pypi.python.org/pypi/ctypeslib2/
 
-`sudo pip install ctypeslib2`
+    sudo pip install ctypeslib2
 
 ### Setting up clang >= 3.7 dependency
 
@@ -46,154 +46,153 @@ Look at `test/test_example_script.py`
 ## Other example
 
 Source file:
-```
-$ cat t.c 
-struct my_bitfield
-{
-  long a:3;
-  long b:4;
-  unsigned long long c:3;
-  unsigned long long d:3;
-  long f:2;
-} ;
-```
+
+    $ cat t.c 
+    struct my_bitfield
+    {
+      long a:3;
+      long b:4;
+      unsigned long long c:3;
+      unsigned long long d:3;
+      long f:2;
+    } ;
+
 Run c-to-python script:
-`clang2py t.c`
+
+    clang2py t.c
+
 Output:
-```
-# -*- coding: utf-8 -*-
-#
-# TARGET arch is: []
-# WORD_SIZE is: 8
-# POINTER_SIZE is: 8
-# LONGDOUBLE_SIZE is: 16
-#
-import ctypes
 
-class struct_my_bitfield(ctypes.Structure):
-    _pack_ = True # source:False
-    _fields_ = [
-    ('a', ctypes.c_int64, 3),
-    ('b', ctypes.c_int64, 4),
-    ('c', ctypes.c_int64, 3),
-    ('d', ctypes.c_int64, 3),
-    ('f', ctypes.c_int64, 2),
-    ('PADDING_0', ctypes.c_int64, 49),
-     ]
-
-__all__ = \
-    ['struct_my_bitfield']
-```
+    # -*- coding: utf-8 -*-
+    #
+    # TARGET arch is: []
+    # WORD_SIZE is: 8
+    # POINTER_SIZE is: 8
+    # LONGDOUBLE_SIZE is: 16
+    #
+    import ctypes
+    
+    class struct_my_bitfield(ctypes.Structure):
+        _pack_ = True # source:False
+        _fields_ = [
+        ('a', ctypes.c_int64, 3),
+        ('b', ctypes.c_int64, 4),
+        ('c', ctypes.c_int64, 3),
+        ('d', ctypes.c_int64, 3),
+        ('f', ctypes.c_int64, 2),
+        ('PADDING_0', ctypes.c_int64, 49),
+         ]
+    
+    __all__ = \
+        ['struct_my_bitfield']
 
 Other example with headers:
 
 Source file:
-```
-$ cat test-stdbool.c 
-#include <stdbool.h>
 
-typedef struct s_foo {
-    bool bar1;
-    bool bar2;
-    bool bar3;
-} foo;
-```
+    $ cat test-stdbool.c 
+    #include <stdbool.h>
+    
+    typedef struct s_foo {
+        bool bar1;
+        bool bar2;
+        bool bar3;
+    } foo;
 
 Run c-to-python script (with any relevant include folder):
-`clang2py --clang-args="-I/usr/include/clang/4.0/include" test-stdbool.c`
+
+    clang2py --clang-args="-I/usr/include/clang/4.0/include" test-stdbool.c
 
 Output:
-```
-# -*- coding: utf-8 -*-
-#
-# TARGET arch is: ['-I/usr/include/clang/4.0/include']
-# WORD_SIZE is: 8
-# POINTER_SIZE is: 8
-# LONGDOUBLE_SIZE is: 16
-#
-import ctypes
 
-class struct_s_foo(ctypes.Structure):
-    _pack_ = True # source:False
-    _fields_ = [
-    ('bar1', ctypes.c_bool),
-    ('bar2', ctypes.c_bool),
-    ('bar3', ctypes.c_bool),
-     ]
-
-foo = struct_s_foo
-__all__ = \
-    ['struct_s_foo', 'foo']
-```
-
-
+    # -*- coding: utf-8 -*-
+    #
+    # TARGET arch is: ['-I/usr/include/clang/4.0/include']
+    # WORD_SIZE is: 8
+    # POINTER_SIZE is: 8
+    # LONGDOUBLE_SIZE is: 16
+    #
+    import ctypes
+    
+    class struct_s_foo(ctypes.Structure):
+        _pack_ = True # source:False
+        _fields_ = [
+        ('bar1', ctypes.c_bool),
+        ('bar2', ctypes.c_bool),
+        ('bar3', ctypes.c_bool),
+         ]
+    
+    foo = struct_s_foo
+    __all__ = \
+        ['struct_s_foo', 'foo']
 
 
 ## Usage
-```
-usage: clang2py [-h] [-c] [-d] [--debug] [-e] [-k TYPEKIND] [-i] [-l DLL]
-                [-m module] [-o OUTPUT] [-p DLL] [-q] [-r EXPRESSION]
-                [-s SYMBOL] [-t TARGET] [-v] [-V] [-w W] [-x]
-                [--show-ids SHOWIDS] [--max-depth N] [--clang-args CLANG_ARGS]
-                files [files ...]
 
-Version 2.1.5rc0. Generate python code from C headers
+    usage: clang2py [-h] [-c] [-d] [--debug] [-e] [-k TYPEKIND] [-i] [-l DLL]
+                    [-m module] [--nm NM] [-o OUTPUT] [-p DLL] [-q]
+                    [-r EXPRESSION] [-s SYMBOL] [-t TARGET] [-v] [-V] [-w W] [-x]
+                    [--show-ids SHOWIDS] [--max-depth N] [--clang-args CLANG_ARGS]
+                    files [files ...]
+    
+    Version 2.2.3. Generate python code from C headers
+    
+    positional arguments:
+      files                 source filenames. stdin is not supported
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -c, --comments        include source doxygen-style comments
+      -d, --doc             include docstrings containing C prototype and source
+                            file location
+      --debug               setLevel to DEBUG
+      -e, --show-definition-location
+                            include source file location in comments
+      -k TYPEKIND, --kind TYPEKIND
+                            kind of type descriptions to include: a = Alias, c =
+                            Class, d = Variable, e = Enumeration, f = Function, m
+                            = Macro, #define s = Structure, t = Typedef, u = Union
+                            default = 'cdefstu'
+      -i, --includes        include declaration defined outside of the sourcefiles
+      -l DLL, --include-library DLL
+                            library to search for exported functions. Add multiple
+                            times if required
+      -m module, --module module
+                            Python module(s) containing symbols which will be
+                            imported instead of generated
+      --nm NM               nm program to use to extract symbols from libraries
+      -o OUTPUT, --output OUTPUT
+                            output filename (if not specified, standard output
+                            will be used)
+      -p DLL, --preload DLL
+                            dll to be loaded before all others (to resolve
+                            symbols)
+      -q, --quiet           Shut down warnings and below
+      -r EXPRESSION, --regex EXPRESSION
+                            regular expression for symbols to include (if neither
+                            symbols nor expressions are specified,everything will
+                            be included)
+      -s SYMBOL, --symbol SYMBOL
+                            symbol to include (if neither symbols nor expressions
+                            are specified,everything will be included)
+      -t TARGET, --target TARGET
+                            target architecture (default: x86_64-Linux)
+      -v, --verbose         verbose output
+      -V, --version         show program's version number and exit
+      -w W                  add all standard windows dlls to the searched dlls
+                            list
+      -x, --exclude-includes
+                            Parse object in sources files only. Ignore includes
+      --show-ids SHOWIDS    Don't compute cursor IDs (very slow)
+      --max-depth N         Limit cursor expansion to depth N
+      --clang-args CLANG_ARGS
+                            clang options, in quotes: --clang-args="-std=c99
+                            -Wall"
+    
+    Cross-architecture: You can pass target modifiers to clang. For example, try
+    --clang-args="-target x86_64" or "-target i386-linux" to change the target CPU
+    arch.
 
-positional arguments:
-  files                 source filenames. stdin is not supported
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -c, --comments        include source doxygen-style comments
-  -d, --doc             include docstrings containing C prototype and source
-                        file location
-  --debug               setLevel to DEBUG
-  -e, --show-definition-location
-                        include source file location in comments
-  -k TYPEKIND, --kind TYPEKIND
-                        kind of type descriptions to include: a = Alias, c =
-                        Class, d = Variable, e = Enumeration, f = Function, m
-                        = Macro, #define s = Structure, t = Typedef, u = Union
-                        default = 'cdefstu'
-  -i, --includes        include declaration defined outside of the sourcefiles
-  -l DLL, --include-library DLL
-                        library to search for exported functions. Add multiple
-                        times if required
-  -m module, --module module
-                        Python module(s) containing symbols which will be
-                        imported instead of generated
-  -o OUTPUT, --output OUTPUT
-                        output filename (if not specified, standard output
-                        will be used)
-  -p DLL, --preload DLL
-                        dll to be loaded before all others (to resolve
-                        symbols)
-  -q, --quiet           Shut down warnings and below
-  -r EXPRESSION, --regex EXPRESSION
-                        regular expression for symbols to include (if neither
-                        symbols nor expressions are specified,everything will
-                        be included)
-  -s SYMBOL, --symbol SYMBOL
-                        symbol to include (if neither symbols nor expressions
-                        are specified,everything will be included)
-  -t TARGET, --target TARGET
-                        target architecture (default: x86_64-Linux)
-  -v, --verbose         verbose output
-  -V, --version         show program's version number and exit
-  -w W                  add all standard windows dlls to the searched dlls
-                        list
-  -x, --exclude-includes
-                        Parse object in sources files only. Ignore includes
-  --show-ids SHOWIDS    Don't compute cursor IDs (very slow)
-  --max-depth N         Limit cursor expansion to depth N
-  --clang-args CLANG_ARGS
-                        clang options, in quotes: --clang-args="-std=c99
-                        -Wall"
-
-Cross-architecture: You can pass target modifiers to clang. For example, try
---clang-args="-target x86_64" or "-target i386-linux" to change the target CPU
-arch.
-```
 
 ## Inner workings for memo
 
