@@ -100,7 +100,8 @@ class ConstantsTest(ClangTest):
         #self.assertEqual(len(self.namespace.aa), 6 * 8 // 8 - 1)
         #self.assertEqual(len(self.namespace.a), 11 * 8 // 8 - 1)
 
-    @unittest.expectedFailure
+    # @unittest.expectedFailure  # succeed in py27
+    @unittest.skip("Fails in py3, succeeds in py2")
     def test_iso8859_1(self):
         """ conversion test from unittest in clang"""
         self.gen('test/data/test-strings-8859-1.cpp', ['-x', 'c++'])
@@ -117,7 +118,8 @@ class ConstantsTest(ClangTest):
         self.assertEqual(len(self.namespace.b2.encode("utf-8")), 6)
 
     # TODO
-    @unittest.expectedFailure
+    # @unittest.expectedFailure # succeed in py27
+    @unittest.skip("Fails in py3, succeeds in py2")
     def test_unicode_cpp11(self):
         """ unicode conversion test from unittest in clang"""
         self.gen('test/data/test-strings.cpp', ['-x', 'c++', '--std=c++11'])

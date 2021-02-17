@@ -7,7 +7,10 @@ class AsDictMixin:
             return self
         if not hasattr(cls, "_fields_"):
             return result
-        for (field, *_) in cls._fields_:  # noqa
+        # sys.version_info >= (3, 5)
+        # for (field, *_) in cls._fields_:  # noqa
+        for field_tuple in cls._fields_:  # noqa
+            field = field_tuple[0]
             if field.startswith('PADDING_'):
                 continue
             value = getattr(self, field)
