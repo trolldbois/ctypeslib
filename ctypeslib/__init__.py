@@ -37,7 +37,7 @@ try:
             from clang import cindex
             cindex.Config.set_library_file('/Applications/Xcode.app/Contents/Frameworks/libclang.dylib')
 
-    def ctypes_version():
+    def clang_version():
         return cindex.Config.library_file
 except ImportError as e:
     print(e)
