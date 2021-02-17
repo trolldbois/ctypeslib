@@ -352,9 +352,9 @@ class ConstantsTest(ClangTest):
         #define B  1.0
         #define C  0.8249
         """)
-        self.failUnlessAlmostEqual(self.namespace.A, 0.9642)
-        self.failUnlessAlmostEqual(self.namespace.B, 1.0)
-        self.failUnlessAlmostEqual(self.namespace.C, 0.8249)
+        self.assertAlmostEqual(self.namespace.A, 0.9642)
+        self.assertAlmostEqual(self.namespace.B, 1.0)
+        self.assertAlmostEqual(self.namespace.C, 0.8249)
 
     def test_anonymous_struct(self):
         flags = ['-target', 'i386-linux']
