@@ -558,11 +558,14 @@ class CursorHandler(ClangHandler):
         log.debug('cursor.type.kind:%s', cursor.type.kind.name)
         if cursor.kind == CursorKind.UNARY_OPERATOR:
             if cursor.type.kind == TypeKind.INT:
-                retval = int(retval)
+                if '0x' in retval:
+                    retval = int(retval, 16)
+                else:
+                    retval = int(retval)
             elif cursor.type.kind in [TypeKind.FLOAT, TypeKind.DOUBLE]:
                 retval = float(retval)
             else:
-                raise TypeError
+                raise TypeError("Unsupported Cursor type.kind: %s", cursor.type.kind)
         elif cursor.kind == CursorKind.BINARY_OPERATOR:
             # cursor.kind == binary_operator, then need to make some additions
             retval = eval(retval)

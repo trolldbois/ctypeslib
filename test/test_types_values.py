@@ -6,7 +6,6 @@ import unittest
 
 from test.util import ClangTest
 
-logging.basicConfig(level=logging.DEBUG)
 
 class ConstantsTest(ClangTest):
     """Tests from the original ctypeslib.
@@ -324,7 +323,7 @@ class ConstantsTest(ClangTest):
         // const int c[2] = {+i,-i*2};
         const float f[3] = {1,-2, 2.0};
         const long double d[3] = {1.1,-2.1, 3.3};
-        const long l[5] = {1,-2, 0x44, 1, 2};
+        const long l[6] = {1,-2, 0x44, 1, 2, -0x02};
         """)
         self.assertEqual(self.namespace.i, 1)
         self.assertEqual(self.namespace.a, [1, -2])
@@ -332,7 +331,7 @@ class ConstantsTest(ClangTest):
         # self.assertEqual(self.namespace.c, [1, -2])  # unsuported ref_expr
         self.assertEqual(self.namespace.f, [1, -2, 2.0])
         self.assertEqual(self.namespace.d, [1.1, -2.1, 3.3])
-        self.assertEqual(self.namespace.l, [1, -2, 0x44, 1, 2])
+        self.assertEqual(self.namespace.l, [1, -2, 0x44, 1, 2, -0x02])
 
     # we are not actually looking at signed/unsigned types...
     @unittest.expectedFailure
