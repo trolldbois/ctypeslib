@@ -216,11 +216,15 @@ def main(argv=None):
 
     options = parser.parse_args()
 
-    # handle stdin, just in case
+    # handle stdin
     files = []
+    _stdin = None
     for f in options.files:
         if f == sys.stdin:
-            raise ValueError('stdin is not supported')
+            import tempfile
+            _stdin = tempfile.NamedTemporaryFile(mode="w", prefix="stdin", suffix=".c", delete=False)
+            _stdin.write(f.read())
+            f = _stdin
         files.append(f.name)
         f.close()
     # files = [f.name for f in options.files]
@@ -302,11 +306,12 @@ def main(argv=None):
                       preloaded_dlls=options.preload,
                       types=options.kind,
                       flags=clang_opts)
-    except:
+    finally:
         if output_file is not None:
             output_file.close()
             os.remove(options.output)
-        raise
+        if _stdin:
+            os.remove(_stdin.name)
     return 0
 
 
