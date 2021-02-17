@@ -538,8 +538,10 @@ class CursorHandler(ClangHandler):
         if len(final_value) == 1:
             return final_value[0]
         # Macro definition of a string using multiple macro
-        if isinstance(final_value, list) and cursor.kind == CursorKind.STRING_LITERAL:
-            final_value = ''.join(final_value)
+        if isinstance(final_value, list):
+            if cursor.kind == CursorKind.STRING_LITERAL:
+                final_value = ''.join(final_value)
+        log.debug('_literal_handling final_value: %s', final_value)
         return final_value
 
     INTEGER_LITERAL = _literal_handling
@@ -553,6 +555,18 @@ class CursorHandler(ClangHandler):
         """Returns a string with the literal that are part of the operation."""
         values = self._literal_handling(cursor)
         retval = ''.join([str(val) for val in values])
+        log.debug('cursor.type.kind:%s', cursor.type.kind.name)
+        if cursor.kind == CursorKind.UNARY_OPERATOR:
+            if cursor.type.kind == TypeKind.INT:
+                retval = int(retval)
+            elif cursor.type.kind in [TypeKind.FLOAT, TypeKind.DOUBLE]:
+                retval = float(retval)
+            else:
+                raise TypeError
+        elif cursor.kind == CursorKind.BINARY_OPERATOR:
+            # cursor.kind == binary_operator, then need to make some additions
+            retval = eval(retval)
+
         return retval
 
     UNARY_OPERATOR = _operator_handling

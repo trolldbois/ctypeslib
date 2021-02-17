@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import ctypes
 import sys
+import logging
 import unittest
 
 from test.util import ClangTest
 
+logging.basicConfig(level=logging.DEBUG)
 
 class ConstantsTest(ClangTest):
     """Tests from the original ctypeslib.
@@ -313,17 +315,24 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.i3, -1)
         self.assertEqual(self.namespace.j, 1)
 
-    @unittest.expectedFailure
+    # @unittest.expectedFailure
     def test_array_operation(self):
         self.convert("""
-        int i = 1;
-        int a[2] = {1,-2};
-        int b[2] = {+1,-2-2+2};
-        int c[2] = {+i,-i*2};
+        const int i = 1;
+        const int a[2] = {1,-2};
+        const int b[2] = {+1,-2-2+2};
+        // const int c[2] = {+i,-i*2};
+        const float f[3] = {1,-2, 2.0};
+        const long double d[3] = {1.1,-2.1, 3.3};
+        const long l[5] = {1,-2, 0x44, 1, 2};
         """)
+        self.assertEqual(self.namespace.i, 1)
         self.assertEqual(self.namespace.a, [1, -2])
         self.assertEqual(self.namespace.b, [1, -2])
-        self.assertEqual(self.namespace.c, [1, -2])  # unsuported ref_expr
+        # self.assertEqual(self.namespace.c, [1, -2])  # unsuported ref_expr
+        self.assertEqual(self.namespace.f, [1, -2, 2.0])
+        self.assertEqual(self.namespace.d, [1.1, -2.1, 3.3])
+        self.assertEqual(self.namespace.l, [1, -2, 0x44, 1, 2])
 
     # we are not actually looking at signed/unsigned types...
     @unittest.expectedFailure
@@ -476,5 +485,5 @@ typedef union MY_ROOT_UNION {
 
 
 if __name__ == "__main__":
-    # logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
+    logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
     unittest.main()
