@@ -1,7 +1,7 @@
 include README.md CHANGES.md
 include LICENSE.txt
 include requirements.txt
-include TODO
+# include TODO
 include ctypeslib/experimental/README.txt
 recursive-include ctypeslib *.py
 # recursive-include docs *.*
@@ -11,4 +11,4 @@ recursive-include test *.cpp
 recursive-include test *.h
 
 # added by check_manifest.py
-include *.txt
+# include *.txt
