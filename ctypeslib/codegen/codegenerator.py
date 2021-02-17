@@ -562,7 +562,7 @@ class Generator(object):
         # LXJ: we pack all the time, because clang gives a precise field offset
         # per target architecture. No need to defer to ctypes logic for that.
         if fields:
-            print("%s_pack_ = True # source:%s" % (
+            print("%s_pack_ = 1 # source:%s" % (
                 prefix, body.struct.packed), file=self.stream)
 
         if body.struct.bases:
