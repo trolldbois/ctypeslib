@@ -28,6 +28,7 @@ script:
 # system python package will not be used. Can't use python-clang, have to use pip.
 # we need clang2py in the path. also installs python clang
   - python setup.py develop
+  - clang test/data/test-callbacks.c -Wall -Wextra -Werror -std=c99 -pedantic -fpic -shared -o test/data/test-callbacks.so
 # run tests
   - python setup.py test
 
