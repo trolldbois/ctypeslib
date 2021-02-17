@@ -175,12 +175,14 @@ class ConstantsTest(ClangTest):
 
     def test_array(self):
         self.convert("""
+        #include <stdint.h>
         char c1[];
         char c2[3] = {'a','b','c'};
         char c3[] = {'a','b','c'};
         int tab1[];
         int tab2[3] = {1,2,3};
         int tab3[] = {1,2,3};
+        uint8_t buf[2048];
         """)
         self.assertEqual(self.namespace.c1, [])
         self.assertEqual(self.namespace.c2, ['a', 'b', 'c'])
@@ -188,6 +190,7 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.tab1, [])
         self.assertEqual(self.namespace.tab2, [1, 2, 3])
         self.assertEqual(self.namespace.tab3, [1, 2, 3])
+        self.assertEqual(self.namespace.buf, [])
 
     def test_incomplete_array(self):
         self.convert("""
