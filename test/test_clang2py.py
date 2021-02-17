@@ -38,12 +38,12 @@ class InputOutput(ClangTest):
         self.assertEqual(p.returncode, 0)
         self.assertIn("WORD_SIZE is:", output)
 
-    def test_stdin_fail(self):
-        """Support of stdin is on the TODO list"""
+    def test_stdin_succeed(self):
+        """Support of stdin is done """
         # run cat  test/data/test-includes.h | clang2py -
         p, output, stderr = clang2py(['-'])
-        self.assertEqual(p.returncode, 1)
-        self.assertIn("ValueError: stdin is not supported", stderr)
+        self.assertEqual(p.returncode, 0)
+        self.assertIn("__all__", output)
 
     def test_no_files(self):
         """run cat  test/data/test-includes.h | clang2py"""
