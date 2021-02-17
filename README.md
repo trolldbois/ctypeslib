@@ -123,6 +123,32 @@ Output:
     __all__ = ['struct_s_foo', 'foo']
 
 
+## _pack_ and PADDING explanation
+
+    clang2py test/data/test-record.c
+
+This outputs:
+
+    # ...
+    class struct_Node2(Structure):
+        _pack_ = True # source:False
+        _fields_ = [
+        ('m1', ctypes.c_ubyte),
+        ('PADDING_0', ctypes.c_ubyte * 7),
+        ('m2', POINTER_T(struct_Node)),
+         ]
+    # ...
+
+The PADDING_0 field is added to force the ctypes memory Structure to align fields offset with the definition given
+by the clang compiler.
+
+The [_pack_](https://docs.python.org/3/library/ctypes.html#ctypes.Structure._pack_) attribute forces the alignment 
+on 0 bytes, to ensure all fields are as defined by this library, and not per the compiler used by the host python binary
+
+The objective of this, is to be able to produce cross-architecture python code, that can read memory structures from a 
+different architecture (like reading a memory dump from a different architecture)
+
+
 
 ## Usage
 
