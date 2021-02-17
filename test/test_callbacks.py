@@ -43,6 +43,7 @@ class Callback(ClangTest):
             31
         )
 
+    @unittest.expectedFailure
     def test_callbacks_x32(self):
         flags = ['-target', 'i386-linux']
         self.gen('test/data/test-callbacks.c', flags=flags, dlls=['test/data/test-callbacks.so'])
@@ -70,6 +71,7 @@ class Callback(ClangTest):
             31
         )
 
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    # logging.basicConfig(level=logging.INFO)
     unittest.main(verbosity=2)

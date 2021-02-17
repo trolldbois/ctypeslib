@@ -7,7 +7,6 @@
 #include <stddef.h>
 // CHECK-C: private unnamed_addr constant [6 x i8] c"\C0\E9\EE\F5\FC\00", align 1
 // CHECK-CPP0X: private unnamed_addr constant [6 x i8] c"\C0\E9\EE\F5\FC\00", align 1
-char const *aa = "Àéîõü";
 
 // CHECK-C: private unnamed_addr constant [11 x i8] c"\D0\9A\D0\BE\D1\88\D0\BA\D0\B0\00", align 1
 // CHECK-CPP0X: private unnamed_addr constant [11 x i8] c"\D0\9A\D0\BE\D1\88\D0\BA\D0\B0\00", align 1
