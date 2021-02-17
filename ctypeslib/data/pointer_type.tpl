@@ -2,6 +2,8 @@
 if ctypes.sizeof(ctypes.c_void_p) == __POINTER_SIZE__:
     POINTER_T = ctypes.POINTER
 else:
+    class IncorrectWordSizeError(TypeError):
+        pass
     # required to access _ctypes
     import _ctypes
     # Emulate a pointer class using the approriate c_int32/c_int64 type
@@ -12,7 +14,7 @@ else:
     ctypes._pointer_t_type_cache = {}
     def POINTER_T(pointee):
         # a pointer should have the same length as LONG
-        fake_ptr_base_type = ctypes.__REPLACEMENT_TYPE__ 
+        fake_ptr_base_type = ctypes.__REPLACEMENT_TYPE__
         # specific case for c_void_p
         if pointee is None: # VOID pointer type. c_void_p.
             pointee = type(None) # ctypes.c_void_p # ctypes.c_ulong
@@ -30,9 +32,9 @@ else:
             def __repr__(self):
                 return '%s(%d)'%(clsname, self.value)
             def contents(self):
-                raise TypeError('This is not a ctypes pointer.')
+                raise IncorrectWordSizeError('This is not a ctypes pointer.')
             def __init__(self, **args):
-                raise TypeError('This is not a ctypes pointer. It is not instanciable.')
-        _class = type('LP_%d_%s'%(__POINTER_SIZE__, clsname), (_T,),{}) 
+                raise IncorrectWordSizeError('This is not a ctypes pointer. It is not instanciable.')
+        _class = type('LP_%d_%s'%(__POINTER_SIZE__, clsname), (_T,),{})
         ctypes._pointer_t_type_cache[clsname] = _class
         return _class
