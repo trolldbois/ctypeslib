@@ -129,7 +129,6 @@ class ArgumentTypeKind(ClangTest):
         """run clang2py -k d test/data/test-strings.cpp"""
         p, output, stderr = clang2py(['-k', 'd', 'test/data/test-strings.cpp'])
         self.assertEqual(p.returncode, 0)
-        self.assertIn("aa =", output)
         self.assertIn("a =", output)
         self.assertIn("b =", output)
 

@@ -100,6 +100,13 @@ class ConstantsTest(ClangTest):
         #self.assertEqual(len(self.namespace.a), 11 * 8 // 8 - 1)
 
     @unittest.expectedFailure
+    def test_iso8859_1(self):
+        """ conversion test from unittest in clang"""
+        self.gen('test/data/test-strings-8859-1.cpp', ['-x', 'c++'])
+        # force c++ lang for wchar
+        self.assertEqual(self.namespace.aa, '\xc0\xe9\xee\xf5\xfc')  # "Àéîõü")
+
+    @unittest.expectedFailure
     def test_unicode_wchar(self):
         """ unicode conversion test from unittest in clang"""
         self.gen('test/data/test-strings.cpp', ['-x', 'c++'])
@@ -108,7 +115,8 @@ class ConstantsTest(ClangTest):
         # utf-32, not supported. Should be 6 or 12
         self.assertEqual(len(self.namespace.b2.encode("utf-8")), 6)
 
-    # @unittest.expectedFailure
+    # TODO
+    @unittest.expectedFailure
     def test_unicode_cpp11(self):
         """ unicode conversion test from unittest in clang"""
         self.gen('test/data/test-strings.cpp', ['-x', 'c++', '--std=c++11'])
