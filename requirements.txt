@@ -1,2 +1,2 @@
-clang>=4.0
+clang>=7.0
 six
