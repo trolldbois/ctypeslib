@@ -1053,8 +1053,9 @@ class CursorHandler(ClangHandler):
         """
         Parse MACRO_DEFINITION, only present if the TranslationUnit is
         used with TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD.
+        By default, macro are not parsed. requires -k m || parser.activate_macros_parsing()
         """
-        # TODO: optionalize macro parsing. It takes a LOT of time.
+        # macro parsing takes a LOT of time.
         # ignore system macro
         if (not hasattr(cursor, 'location') or cursor.location is None or
                 cursor.location.file is None):
@@ -1099,10 +1100,22 @@ class CursorHandler(ClangHandler):
         obj.comment = comment
         return True
 
-    # @log_entity
-    # def MACRO_INSTANTIATION(self, cursor):
-    #     log.debug("I was here")
-    #     self.set_location(obj, cursor)
-    #     # set the comment in the obj
-    #     obj.comment = comment
-    #     return True
+    @log_entity
+    def MACRO_INSTANTIATION(self, cursor):
+        """We could use this to count instantiations
+        so we now, if we need to generate python code or comment for this macro ? """
+        log.debug('cursor.spelling: %s', cursor.spelling)
+        log.debug('cursor.kind: %s', cursor.kind.name)
+        log.debug('cursor.type.kind: %s', cursor.type.kind.name)
+        # no children ?
+        for child in cursor.get_children():
+            log.debug('child.spelling: %s', child.spelling)
+            log.debug('child.kind: %s', child.kind.name)
+            log.debug('child.type.kind: %s', child.type.kind.name)
+
+            # ret.append(self.parse_cursor(child))
+        # log.debug('cursor.type:%s', cursor.type.kind.name)
+        # self.set_location(obj, cursor)
+        # set the comment in the obj
+        # obj.comment = comment
+        return True

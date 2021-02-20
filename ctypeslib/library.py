@@ -31,7 +31,7 @@ class Library(six.with_metaclass(LibraryMeta)):
     def __init__(self, filepath, nm):
         self._filepath = filepath
         self._name = os.path.basename(self._filepath)
-        self.symbols = {}
+        self.__symbols = {}
         self._get_symbols(nm)
 
     # nm will print lines like this:
@@ -42,11 +42,11 @@ class Library(six.with_metaclass(LibraryMeta)):
         for line in output.split('\n'):
             fields = line.split(' ', 2)
             if len(fields) >= 3 and fields[1] in ("T", "D", "G", "R", "S"):
-                self.symbols[fields[2]] = fields[0]
+                self.__symbols[fields[2]] = fields[0]
 
     def __getattr__(self, name):
         try:
-            return self.symbols[name]
+            return self.__symbols[name]
         except KeyError:
             pass
         raise AttributeError(name)

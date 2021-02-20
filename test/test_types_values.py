@@ -27,10 +27,8 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.f2, 0.0)
         self.assertEqual(self.namespace.c, '\x00')
 
-
-
     def test_longlong(self):
-        """Basic POD test variable on longlong values'
+        """Basic POD test variable on longlong values
         """
         self.convert("""
         long long int i1 = 0x7FFFFFFFFFFFFFFFLL;

@@ -3,18 +3,20 @@
 
 #define plop void
 
-#define x(a,b) plopi(a,1,b)
+#define example(a,b) {a,b}
+
+#define x(c,d) plopi(c,d)
 
 
-plop x(int a, int b);
+plop x(int f, int g);
 
 #define PRE "before"
 #define POST " after"
 #define PREPOST PRE POST
 
-char a[] = "what";
-char b[] = "why" " though";
-char c[] = PRE POST;
-char d[] = PREPOST;
+char c1[] = "what";
+char c2[] = "why" " though";
+char c3[] = PRE POST;
+char c4[] = PREPOST;
 
 int i = MY_VAL;

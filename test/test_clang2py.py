@@ -146,8 +146,8 @@ class ArgumentTypeKind(ClangTest):
         # TODO: find a good test
 
     def test_macro(self):
-        """run clang2py -k m test/data/test-stdint.cpp"""
-        p, output, stderr = clang2py(['-k', 'm', 'test/data/test-stdint.cpp'])
+        """run clang2py -k m test/data/test-macro.h"""
+        p, output, stderr = clang2py(['-k', 'm', 'test/data/test-macro.h'])
         self.assertEqual(p.returncode, 0)
 
     def test_structure(self):

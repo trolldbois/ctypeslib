@@ -116,14 +116,14 @@ class ADict(dict):
 
 class ClangTest(unittest.TestCase):
     namespace = None
+    text_output = None
     full_parsing_options = False
 
     def _gen(self, ofi, fname, flags=None, dlls=None):
         """Take a file input and generate the code.
         """
         flags = flags or []
-        dlls = dlls or []
-        dlls = [Library(name, RTLD_GLOBAL, nm=None) for name in dlls]
+        dlls = [Library(name, nm="nm") for name in dlls]
         # leave the new parser accessible for tests
         self.parser = clangparser.Clang_Parser(flags)
         if self.full_parsing_options:
@@ -155,6 +155,7 @@ class ClangTest(unittest.TestCase):
         ignore_coding = ofi.readline()
         # exec ofi.getvalue() in namespace
         output = ''.join(ofi.readlines())
+        self.text_output = output
         try:
             # PY3 change
             exec(output, namespace)
@@ -168,14 +169,14 @@ class ClangTest(unittest.TestCase):
             print(output)
         return
 
-    def convert(self, src_code, flags=[], debug=False):
+    def convert(self, src_code, flags=[], dlls=[], debug=False):
         """Take a string input, write it into a temp file and the code.
         """
         hfile = mktemp(".h")
         with open(hfile, "w") as f:
             f.write(src_code)
         try:
-            self.gen(hfile, flags, debug)
+            self.gen(hfile, flags, dlls, debug)
         finally:
             os.unlink(hfile)
         return
