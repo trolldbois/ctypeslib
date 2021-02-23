@@ -182,7 +182,15 @@ class Generator(object):
     _macros = 0
 
     def Macro(self, macro):
-        """Handles macro. No test cases else that #defines."""
+        """
+        Handles macro. No test cases else that #defines.
+
+        Clang will first give us the macro definition,
+        and then later, the macro reference in code will be replaced by teh macro body.
+        So really, there is nothing to actually generate.
+        Just push the macro in comment, and let the rest work away
+
+        """
         if macro.location is None:
             log.info('Ignoring %s with no location', macro.name)
             return
@@ -190,7 +198,15 @@ class Generator(object):
             print("# %s:%s" % (macro.location), file=self.stream)
         if self.generate_comments:
             self.print_comment(macro)
-        print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
+
+        if macro.args:
+            print("# def %s%s:  # macro" % (macro.name, macro.args), file=self.stream)
+            print("#    return %s  " % macro.body, file=self.stream)
+        elif isinstance(macro.body, list):
+            # we can't handle that
+            print("# %s = %s # macro" % (macro.name, ' '.join(macro.body)), file=self.stream)
+        else:
+            print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
         self.macros += 1
         self.names.add(macro.name)
         return

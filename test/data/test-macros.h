@@ -8,15 +8,16 @@
 #define x(c,d) plopi(c,d)
 
 
-plop x(int f, int g);
+extern plop x(int f, int g);
 
 #define PRE "before"
 #define POST " after"
-#define PREPOST PRE POST
+#define APREPOST PRE POST
+#define ANOTHER 1 2 3 4 5 6
 
 char c1[] = "what";
 char c2[] = "why" " though";
 char c3[] = PRE POST;
-char c4[] = PREPOST;
+char c4[] = APREPOST;
 
 int i = MY_VAL;

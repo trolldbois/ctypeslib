@@ -309,16 +309,16 @@ class CursorHandler(ClangHandler):
             # but we need to put a CFUNCTYPE as a value of the name variable
             init_value = _type
         elif self.is_array_type(_ctype):
-            # an integer litteral will be the size
-            # an string litteral will be the value
+            # an integer literal will be the size
+            # a string literal will be the value
             # any list member will be children of a init_list_expr
             # FIXME Move that code into typedesc
             def countof(k, l):
                 return [item[0] for item in l].count(k)
 
-            if (countof(CursorKind.INIT_LIST_EXPR, init_value) == 1):
+            if countof(CursorKind.INIT_LIST_EXPR, init_value) == 1:
                 init_value = dict(init_value)[CursorKind.INIT_LIST_EXPR]
-            elif (countof(CursorKind.STRING_LITERAL, init_value) == 1):
+            elif countof(CursorKind.STRING_LITERAL, init_value) == 1:
                 # we have a initialised c_array
                 init_value = dict(init_value)[CursorKind.STRING_LITERAL]
             else:
@@ -383,8 +383,7 @@ class CursorHandler(ClangHandler):
         # but really it depends...
         if child.kind.is_unexposed():
             # recurse until we find a literal kind
-            init_value = self._get_var_decl_init_value(_ctype,
-                                                       child.get_children())
+            init_value = self._get_var_decl_init_value(_ctype, child.get_children())
             if len(init_value) == 0:
                 init_value = None
             elif len(init_value) == 1:
@@ -392,18 +391,16 @@ class CursorHandler(ClangHandler):
             else:
                 log.error('_get_var_decl_init_value_single: Unhandled case')
                 assert len(init_value) <= 1
+        # elif child.kind == CursorKind.STRING_LITERAL:
+        #     _v = self._literal_handling(child)
+        #     init_value = (child.kind, _v)
         else:  # literal or others
             _v = self.parse_cursor(child)
-            if isinstance(
-                    _v, list) and child.kind not in [CursorKind.INIT_LIST_EXPR, CursorKind.STRING_LITERAL]:
-                log.warning(
-                    '_get_var_decl_init_value_single: TOKENIZATION BUG CHECK: %s',
-                    _v)
+            if isinstance(_v, list) and child.kind not in [CursorKind.INIT_LIST_EXPR, CursorKind.STRING_LITERAL]:
+                log.warning('_get_var_decl_init_value_single: TOKENIZATION BUG CHECK: %s', _v)
                 _v = _v[0]
             init_value = (child.kind, _v)
-        log.debug(
-            '_get_var_decl_init_value_single: returns %s',
-            str(init_value))
+        log.debug('_get_var_decl_init_value_single: returns %s', str(init_value))
         return init_value
 
     def _clean_string_literal(self, cursor, value):
@@ -458,13 +455,12 @@ class CursorHandler(ClangHandler):
             # if t.spelling != ';'])
         because some literal might need cleaning."""
         # use a shortcut - does not work on unicode var_decl
-        # if cursor.kind == CursorKind.STRING_LITERAL:
-        #     value = cursor.displayname
-        #     value = self._clean_string_literal(cursor, value)
-        #     return value
+        if cursor.kind == CursorKind.STRING_LITERAL:
+            value = cursor.displayname
+            value = self._clean_string_literal(cursor, value)
+            return value
         tokens = list(cursor.get_tokens())
-        log.debug('literal has %d tokens.[ %s ]', len(tokens),
-                  str([str(t.spelling) for t in tokens]))
+        log.debug('literal has %d tokens.[ %s ]', len(tokens), ' '.join([str(t.spelling) for t in tokens]))
         final_value = []
         # code.interact(local=locals())
         log.debug('cursor.type:%s', cursor.type.kind.name)
@@ -485,10 +481,8 @@ class CursorHandler(ClangHandler):
                 continue
             # elif token.cursor.kind == CursorKind.VAR_DECL:
             elif token.location not in cursor.extent:
-                log.debug(
-                    'FIXME BUG: token.location not in cursor.extent %s',
-                    value)
-                # FIXME
+                # log.debug('FIXME BUG: token.location not in cursor.extent %s', value)
+                # 2021 clang 11, this seems fixed ?
                 # there is most probably a BUG in clang or python-clang
                 # when on #define with no value, a token is taken from
                 # next line. Which break stuff.
@@ -521,6 +515,7 @@ class CursorHandler(ClangHandler):
                 value = self.get_registered(value).body
                 # already cleaned value = self._clean_string_literal(token.cursor, value)
             elif token.cursor.kind == CursorKind.MACRO_DEFINITION:
+                tk = token.kind
                 if i == 0:
                     # ignore, macro name
                     pass
@@ -528,13 +523,21 @@ class CursorHandler(ClangHandler):
                     # and just clean it
                     value = self._clean_string_literal(token.cursor, value)
                 elif token.kind == TokenKind.IDENTIFIER:
-                    # parse that, try to see if there is another Macro in there.
-                    value = self.get_registered(value).body
+                    # Identifier in Macro... Not sure what to do with that.
+                    # if self.is_registered()
+                    # # parse that, try to see if there is another Macro in there.
+                    # value = self.get_registered(value).body
+                    # log.debug("Ignored MACRO_DEFINITION token identifier : %s", value)
+                    pass
+                elif token.kind in [TokenKind.COMMENT, TokenKind.KEYWORD, TokenKind.PUNCTUATION]:
+                    # log.debug("Ignored MACRO_DEFINITION token.kind: %s", token.kind.name)
+                    pass
 
             # add token
             final_value.append(value)
         # return the EXPR
         # code.interact(local=locals())
+        # FIXME, that will break. We need constant type return
         if len(final_value) == 1:
             return final_value[0]
         # Macro definition of a string using multiple macro
@@ -1061,21 +1064,33 @@ class CursorHandler(ClangHandler):
                 cursor.location.file is None):
             return False
         name = self.get_unique_name(cursor)
-        # if name == 'A':
-        #    code.interact(local=locals())
-        # Tokens !!! .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION,
-        # COMMENT ? } etc. see TokenKinds.def
+        # MACRO_DEFINTIION are a list of Tokens
+        # .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION, COMMENT ? }
         comment = None
         tokens = self._literal_handling(cursor)
         # Macro name is tokens[0]
         # get Macro value(s)
         value = True
+        # args should be filled when () are in tokens,
+        args = None
         if isinstance(tokens, list):
             if len(tokens) == 2:
+                # #define key value
                 value = tokens[1]
+            elif tokens[1] == '(':
+                # function macro
+                args = ''.join(tokens[1:tokens.index(')')+1]).replace(',', ', ')
+                value = ''.join(tokens[tokens.index(')')+1:])
+            elif len(tokens) > 2:
+                # #define key a b c
+                value = list(tokens[1:])
             else:
+                # FIXME no reach ?!
                 # just merge the list of tokens
-                value = ''.join(tokens[1:])
+                value = ' '.join(tokens[1:])
+        elif isinstance(tokens, str):
+            # #define only
+            value = True
         # macro comment maybe in tokens. Not in cursor.raw_comment
         for t in cursor.get_tokens():
             if t.kind == TokenKind.COMMENT:
@@ -1085,8 +1100,8 @@ class CursorHandler(ClangHandler):
         # why not Cursor.kind GNU_NULL_EXPR child instead of a token ?
         if name == 'NULL' or value == '__null':
             value = None
-        log.debug('MACRO: #define %s %s', tokens[0], value)
-        obj = typedesc.Macro(name, None, value)
+        log.debug('MACRO: #define %s%s %s', name, args or '', value)
+        obj = typedesc.Macro(name, args, value)
         try:
             self.register(name, obj)
         except DuplicateDefinitionException:
