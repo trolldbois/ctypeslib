@@ -27,7 +27,8 @@ class Generator(object):
                  searched_dlls=None,
                  preloaded_dlls=None,
                  generate_docstrings=False,
-                 generate_locations=False):
+                 generate_locations=False,
+                 cross_arch=False):
         self.output = output
         self.stream = StringIO()
         self.imports = StringIO()
@@ -44,6 +45,7 @@ class Generator(object):
         self.done = set()  # type descriptions that have been generated
         self.names = set()  # names that have been generated
         self.macros = 0
+        self.cross_arch_code_generation = cross_arch
 
     # pylint: disable=method-hidden
     def enable_fundamental_type_wrappers(self):
@@ -51,9 +53,6 @@ class Generator(object):
         If a type is a int128, a long_double_t or a void, some placeholders need
         to be in the generated code to be valid.
         """
-        # 2015-01 reactivating header templates
-        # log.warning('enable_fundamental_type_wrappers deprecated - replaced by generate_headers')
-        # return # FIXME ignore
         self.enable_fundamental_type_wrappers = lambda: True
         import pkgutil
         headers = pkgutil.get_data(
@@ -70,10 +69,10 @@ class Generator(object):
         If a type is a pointer, a platform-independent POINTER_T type needs
         to be in the generated code.
         """
-        # 2015-01 reactivating header templates
-        # log.warning('enable_pointer_type deprecated - replaced by generate_headers')
-        # return # FIXME ignore
-        self.enable_pointer_type = lambda: True
+        # only enable if cross arch mode is on
+        if not self.cross_arch_code_generation:
+            return 'ctypes.POINTER'
+        self.enable_pointer_type = lambda: 'POINTER_T'
         import pkgutil
         headers = pkgutil.get_data('ctypeslib', 'data/pointer_type.tpl').decode()
         import ctypes
@@ -88,7 +87,7 @@ class Generator(object):
         headers = headers.replace('__REPLACEMENT_TYPE__', word_type)
         headers = headers.replace('__REPLACEMENT_TYPE_CHAR__', word_char)
         print(headers, file=self.imports)
-        return
+        return 'POINTER_T'
 
     def enable_structure_type(self):
         """
@@ -149,10 +148,10 @@ class Generator(object):
         elif isinstance(t, typedesc.PointerType) and isinstance(t.typ, typedesc.FunctionType):
             return self.type_name(t.typ, generate)
         elif isinstance(t, typedesc.PointerType):
-            self.enable_pointer_type()
+            pointer_class = self.enable_pointer_type()
             if t.typ.name == "c_char":
                 self.enable_string_cast()
-            return "POINTER_T(%s)" % (self.type_name(t.typ, generate))
+            return "%s(%s)" % (pointer_class, self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.FunctionType):
             args = [self.type_name(x, generate) for x in [t.returns] + list(t.iterArgTypes())]
             if "__stdcall__" in t.attributes:
@@ -996,13 +995,15 @@ def generate_code(srcfiles,
         items = todo
 
     ################
+    cross_arch = '-target' in ' '.join(flags)
     gen = Generator(outfile,
                     generate_locations=generate_locations,
                     generate_comments=generate_comments,
                     generate_docstrings=generate_docstrings,
                     known_symbols=known_symbols,
                     searched_dlls=searched_dlls,
-                    preloaded_dlls=preloaded_dlls)
+                    preloaded_dlls=preloaded_dlls,
+                    cross_arch=cross_arch)
 
     # add some headers and ctypes import
     gen.generate_headers(parser)

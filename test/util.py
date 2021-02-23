@@ -134,7 +134,8 @@ class ClangTest(unittest.TestCase):
         self.parser.parse(fname)
         items = self.parser.get_result()
         # gen code
-        gen = codegenerator.Generator(ofi, searched_dlls=dlls)
+        cross_arch = '-target' in ' '.join(flags)
+        gen = codegenerator.Generator(ofi, searched_dlls=dlls, cross_arch=cross_arch)
         gen.generate_headers(self.parser)
         gen.generate_code(items)
         return gen
