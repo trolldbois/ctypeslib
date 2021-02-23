@@ -454,13 +454,18 @@ class CursorHandler(ClangHandler):
             # init_value = ' '.join([t.spelling for t in children[0].get_tokens()
             # if t.spelling != ';'])
         because some literal might need cleaning."""
-        # use a shortcut - does not work on unicode var_decl
-        if cursor.kind == CursorKind.STRING_LITERAL:
+        tokens = list(cursor.get_tokens())
+        log.debug('literal has %d tokens.[ %s ]', len(tokens), ' '.join([str(t.spelling) for t in tokens]))
+        if len(tokens) == 1 and cursor.kind == CursorKind.STRING_LITERAL:
+            # use a shortcut that works for unicode
+            value = tokens[0].spelling
+            value = self._clean_string_literal(cursor, value)
+            return value
+        elif cursor.kind == CursorKind.STRING_LITERAL:
+            # use a shortcut - does not work on unicode var_decl
             value = cursor.displayname
             value = self._clean_string_literal(cursor, value)
             return value
-        tokens = list(cursor.get_tokens())
-        log.debug('literal has %d tokens.[ %s ]', len(tokens), ' '.join([str(t.spelling) for t in tokens]))
         final_value = []
         # code.interact(local=locals())
         log.debug('cursor.type:%s', cursor.type.kind.name)

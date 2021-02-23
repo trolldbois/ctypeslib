@@ -430,41 +430,6 @@ typedef union MY_ROOT_UNION {
         self.assertEqual(ctypes.sizeof(self.namespace.union_MY_ROOT_UNION), 16)
         self.assertSizes("union_MY_ROOT_UNION")
 
-    # L"string" not supported
-    # -1 literal is split as ['-','1']
-    @unittest.expectedFailure
-    def test_defines(self):
-        # we need macros
-        self.full_parsing_options = True
-        self.convert("""
-        #define zero 0
-        #define one 1
-        #define minusone -1
-        #define maxint 2147483647
-        #define minint -2147483648
-        #define spam "spam"
-        #define foo L"foo"
-        #define LARGE 0xFFFFFFFF
-
-        #ifdef _MSC_VER
-        # define VERYLARGE 0xFFFFFFFFFFFFFFFFui64
-        #endif
-        """)
-
-        self.assertEqual(self.namespace.zero, 0)
-        self.assertEqual(self.namespace.one, 1)
-        self.assertEqual(self.namespace.minusone, -1)
-        self.assertEqual(self.namespace.maxint, 2147483647)
-        self.assertEqual(self.namespace.LARGE, 0xFFFFFFFF)
-        ##        self.assertEqual(self.namespace.VERYLARGE, 0xFFFFFFFFFFFFFFFF)
-        ##        self.assertEqual(self.namespace.minint, -2147483648)
-
-        self.assertEqual(self.namespace.spam, "spam")
-        self.assertEqual(type(self.namespace.spam), str)
-
-        self.assertEqual(self.namespace.foo, "foo")
-        self.assertEqual(type(self.namespace.foo), unicode)
-
     @unittest.skip('find a good test for docstring')
     def test_docstring(self):
         import os
@@ -487,5 +452,5 @@ typedef union MY_ROOT_UNION {
 
 
 if __name__ == "__main__":
-    logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
+    logging.basicConfig(level=logging.DEBUG)
     unittest.main()
