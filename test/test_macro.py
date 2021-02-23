@@ -83,6 +83,19 @@ fn_type fn_name(int a, int b);
 ''')
         self.assertIn("real_name", self.namespace)
 
+    def test_simple_macro_function(self):
+        self.convert('''
+    #define HI(x) x
+    HI(int) y;
+    ''')
+        # print(self.text_output)
+        self.assertIn("y", self.namespace)
+        self.assertEqual(self.namespace.y, 0)
+        self.assertIn("HI", self.text_output)
+        # only comments for functions
+        self.assertNotIn("HI", self.namespace)
+
+
     def test_example(self):
         self.convert('''
 #define DEBUG
