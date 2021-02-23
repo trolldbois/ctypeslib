@@ -13,6 +13,6 @@ def char_pointer_cast(string, encoding='utf-8'):
             # In Python3, bytes has no encode attribute
             pass
     string = ctypes.c_char_p(string)
-    return ctypes.cast(string, POINTER_T(ctypes.c_char))
+    return ctypes.cast(string, __POINTER_TYPE__(ctypes.c_char))
 
 

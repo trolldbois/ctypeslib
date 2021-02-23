@@ -37,6 +37,15 @@ class Pointer(ClangTest):
         self.fail('member pointer')
         #self.assertTrue(isinstance(self.namespace.member_pointer,POINTER_T) )
 
+    def test_same_arch_pointer(self):
+        self.convert('''
+        typedef char*  PCHAR;
+        typedef void*  PVOID;
+        ''')
+        print(self.text_output)
+        self.assertNotIn('POINTER_T', self.text_output)
+        # self.assertIn('POINTER_T', self.text_output)
+
 
 if __name__ == "__main__":
     unittest.main()

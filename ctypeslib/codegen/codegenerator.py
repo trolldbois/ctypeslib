@@ -106,6 +106,7 @@ class Generator(object):
         self.enable_string_cast = lambda: True
         import pkgutil
         headers = pkgutil.get_data('ctypeslib', 'data/string_cast.tpl').decode()
+        headers = headers.replace('__POINTER_TYPE__', self.enable_pointer_type())
         print(headers, file=self.imports)
         return
 
