@@ -1,6 +1,5 @@
 import os
 import subprocess
-import six
 from ctypes import RTLD_LOCAL, RTLD_GLOBAL
 
 
@@ -26,7 +25,7 @@ class LibraryMeta(type):
         return CDLL(path, mode=mode)
 
 
-class Library(six.with_metaclass(LibraryMeta)):
+class Library(metaclass=LibraryMeta):
 
     def __init__(self, filepath, nm):
         self._filepath = filepath
