@@ -130,13 +130,14 @@ Output:
 This outputs:
 
     # ...
+    
     class struct_Node2(Structure):
         _pack_ = True # source:False
-        _fields_ = [
+        _fields_ = [ 
         ('m1', ctypes.c_ubyte),
         ('PADDING_0', ctypes.c_ubyte * 7),
-        ('m2', POINTER_T(struct_Node)),
-         ]
+        ('m2', POINTER_T(struct_Node)),]
+
     # ...
 
 The PADDING_0 field is added to force the ctypes memory Structure to align fields offset with the definition given
@@ -158,7 +159,7 @@ different architecture (like reading a memory dump from a different architecture
                     [--show-ids SHOWIDS] [--max-depth N] [--clang-args CLANG_ARGS]
                     files [files ...]
     
-    Version 2.2.3. Generate python code from C headers
+    Version 2.3.0. Generate python code from C headers
     
     positional arguments:
       files                 source filenames. stdin is not supported
