@@ -51,7 +51,7 @@ rpcrt4""".split()
 
 def main(argv=None):
     if argv is None:
-        argv = sys.argv
+        argv = sys.argv[1:]
 
     local_platform_triple = "%s-%s" % (platform.machine(), platform.system())
     clang_opts = []
@@ -317,7 +317,7 @@ def main(argv=None):
 
 if __name__ == "__main__":
     try:
-        sys.exit(main(sys.argv))
+        sys.exit(main(sys.argv[1:]))
     except Exception:
         # return non-zero exit status in case of an unhandled exception
         traceback.print_exc()
