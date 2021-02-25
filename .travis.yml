@@ -1,46 +1,46 @@
-# .travis.yml for ctypeslib2
-
-sudo: required
-dist: xenial
-
-language: python
-python:
-#  - "2.7"  clang 8 went to py3
-  - "3.8"
-
-install:
-# travis-ci 201801 use Trusty and comes with py27 py34 and clang 5, but not libclang1-5
-# travis-ci 202102 use Trusty and comes with py27 py36
-# travis-ci 202102 use xenial and comes with py27 py38
-  - sudo apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-11 main" --yes
-  - sudo apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu xenial main"  --yes
-  - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
-  - sudo apt-get update
-  - sudo apt-get install libclang1-11 libclang-11-dev --yes --force-yes
-  - pip install clang
-#  - sudo apt-get install libclang1-11 libclang-11-dev python3-clang-11 --yes --force-yes
-#  - sudo cp -r /usr/lib/python2.7/dist-packages/clang $VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/site-packages/
-#permission denied  - sudo echo `echo "/usr/lib/llvm-4.0/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
-#  - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang-5.0.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
-#  - sudo ldconfig
-# tests dependencies
-  - pip install coveralls
-
-script:
-# http://docs.travis-ci.com/user/languages/python/.
-# system python package will not be used. Can't use python-clang, have to use pip.
-# we need clang2py in the path. also installs python clang
-  - python setup.py develop
-  - clang test/data/test-callbacks.c -Wall -Wextra -Werror -std=c99 -pedantic -fpic -shared -o test/data/test-callbacks.so
-# run tests
-  - python setup.py test
-
-after_success:
-  - coverage run --source=ctypeslib setup.py test
-  - coveralls
-
-# disable email notifications
-notifications:
-  email:
-    on_success: never
-    on_failure: never
+## .travis.yml for ctypeslib2
+#
+#sudo: required
+#dist: xenial
+#
+#language: python
+#python:
+##  - "2.7"  clang 8 went to py3
+#  - "3.8"
+#
+#install:
+## travis-ci 201801 use Trusty and comes with py27 py34 and clang 5, but not libclang1-5
+## travis-ci 202102 use Trusty and comes with py27 py36
+## travis-ci 202102 use xenial and comes with py27 py38
+#  - sudo apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-11 main" --yes
+#  - sudo apt-add-repository "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu xenial main"  --yes
+#  - wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
+#  - sudo apt-get update
+#  - sudo apt-get install libclang1-11 libclang-11-dev --yes --force-yes
+#  - pip install clang
+##  - sudo apt-get install libclang1-11 libclang-11-dev python3-clang-11 --yes --force-yes
+##  - sudo cp -r /usr/lib/python2.7/dist-packages/clang $VIRTUAL_ENV/lib/python$TRAVIS_PYTHON_VERSION/site-packages/
+##permission denied  - sudo echo `echo "/usr/lib/llvm-4.0/lib/" >> /etc/ld.so.conf.d/llvm-dev.conf`
+##  - sudo ln -v -s /usr/lib/x86_64-linux-gnu/libclang-5.0.so.1 /usr/lib/x86_64-linux-gnu/libclang.so
+##  - sudo ldconfig
+## tests dependencies
+#  - pip install coveralls
+#
+#script:
+## http://docs.travis-ci.com/user/languages/python/.
+## system python package will not be used. Can't use python-clang, have to use pip.
+## we need clang2py in the path. also installs python clang
+#  - python setup.py develop
+#  - clang test/data/test-callbacks.c -Wall -Wextra -Werror -std=c99 -pedantic -fpic -shared -o test/data/test-callbacks.so
+## run tests
+#  - python setup.py test
+#
+#after_success:
+#  - coverage run --source=ctypeslib setup.py test
+#  - coveralls
+#
+## disable email notifications
+#notifications:
+#  email:
+#    on_success: never
+#    on_failure: never
