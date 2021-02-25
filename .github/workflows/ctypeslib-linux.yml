@@ -32,6 +32,9 @@ jobs:
         CFLAGS="-Wall -Wextra -Werror -std=c99 -pedantic -fpic"
         LDFLAGS="-shared"
         clang $CFLAGS $LDFLAGS -o test/data/test-callbacks.so test/data/test-callbacks.c
+    - name: Install clang2py
+      run: |
+        python setup.py develop
     - name: Test with Unittest
       run: |
         python setup.py test
