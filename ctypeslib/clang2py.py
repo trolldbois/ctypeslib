@@ -214,7 +214,7 @@ def main(argv=None):
     parser.epilog = """Cross-architecture: You can pass target modifiers to clang.
     For example, try --clang-args="-target x86_64" or "-target i386-linux" to change the target CPU arch."""
 
-    options = parser.parse_args()
+    options = parser.parse_args(argv)
 
     # handle stdin
     files = []
@@ -317,7 +317,7 @@ def main(argv=None):
 
 if __name__ == "__main__":
     try:
-        sys.exit(main())
+        sys.exit(main(sys.argv))
     except Exception:
         # return non-zero exit status in case of an unhandled exception
         traceback.print_exc()

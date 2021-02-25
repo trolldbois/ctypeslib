@@ -35,10 +35,6 @@ jobs:
     - name: Install clang2py
       run: |
         python setup.py develop
-    - name: Coveralls
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Test with Unittest and coverage
       run: |
         coverage run --source=ctypeslib setup.py test

@@ -4,6 +4,7 @@ import sys
 import unittest
 
 from test.util import ClangTest
+import ctypeslib
 
 
 def run(args):
@@ -184,13 +185,28 @@ class ArgumentTypeKind(ClangTest):
         self.assertNotIn("union__complex3_0_1_1(", output)
 
 
-class ArgumentComments(ClangTest):
+class CLITesting(ClangTest):
 
-    @unittest.skip('find a good test for function')
-    def test_comment(self):
-        """run clang2py -c test/data/test-records-complex.c"""
-        p, output, stderr = clang2py(['-c', 'test/data/test-records-complex.c'])
+    def test_version(self):
+        """run clang2py -v"""
+        p, output, stderr = clang2py(['--version'])
         self.assertEqual(0, p.returncode)
+        self.assertIn(str(ctypeslib.__version__), output)
+        self.assertIn("libclang", output)
+
+
+from io import StringIO
+from unittest.mock import patch
+
+
+class ModuleTesting(ClangTest):
+    def test_version(self):
+        """run import clang2py -v"""
+        from ctypeslib import clang2py
+        with patch('sys.stdout', new=StringIO()) as fake_out:
+            with self.assertRaises(SystemExit):
+                clang2py.main(['--version'])
+            self.assertIn(str(ctypeslib.__version__), fake_out.getvalue())
 
 
 if __name__ == "__main__":
