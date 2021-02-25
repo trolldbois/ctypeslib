@@ -11,6 +11,7 @@ from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
 import unittest
 from ctypeslib.codegen import clangparser, codegenerator
+from ctypeslib.codegen import util
 from ctypeslib.library import Library
 
 import tempfile
@@ -20,90 +21,6 @@ def mktemp(suffix):
     handle, fnm = tempfile.mkstemp(suffix)
     os.close(handle)
     return fnm
-
-
-def get_tu(source, lang='c', all_warnings=False, flags=[]):
-    """Obtain a translation unit from source and language.
-
-    By default, the translation unit is created from source file "t.<ext>"
-    where <ext> is the default file extension for the specified language. By
-    default it is C, so "t.c" is the default file name.
-
-    Supported languages are {c, cpp, objc}.
-
-    all_warnings is a convenience argument to enable all compiler warnings.
-    """
-    assert isinstance(flags, list)
-    args = list(flags)
-    name = 't.c'
-    if lang == 'cpp':
-        name = 't.cpp'
-        args.append('-std=c++11')
-    elif lang == 'objc':
-        name = 't.m'
-    elif lang != 'c':
-        raise Exception('Unknown language: %s' % lang)
-
-    if all_warnings:
-        args += ['-Wall', '-Wextra']
-
-    return TranslationUnit.from_source(name, args, unsaved_files=[(name,
-                                                                   source)])
-
-
-def get_cursor(source, spelling):
-    """Obtain a cursor from a source object.
-
-    This provides a convenient search mechanism to find a cursor with specific
-    spelling within a source. The first argument can be either a
-    TranslationUnit or Cursor instance.
-
-    If the cursor is not found, None is returned.
-    """
-    children = []
-    if isinstance(source, Cursor):
-        children = source.get_children()
-    else:
-        # Assume TU
-        children = source.cursor.get_children()
-
-    for cursor in children:
-        if cursor.spelling == spelling:
-            return cursor
-
-        # Recurse into children.
-        result = get_cursor(cursor, spelling)
-        if result is not None:
-            return result
-
-    return None
-
-
-def get_cursors(source, spelling):
-    """Obtain all cursors from a source object with a specific spelling.
-
-    This provides a convenient search mechanism to find all cursors with specific
-    spelling within a source. The first argument can be either a
-    TranslationUnit or Cursor instance.
-
-    If no cursors are found, an empty list is returned.
-    """
-    cursors = []
-    children = []
-    if isinstance(source, Cursor):
-        children = source.get_children()
-    else:
-        # Assume TU
-        children = source.cursor.get_children()
-
-    for cursor in children:
-        if cursor.spelling == spelling:
-            cursors.append(cursor)
-
-        # Recurse into children.
-        cursors.extend(get_cursors(cursor, spelling))
-
-    return cursors
 
 
 class ADict(dict):
@@ -173,6 +90,7 @@ class ClangTest(unittest.TestCase):
     def convert(self, src_code, flags=[], dlls=[], debug=False):
         """Take a string input, write it into a temp file and the code.
         """
+        # This seems a bit redundant, when util.get_tu() exists.
         hfile = mktemp(".h")
         with open(hfile, "w") as f:
             f.write(src_code)
@@ -185,11 +103,11 @@ class ClangTest(unittest.TestCase):
     def _get_target_with_struct_hack(self, name):
         """ because we rename "struct x" to struct_x, we have to reverse that
         """
-        target = get_cursor(self.parser.tu, name)
+        target = util.get_cursor(self.parser.tu, name)
         if target is None:
-            target = get_cursor(self.parser.tu, name.replace('struct_', ''))
+            target = util.get_cursor(self.parser.tu, name.replace('struct_', ''))
         if target is None:
-            target = get_cursor(self.parser.tu, name.replace('union_', ''))
+            target = util.get_cursor(self.parser.tu, name.replace('union_', ''))
         return target
 
     def assertSizes(self, name):
@@ -249,8 +167,4 @@ class ClangTest(unittest.TestCase):
 
 
 __all__ = [
-    'get_cursor',
-    'get_cursors',
-    'get_tu',
-    'ArchTest',
 ]
