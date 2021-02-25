@@ -1,8 +1,6 @@
 import unittest
 import ctypes
 
-from test.util import get_cursor
-from test.util import get_tu
 from test.util import ClangTest
 
 '''Test if pointers are correctly generated in structures for different target

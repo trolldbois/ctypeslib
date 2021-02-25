@@ -3,8 +3,6 @@ import ctypes
 import logging
 import sys
 
-from test.util import get_cursor
-from test.util import get_tu
 from test.util import ClangTest
 
 

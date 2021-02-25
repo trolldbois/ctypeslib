@@ -1,11 +1,7 @@
 import unittest
 import ctypes
 
-from test.util import get_cursor
-from test.util import get_tu
 from test.util import ClangTest
-import logging
-import sys
 
 
 class EnumTest(ClangTest):
