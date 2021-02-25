@@ -396,7 +396,7 @@ class CursorHandler(ClangHandler):
         #     init_value = (child.kind, _v)
         else:  # literal or others
             _v = self.parse_cursor(child)
-            if isinstance(_v, list) and child.kind not in [CursorKind.INIT_LIST_EXPR, CursorKind.STRING_LITERAL]:
+            if isinstance(_v, list) and len(_v) > 0 and child.kind not in [CursorKind.INIT_LIST_EXPR, CursorKind.STRING_LITERAL]:
                 log.warning('_get_var_decl_init_value_single: TOKENIZATION BUG CHECK: %s', _v)
                 _v = _v[0]
             init_value = (child.kind, _v)
@@ -528,18 +528,23 @@ class CursorHandler(ClangHandler):
                     # and just clean it
                     value = self._clean_string_literal(token.cursor, value)
                 elif token.kind == TokenKind.IDENTIFIER:
-                    # Identifier in Macro... Not sure what to do with that.
-                    # if self.is_registered()
-                    # # parse that, try to see if there is another Macro in there.
-                    # value = self.get_registered(value).body
                     # log.debug("Ignored MACRO_DEFINITION token identifier : %s", value)
+                    # Identifier in Macro... Not sure what to do with that.
+                    if self.is_registered(value):
+                        # parse that, try to see if there is another Macro in there.
+                        value = self.get_registered(value).body
+                        log.debug("Found MACRO_DEFINITION token identifier : %s", value)
+                    else:
+                        value = typedesc.UndefinedIdentifier(value)
+                        log.debug("Undefined MACRO_DEFINITION token identifier : %s", value)
                     pass
                 elif token.kind in [TokenKind.COMMENT, TokenKind.KEYWORD, TokenKind.PUNCTUATION]:
                     # log.debug("Ignored MACRO_DEFINITION token.kind: %s", token.kind.name)
                     pass
 
             # add token
-            final_value.append(value)
+            if value is not None:
+                final_value.append(value)
         # return the EXPR
         # code.interact(local=locals())
         # FIXME, that will break. We need constant type return
@@ -1084,8 +1089,10 @@ class CursorHandler(ClangHandler):
                 value = tokens[1]
             elif tokens[1] == '(':
                 # function macro
-                args = ''.join(tokens[1:tokens.index(')')+1]).replace(',', ', ')
-                value = ''.join(tokens[tokens.index(')')+1:])
+                str_tokens = [str(_) for _ in tokens[1:tokens.index(')')+1]]
+                args = ''.join(str_tokens).replace(',', ', ')
+                str_tokens = [str(_) for _ in tokens[tokens.index(')')+1:]]
+                value = ''.join(str_tokens)
             elif len(tokens) > 2:
                 # #define key a b c
                 value = list(tokens[1:])

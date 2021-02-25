@@ -195,7 +195,7 @@ class Generator(object):
             log.info('Ignoring %s with no location', macro.name)
             return
         if self.generate_locations:
-            print("# %s:%s" % (macro.location), file=self.stream)
+            print("# %s:%s" % macro.location, file=self.stream)
         if self.generate_comments:
             self.print_comment(macro)
 
@@ -205,8 +205,15 @@ class Generator(object):
         elif isinstance(macro.body, list):
             # we can't handle that
             print("# %s = %s # macro" % (macro.name, ' '.join(macro.body)), file=self.stream)
-        else:
+        elif isinstance(macro.body, typedesc.UndefinedIdentifier):
+            # just comment is out
+            print("# %s = %s # macro" % (macro.name, macro.body.name), file=self.stream)
+        elif isinstance(macro.body, str) or isinstance(macro.body, bool):
+            # either it's just a thing we gonna print, or we need to have a registered item
             print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
+        else:
+            # we just comment out all macro definitions, because values will be replace in situ
+            print("# %s = %s # macro" % (macro.name, macro.body), file=self.stream)
         self.macros += 1
         self.names.add(macro.name)
         return

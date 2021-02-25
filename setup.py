@@ -37,6 +37,5 @@ setup(
     test_suite="test.alltests",
     install_requires=[
        'clang>=11',
-       'six'
     ]
 )

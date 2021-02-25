@@ -21,3 +21,6 @@ char c3[] = PRE POST;
 char c4[] = APREPOST;
 
 int i = MY_VAL;
+
+#define DATE __DATE__
+char c5[] = DATE;

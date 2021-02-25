@@ -3,7 +3,7 @@ import ctypes
 
 from ctypeslib.codegen.util import get_cursor
 from ctypeslib.codegen.util import get_tu
-from util import ClangTest
+from test.util import ClangTest
 
 '''Test if macro are correctly generated.
 '''
@@ -95,7 +95,6 @@ fn_type fn_name(int a, int b);
         # only comments for functions
         self.assertNotIn("HI", self.namespace)
 
-
     def test_example(self):
         self.convert('''
 #define DEBUG
@@ -105,13 +104,46 @@ fn_type fn_name(int a, int b);
 
 int tab1[] = MACRO_EXAMPLE(1,2); 
 ''')
+        print(self.text_output)
         self.assertIn("tab1", self.namespace)
         self.assertEqual(self.namespace.tab1, [1, 2])
         self.assertEqual(self.namespace.DEBUG, True)
         self.assertEqual(self.namespace.PROD, 1)
         # we don't gen macro functions
         self.assertNotIn('MACRO_EXAMPLE', self.namespace)
-        # print(self.text_output)
+
+    def test_internal_defines(self):
+        self.convert('''
+#define DATE __DATE__
+#define VAL 1
+#define STRVAL "ebcde"
+#define CHARVAL 'abcde'
+char c1[] = DATE;
+''')
+        print(self.text_output)
+        self.assertIn("c1", self.namespace)
+        import datetime
+        this_date = datetime.datetime.now().strftime("%b %d %Y")
+        self.assertEqual(self.namespace.c1, this_date)
+        self.assertIn("# DATE = __DATE__", self.text_output)
+        self.assertNotIn("# VAL = 1", self.text_output)
+        self.assertEqual(self.namespace.VAL, 1)
+        self.assertEqual(self.namespace.STRVAL, 'ebcde')
+        self.assertEqual(self.namespace.CHARVAL, 'abcde')
+
+    def test_internal_defines_identifier(self):
+            self.convert('''
+    #define DATE "now"
+    #define DATE2 DATE
+    char c1[] = DATE2;
+    ''')
+            print(self.text_output)
+            self.assertIn("c1", self.namespace)
+            self.assertEqual(self.namespace.c1, 'now')
+            self.assertIn("DATE", self.namespace)
+            self.assertEqual(self.namespace.DATE, 'now')
+            self.assertIn("DATE2", self.namespace)
+            self.assertEqual(self.namespace.DATE2, 'now')
 
     # L"string" not supported
     # -1 literal is split as ['-','1']

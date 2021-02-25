@@ -1,9 +1,9 @@
 import unittest
 import ctypes
 
-from util import get_cursor
-from util import get_tu
-from util import ClangTest
+from test.util import get_cursor
+from test.util import get_tu
+from test.util import ClangTest
 
 '''Test if pointers are correctly generated in structures for different target
 archictecture.

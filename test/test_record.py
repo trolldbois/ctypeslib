@@ -3,7 +3,7 @@ import logging
 import sys
 import unittest
 
-from util import ClangTest
+from test.util import ClangTest
 
 
 class RecordTest(ClangTest):

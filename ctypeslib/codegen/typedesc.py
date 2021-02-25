@@ -275,3 +275,11 @@ class Variable(T):
         self.extern = extern
 
 ################################################################
+
+
+class UndefinedIdentifier(T):
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return self.name

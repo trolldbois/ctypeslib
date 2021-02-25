@@ -51,7 +51,7 @@ class ConstantsTest(ClangTest):
         int maxint = 2147483647;
         int minint = -2147483648;
         """)
-
+        print(self.text_output)
         self.assertEqual(self.namespace.zero, 0)
         self.assertEqual(self.namespace.one, 1)
         self.assertEqual(self.namespace.minusone, -1)
