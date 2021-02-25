@@ -8,6 +8,10 @@ from test.util import ClangTest
 '''Test if macro are correctly generated.
 '''
 
+import logging
+
+# logging.basicConfig(level=logging.DEBUG)
+
 
 class Macro(ClangTest):
     # @unittest.skip('')
@@ -145,6 +149,22 @@ char c1[] = DATE;
             self.assertIn("DATE2", self.namespace)
             self.assertEqual(self.namespace.DATE2, 'now')
 
+    def test_pack_attribute(self):
+            self.convert('''
+    #define PACK __attribute__((aligned(2)))
+    #define PACKTO __attribute__((packed))
+    
+    int x PACK = 0;
+    struct foo {
+        char a;
+        int x[2] PACKTO;
+    };
+    ''')
+            print(self.text_output)
+            self.assertIn("# PACK = __attribute__", self.text_output)
+            self.assertIn("# PACKTO = __attribute__", self.text_output)
+            self.assertIn("struct_foo", self.namespace)
+
     # L"string" not supported
     # -1 literal is split as ['-','1']
     @unittest.expectedFailure
@@ -179,6 +199,7 @@ char c1[] = DATE;
 
         self.assertEqual(self.namespace.foo, "foo")
         self.assertEqual(type(self.namespace.foo), unicode)
+
 
 if __name__ == "__main__":
     import logging

@@ -1072,9 +1072,14 @@ class CursorHandler(ClangHandler):
         # ignore system macro
         if (not hasattr(cursor, 'location') or cursor.location is None or
                 cursor.location.file is None):
+            # keep track of sizes from clang directly
+            # but we already did that elsewhere in clangparser.py make_ctypes_convertor
+            # if cursor.displayname.startswith('__SIZEOF_'):
+            #     typ = cursor.displayname[len('__SIZEOF_'):-2]
+            #     self.__sizeof[typ] = list(cursor.get_tokens())[1].spelling
             return False
         name = self.get_unique_name(cursor)
-        # MACRO_DEFINTIION are a list of Tokens
+        # MACRO_DEFINITION are a list of Tokens
         # .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION, COMMENT ? }
         comment = None
         tokens = self._literal_handling(cursor)

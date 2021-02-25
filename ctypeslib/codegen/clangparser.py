@@ -229,10 +229,11 @@ class Clang_Parser(object):
 
     def make_ctypes_convertor(self, _flags):
         """
-        Fix clang types to ctypes convertion for this parsing isntance.
-        Some architecture dependent size types ahve to be changed if the target
+        Fix clang types to ctypes conversion for this parsing instance.
+        Some architecture dependent size types have to be changed if the target
         architecture is not the same as local
         """
+        # NOTE: one could also use the __SIZEOF_x__ MACROs to obtain sizes.
         tu = util.get_tu('''
 typedef short short_t;
 typedef int int_t;

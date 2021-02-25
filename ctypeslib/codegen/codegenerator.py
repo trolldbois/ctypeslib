@@ -204,7 +204,7 @@ class Generator(object):
             print("#    return %s  " % macro.body, file=self.stream)
         elif isinstance(macro.body, list):
             # we can't handle that
-            print("# %s = %s # macro" % (macro.name, ' '.join(macro.body)), file=self.stream)
+            print("# %s = %s # macro" % (macro.name, ' '.join([str(_) for _ in macro.body])), file=self.stream)
         elif isinstance(macro.body, typedesc.UndefinedIdentifier):
             # just comment is out
             print("# %s = %s # macro" % (macro.name, macro.body.name), file=self.stream)
