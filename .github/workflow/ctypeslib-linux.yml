@@ -1,0 +1,36 @@
+name: ctypeslib-linux
+
+on: [push, pull_request]
+
+env:
+  LLVM_VER: 11.0.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+      strategy:
+        matrix:
+          python-version: [ 3.5, 3.6, 3.7, 3.8, 3.9 ]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+      - name: Install Clang
+      uses: egor-tensin/setup-clang@v1
+      with:
+        platform: x64
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install clang
+      - name: build test libs
+        run: |
+          CFLAGS="-Wall -Wextra -Werror -std=c99 -pedantic -fpic"
+          LDFLAGS="-shared"
+          clang $CFLAGS $LDFLAGS -o test/data/test-callbacks.so test/data/test-callbacks.c
+      - name: Test with Unittest
+        run: |
+          python setup.py test

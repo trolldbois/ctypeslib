@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name="ctypeslib2",
-    version="2.3.0-pre1",
+    version="2.3.0",
     description="ctypeslib2 - FFI toolkit, relies on clang",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
