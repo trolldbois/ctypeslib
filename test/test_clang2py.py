@@ -204,12 +204,61 @@ from unittest.mock import patch
 
 class ModuleTesting(ClangTest):
     def test_version(self):
-        """run import clang2py -v"""
+        """run clang2py -v"""
         from ctypeslib import clang2py
         with patch('sys.stdout', new=StringIO()) as fake_out:
             with self.assertRaises(SystemExit):
                 clang2py.main(['--version'])
             self.assertIn(str(ctypeslib.__version__), fake_out.getvalue())
+
+    def test_arg_file(self):
+        """run clang2py test/data/test-basic-types.c"""
+        from ctypeslib import clang2py
+        with patch('sys.stdout', new=StringIO()) as fake_out:
+            clang2py.main(['test/data/test-basic-types.c'])
+            self.assertIn("_int = ctypes.c_int", fake_out.getvalue())
+
+    def test_arg_input_stdin(self):
+        """run echo | clang2py - """
+        from ctypeslib import clang2py
+        with patch('sys.stdin', StringIO('int i = 0;')) as stdin, patch('sys.stdout', new=StringIO()) as fake_out:
+            clang2py.main(['-'])
+            self.assertIn("__all__ =", fake_out.getvalue())
+            self.assertIn("# TARGET arch is: []", fake_out.getvalue())
+
+    def test_arg_debug(self):
+        """run clang2py --debug test/data/test-basic-types.c"""
+        from ctypeslib import clang2py
+        with patch('sys.stdout', new=StringIO()) as fake_out, patch('sys.stderr', new=StringIO()) as fake_err:
+            clang2py.main(['--debug', 'test/data/test-basic-types.c'])
+            self.assertIn("_int = ctypes.c_int", fake_out.getvalue())
+            self.assertIn("DEBUG:clangparser:ARCH sizes:", fake_err.getvalue())
+            self.assertNotIn("ERROR", fake_err.getvalue())
+
+    def test_arg_target(self):
+        """run clang2py --target x86_64-Linux test/data/test-basic-types.c """
+        from ctypeslib import clang2py
+        with patch('sys.stdout', new=StringIO()) as fake_out:
+            clang2py.main(['--target', 'x86_64-Linux', 'test/data/test-basic-types.c'])
+            self.assertIn("# TARGET arch is: ['-target', 'x86_64-Linux']", fake_out.getvalue())
+            self.assertIn("_int = ctypes.c_int", fake_out.getvalue())
+            self.assertIn("_long = ctypes.c_int64", fake_out.getvalue())
+
+            clang2py.main(['--target', 'i586-Linux', 'test/data/test-basic-types.c'])
+            self.assertIn("# TARGET arch is: ['-target', 'i586-Linux']", fake_out.getvalue())
+            self.assertIn("_int = ctypes.c_int", fake_out.getvalue())
+            self.assertIn("_long = ctypes.c_int32", fake_out.getvalue())
+
+    # TODO
+    @unittest.skip
+    def test_arg_clang_args(self):
+        """run clang2py test/data/test-basic-types.c --clang-args="-DDEBUG=2" """
+        from ctypeslib import clang2py
+        with patch('sys.stdin', StringIO('int i = DEBUG;')) as stdin, patch('sys.stdout', new=StringIO()) as fake_out:
+            clang2py.main(['', '--clang-args="-DDEBUG=2"', '-'])
+            self.assertIn("# TARGET arch is: []", fake_out.getvalue())
+            self.assertIn("i = 2", fake_out.getvalue())
+
 
 
 if __name__ == "__main__":
