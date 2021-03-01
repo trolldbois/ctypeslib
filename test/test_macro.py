@@ -127,7 +127,8 @@ char c1[] = DATE;
         print(self.text_output)
         self.assertIn("c1", self.namespace)
         import datetime
-        this_date = datetime.datetime.now().strftime("%b %-d %Y")
+        # replace leading 0 in day by a whitespace.
+        this_date = datetime.datetime.now().strftime("%b %d %Y").replace(" 0", "  ")
         self.assertEqual(self.namespace.c1, this_date)
         self.assertIn("# DATE = __DATE__", self.text_output)
         self.assertNotIn("# VAL = 1", self.text_output)
