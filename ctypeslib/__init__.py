@@ -25,7 +25,7 @@ try:
     from clang import cindex
     # debug for python-haystack travis-ci
     v1 = ["clang-%d" % _ for _ in range(14, 6, -1)]
-    v2 = ["clang-%f" % _ for _ in range(6, 3, -1)]
+    v2 = ["clang-%.1f" % _ for _ in range(6, 3, -1)]
     v_list = v1 + v2 + ["clang-3.9", "clang-3.8", "clang-3.7"]
     for version in ["libclang", "clang"] + v_list:
         if find_library(version) is not None:
