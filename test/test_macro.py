@@ -40,7 +40,7 @@ char d[] = APREPOST;''')
         self.assertEqual(self.namespace.b, "why though")
         self.assertEqual(self.namespace.c, 'before after')
         self.assertEqual(self.namespace.d, 'before after')
-        print(self.text_output)
+        # print(self.text_output)
 
     def test_long(self):
         self.convert('''#define BIG_NUM_L 1000000L''')
@@ -62,7 +62,7 @@ char d[] = APREPOST;''')
         # very little
         self.assertIn("i", self.namespace)
         self.assertEqual(self.namespace.i, 10)
-        print(self.text_output)
+        # print(self.text_output)
 
     def test_simple_replace_function(self):
         """When macro are used as typedef, it's transparent to us. """
@@ -74,7 +74,7 @@ char d[] = APREPOST;''')
         # macro_type = int # macro
         # i = 10 # Variable ctypes.c_int32
         # very little
-        print(self.text_output)
+        # print(self.text_output)
         self.assertIn("fn", self.namespace)
         # self.assertIn("fn", self.text_output)
         # self.assertEqual(self.namespace.i, 10)
@@ -108,7 +108,7 @@ fn_type fn_name(int a, int b);
 
 int tab1[] = MACRO_EXAMPLE(1,2); 
 ''')
-        print(self.text_output)
+        # print(self.text_output)
         self.assertIn("tab1", self.namespace)
         self.assertEqual(self.namespace.tab1, [1, 2])
         self.assertEqual(self.namespace.DEBUG, True)
@@ -124,7 +124,7 @@ int tab1[] = MACRO_EXAMPLE(1,2);
 #define CHARVAL 'abcde'
 char c1[] = DATE;
 ''')
-        print(self.text_output)
+        # print(self.text_output)
         self.assertIn("c1", self.namespace)
         import datetime
         # replace leading 0 in day by a whitespace.
@@ -137,21 +137,21 @@ char c1[] = DATE;
         self.assertEqual(self.namespace.CHARVAL, 'abcde')
 
     def test_internal_defines_identifier(self):
-            self.convert('''
+        self.convert('''
     #define DATE "now"
     #define DATE2 DATE
     char c1[] = DATE2;
     ''')
-            print(self.text_output)
-            self.assertIn("c1", self.namespace)
-            self.assertEqual(self.namespace.c1, 'now')
-            self.assertIn("DATE", self.namespace)
-            self.assertEqual(self.namespace.DATE, 'now')
-            self.assertIn("DATE2", self.namespace)
-            self.assertEqual(self.namespace.DATE2, 'now')
+        # print(self.text_output)
+        self.assertIn("c1", self.namespace)
+        self.assertEqual(self.namespace.c1, 'now')
+        self.assertIn("DATE", self.namespace)
+        self.assertEqual(self.namespace.DATE, 'now')
+        self.assertIn("DATE2", self.namespace)
+        self.assertEqual(self.namespace.DATE2, 'now')
 
     def test_pack_attribute(self):
-            self.convert('''
+        self.convert('''
     #define PACK __attribute__((aligned(2)))
     #define PACKTO __attribute__((packed))
     
@@ -161,10 +161,10 @@ char c1[] = DATE;
         int x[2] PACKTO;
     };
     ''')
-            print(self.text_output)
-            self.assertIn("# PACK = __attribute__", self.text_output)
-            self.assertIn("# PACKTO = __attribute__", self.text_output)
-            self.assertIn("struct_foo", self.namespace)
+        # print(self.text_output)
+        self.assertIn("# PACK = __attribute__", self.text_output)
+        self.assertIn("# PACKTO = __attribute__", self.text_output)
+        self.assertIn("struct_foo", self.namespace)
 
     # L"string" not supported
     # -1 literal is split as ['-','1']
@@ -192,14 +192,14 @@ char c1[] = DATE;
         self.assertEqual(self.namespace.minusone, -1)
         self.assertEqual(self.namespace.maxint, 2147483647)
         self.assertEqual(self.namespace.LARGE, 0xFFFFFFFF)
-        ##        self.assertEqual(self.namespace.VERYLARGE, 0xFFFFFFFFFFFFFFFF)
-        ##        self.assertEqual(self.namespace.minint, -2147483648)
+        # self.assertEqual(self.namespace.VERYLARGE, 0xFFFFFFFFFFFFFFFF)
+        # self.assertEqual(self.namespace.minint, -2147483648)
 
         self.assertEqual(self.namespace.spam, "spam")
         self.assertEqual(type(self.namespace.spam), str)
 
         self.assertEqual(self.namespace.foo, "foo")
-        self.assertEqual(type(self.namespace.foo), unicode)
+        # self.assertEqual(type(self.namespace.foo), unicode)
 
 
 if __name__ == "__main__":

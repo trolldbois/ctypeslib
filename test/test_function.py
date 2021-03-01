@@ -47,7 +47,7 @@ class TestFunction(ClangTest):
 
     def test_simple_function_with_dll(self):
         self.convert('''int twice(int i);''', dlls=['test/data/test-callbacks.so'])
-        print(self.text_output)
+        # print(self.text_output)
         # de facto success in exec()
         self.assertIn('twice', self.namespace)
         self.assertNotIn('FIXME_STUB', self.text_output)
@@ -61,7 +61,7 @@ class TestFunction(ClangTest):
         self.assertIn('get_one', self.namespace)
         self.assertIn('get_two', self.namespace)
         self.assertIn('FIXME_STUB', self.text_output)
-        print(self.text_output)
+        # print(self.text_output)
 
 
 #     def test_function_return_enum(self):

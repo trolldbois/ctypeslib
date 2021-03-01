@@ -40,7 +40,7 @@ class Pointer(ClangTest):
         typedef char*  PCHAR;
         typedef void*  PVOID;
         ''')
-        print(self.text_output)
+        # print(self.text_output)
         self.assertNotIn('POINTER_T', self.text_output)
         # self.assertIn('POINTER_T', self.text_output)
 

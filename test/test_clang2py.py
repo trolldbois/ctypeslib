@@ -73,8 +73,8 @@ class ArgumentInclude(ClangTest):
     def test_include_with(self):
         """run clang2py -i test/data/test-includes.h"""
         p, output, stderr = clang2py(['-i', 'test/data/test-includes.h'])
-        print(output)
-        print(stderr)
+        # print(output)
+        # print(stderr)
         self.assertEqual(0, p.returncode)
         # struct_name are defined in another include file
         self.assertIn("struct_Name", output)
