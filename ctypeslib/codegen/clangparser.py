@@ -110,41 +110,43 @@ class Clang_Parser(object):
         if os.path.abspath(filename) in self.__processed_location:
             return
         index = Index.create()
-        self.tu = index.parse(filename, self.flags, options=self.tu_options)
-        if not self.tu:
+        tu = index.parse(filename, self.flags, options=self.tu_options)
+        if not tu:
             log.warning("unable to load input")
             return
-        if len(self.tu.diagnostics) > 0:
-            errors = []
-            for x in self.tu.diagnostics:
-                msg = "{} ({}:{}:{})".format(
-                    x.spelling, filename,
-                    x.location.line, x.location.column)
-                log.warning(msg)
-                if x.severity > 2:
-                    errors.append(msg)
-            if len(errors) > 0:
-                log.warning("Source code has %d error. Please fix.", len(errors))
-                # code.interact(local=locals())
-                raise InvalidTranslationUnitException(errors[0])
+        self._parse_tu_diagnostics(tu, filename)
+        self.tu = tu
         root = self.tu.cursor
         for node in root.get_children():
             self.startElement(node)
         return
 
-    def parse_string(self, inputdata):
-        # store inputdata in temp file
-        import tempfile
-        import os
-        handle, filename = tempfile.mkstemp(".h")
-        os.close(handle)
-        open(filename, "w").write(inputdata)
-        try:
-            with open(filename):
-                self.parse(filename)
-        finally:
-            os.unlink(filename)
+    def parse_string(self, input_data, lang='c', all_warnings=False, flags=None):
+        """Use this parser on a memory string/file, instead of a file on disk"""
+        tu = util.get_tu(input_data, lang, all_warnings, flags)
+        self._parse_tu_diagnostics(tu, "memory_input.c")
+        self.tu = tu
+        root = self.tu.cursor
+        for node in root.get_children():
+            self.startElement(node)
         return
+
+    @staticmethod
+    def _parse_tu_diagnostics(tu, input_filename):
+        if len(tu.diagnostics) == 0:
+            return
+        errors = []
+        for x in tu.diagnostics:
+            msg = "{} ({}:{}:{})".format(
+                x.spelling, input_filename,
+                x.location.line, x.location.column)
+            log.warning(msg)
+            if x.severity > 2:
+                errors.append(msg)
+        if len(errors) > 0:
+            log.warning("Source code has %d error. Please fix.", len(errors))
+            # code.interact(local=locals())
+            raise InvalidTranslationUnitException(errors[0])
 
     def startElement(self, node):
         """Recurses in children of this node"""

@@ -22,20 +22,19 @@ def get_tu(source, lang='c', all_warnings=False, flags=None):
     all_warnings is a convenience argument to enable all compiler warnings.
     """
     args = list(flags or [])
-    name = 't.c'
+    name = 'memory_input.c'
     if lang == 'cpp':
-        name = 't.cpp'
+        name = 'memory_input.cpp'
         args.append('-std=c++11')
     elif lang == 'objc':
-        name = 't.m'
+        name = 'memory_input.m'
     elif lang != 'c':
         raise Exception('Unknown language: %s' % lang)
 
     if all_warnings:
         args += ['-Wall', '-Wextra']
 
-    return TranslationUnit.from_source(name, args, unsaved_files=[(name,
-                                                                   source)])
+    return TranslationUnit.from_source(name, args, unsaved_files=[(name, source)])
 
 
 def get_cursor(source, spelling):
