@@ -33,7 +33,7 @@ try:
             break
     else:
         if os.name == "posix" and sys.platform == "darwin":
-            # On darwin, consider that Xcode should be installed in its default path.
+            # On darwin, assume that users have installed commandline tools.
             from clang import cindex
             cindex.Config.set_library_file('/Library/Developer/CommandLineTools/usr/lib/libclang.dylib')
 
