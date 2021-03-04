@@ -102,18 +102,6 @@ class ArgumentHelper(ClangTest):
         self.assertIn("optional arguments", output)
 
 
-class ArgumentVersion(ClangTest):
-
-    def test_version(self):
-        """run clang2py -V"""
-        p, output, stderr = clang2py(['-V', 'XXXXX'])
-        self.assertEqual(0, p.returncode)
-        if sys.version_info[0] < 3:
-            self.assertIn("clang2py version", stderr)
-        else:
-            self.assertIn("clang2py version", output)
-
-
 class ArgumentTypeKind(ClangTest):
 
     @unittest.skip('find a good test for aliases')
@@ -188,14 +176,42 @@ class ArgumentTypeKind(ClangTest):
         self.assertNotIn("union__complex3_0_1_1(", output)
 
 
-class CLITesting(ClangTest):
+class ArgumentVersion(ClangTest):
 
     def test_version(self):
-        """run clang2py -v"""
+        """run clang2py --version"""
         p, output, stderr = clang2py(['--version'])
         self.assertEqual(0, p.returncode)
         self.assertIn(str(ctypeslib.__version__), output)
         self.assertIn("libclang", output)
+
+    def test_version(self):
+        """run clang2py -V"""
+        p, output, stderr = clang2py(['-V', 'XXXXX'])
+        self.assertEqual(0, p.returncode)
+        if sys.version_info[0] < 3:
+            self.assertIn("clang2py version", stderr)
+        else:
+            self.assertIn("clang2py version", output)
+
+
+class ArgumentVerbose(ClangTest):
+
+    def test_verbose(self):
+        """run clang2py --verbose test/data/test-records.c"""
+        p, output, stderr = clang2py(['--verbose', 'test/data/test-records.c'])
+        self.assertEqual(0, p.returncode)
+        self.assertNotIn("DEBUG:", stderr)
+        self.assertNotIn("DEBUG:", output)
+        self.assertIn("# Total symbols:", stderr)
+
+    def test_debug(self):
+        """run clang2py --verbose test/data/test-records.c"""
+        p, output, stderr = clang2py(['--verbose', 'test/data/test-records.c', '--debug'])
+        self.assertEqual(0, p.returncode)
+        self.assertIn("DEBUG:", stderr)
+        self.assertNotIn("DEBUG:", output)
+        self.assertIn("# Total symbols:", stderr)
 
 
 from io import StringIO
