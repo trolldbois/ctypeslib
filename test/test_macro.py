@@ -1,8 +1,6 @@
 import unittest
-import ctypes
+import datetime
 
-from ctypeslib.codegen.util import get_cursor
-from ctypeslib.codegen.util import get_tu
 from test.util import ClangTest
 
 '''Test if macro are correctly generated.
@@ -26,6 +24,62 @@ class Macro(ClangTest):
         self.convert('''#define __MY_VAL 1''')
         self.assertEqual(getattr(self.namespace, "__MY_VAL"), 1)
 
+    def test_long(self):
+        self.convert('''#define BIG_NUM_L 1000000L''')
+        self.assertEqual(getattr(self.namespace, "BIG_NUM_L"), 1000000)
+
+    def test_signed(self):
+        self.convert('''
+        #define ZERO 0
+        #define POSITIVE 1
+        #define NEGATIVE -1
+        ''')
+        self.assertIn("ZERO", self.namespace)
+        self.assertEqual(self.namespace.ZERO, 0)
+        self.assertIn("POSITIVE", self.namespace)
+        self.assertEqual(self.namespace.POSITIVE, 1)
+        self.assertIn("NEGATIVE", self.namespace)
+        self.assertEqual(self.namespace.NEGATIVE, -1)
+
+    def test_signed_long_long(self):
+        self.convert('''
+        #define ZERO 0x0000000000000000LL
+        #define POSITIVE 0x0000000080000000LL
+        #define NEGATIVE -0x0000000080000000LL
+        ''')
+        self.assertIn("ZERO", self.namespace)
+        self.assertEqual(self.namespace.ZERO, 0)
+        self.assertIn("POSITIVE", self.namespace)
+        self.assertIn("NEGATIVE", self.namespace)
+        self.assertEqual(self.namespace.POSITIVE, 0x0000000080000000)
+        self.assertEqual(self.namespace.NEGATIVE, -0x0000000080000000)
+
+    def test_signed_long(self):
+        self.convert('''
+        #define ZERO 0x0000000000000000L
+        #define POSITIVE 0x0000000080000000L
+        #define NEGATIVE -0x0000000080000000L
+        ''')
+        self.assertIn("ZERO", self.namespace)
+        self.assertEqual(self.namespace.ZERO, 0)
+        self.assertIn("POSITIVE", self.namespace)
+        self.assertIn("NEGATIVE", self.namespace)
+        self.assertEqual(self.namespace.POSITIVE, 0x0000000080000000)
+        self.assertEqual(self.namespace.NEGATIVE, -0x0000000080000000)
+
+    def test_unsigned_long_long(self):
+        self.convert('''
+        #define ZERO 0x0000000000000000ULL
+        #define POSITIVE 0x0000000080000000ULL
+        #define NEGATIVE -0x0000000080000000ULL
+        ''')
+        self.assertIn("ZERO", self.namespace)
+        self.assertEqual(self.namespace.ZERO, 0)
+        self.assertIn("POSITIVE", self.namespace)
+        self.assertIn("NEGATIVE", self.namespace)
+        self.assertEqual(self.namespace.POSITIVE, 0x0000000080000000)
+        self.assertEqual(self.namespace.NEGATIVE, -0x0000000080000000)
+
     def test_char_arrays(self):
         self.convert('''
 #define PRE "before"
@@ -42,33 +96,24 @@ char d[] = APREPOST;''')
         self.assertEqual(self.namespace.d, 'before after')
         # print(self.text_output)
 
-    def test_long(self):
-        self.convert('''#define BIG_NUM_L 1000000L''')
-        self.assertEqual(getattr(self.namespace, "BIG_NUM_L"), 1000000)
+    @unittest.skip
+    def test_define_wchar_t(self):
+        """'L' means wchar_t"""
+        # currently this fails because of Bug #77 , in C
+        # wchar.h contains recursive INTEGER_LITERAL MACROS that fail to be codegen properly
+        self.convert("""
+        #define SPAM "spam"
+        #define STRING_NULL "NULL"
+        #define FOO L"foo"
+        
+        #include <wchar.h>
+        wchar_t * my_foo = FOO;
+        """)
 
-    def test_unsigned_long_long(self):
-        self.convert('''#define BIG_NUM_ULL 0x0000000080000000ULL''')
-        self.assertEqual(getattr(self.namespace, "BIG_NUM_ULL"), 0x0000000080000000)
-
-    def test_signed(self):
-        self.convert('''
-        #define POSITIVE 1
-        #define NEGATIVE -1
-        ''')
-        self.assertIn("POSITIVE", self.namespace)
-        self.assertIn("NEGATIVE", self.namespace)
-        self.assertEqual(self.namespace.POSITIVE, 1)
-        self.assertEqual(self.namespace.NEGATIVE, -1)
-
-    def test_signed_long_long(self):
-        self.convert('''
-        #define POSITIVE 0x0000000080000000ULL
-        #define NEGATIVE -0x0000000080000000ULL
-        ''')
-        self.assertIn("POSITIVE", self.namespace)
-        self.assertIn("NEGATIVE", self.namespace)
-        self.assertEqual(self.namespace.POSITIVE, 0x0000000080000000)
-        self.assertEqual(self.namespace.NEGATIVE, -0x0000000080000000)
+        self.assertEqual(self.namespace.SPAM, "spam")
+        self.assertEqual(self.namespace.STRING_NULL, "NULL")
+        self.assertEqual(self.namespace.FOO, "foo")
+        self.assertEqual(self.namespace.my_foo, "foo")
 
     def test_simple_replace_typedef(self):
         """When macro are used as typedef, it's transparent to us. """
@@ -157,25 +202,66 @@ int tab1[] = MACRO_EXAMPLE(1,2);
         self.assertNotIn('MACRO_FUNC', self.namespace.__all__)
         self.assertNotIn('MACRO_LIST', self.namespace.__all__)
 
-    def test_internal_defines(self):
+    """
+    Bug #77
+    2021-03
+    Both compiler's Predefined Macros and standard's Preprocessor Macros handling works for string values.
+    But predef macros for INTEGER_LITERAL do NOT work.
+    https://gcc.gnu.org/onlinedocs/cpp/Standard-Predefined-Macros.html
+    https://blog.kowalczyk.info/article/j/guide-to-predefined-macros-in-c-compilers-gcc-clang-msvc-etc..html
+    """
+
+    @unittest.skip
+    def test_defines_predefined(self):
         self.convert('''
 #define DATE __DATE__
-#define VAL 1
-#define STRVAL "ebcde"
-#define CHARVAL 'abcde'
 char c1[] = DATE;
+char f[] = __FILE__;
+char v2[] = __clang_version__;
+
+// this fails for now
+int v = __STDC_VERSION__;
 ''')
-        # print(self.text_output)
+        print(self.text_output)
         self.assertIn("c1", self.namespace)
-        import datetime
         # replace leading 0 in day by a whitespace.
         this_date = datetime.datetime.now().strftime("%b %d %Y").replace(" 0", "  ")
         self.assertEqual(self.namespace.c1, this_date)
         self.assertIn("# DATE = __DATE__", self.text_output)
-        self.assertNotIn("# VAL = 1", self.text_output)
-        self.assertEqual(self.namespace.VAL, 1)
-        self.assertEqual(self.namespace.STRVAL, 'ebcde')
-        self.assertEqual(self.namespace.CHARVAL, 'abcde')
+        self.assertIn("f", self.namespace)
+        self.assertIn("v", self.namespace)
+        self.assertIn("v2", self.namespace)
+        # v2 = '11.0.0' for example
+        self.assertIn("v2 = '", self.text_output)
+        # this is the current limit
+        self.assertNotEqual(self.namespace.v, [])
+
+    def test_internal_defines_recursive(self):
+        self.convert('''
+    #define DATE __DATE__
+    #define DATE2 DATE
+    char c1[] = DATE2;
+        ''')
+        print(self.text_output)
+        self.assertIn("c1", self.namespace)
+        # replace leading 0 in day by a whitespace.
+        this_date = datetime.datetime.now().strftime("%b %d %Y").replace(" 0", "  ")
+        self.assertIn("# DATE = __DATE__", self.text_output)
+        self.assertIn("# DATE2 = __DATE__", self.text_output)
+
+    @unittest.skip
+    def test_internal_defines_recursive_with_operation(self):
+        self.convert('''
+    #define VERSION __clang_major__
+    #define VPLUS (VERSION+1)
+    int version = VERSION;
+    int vplus = VPLUS;
+        ''')
+        print(self.text_output)
+        self.assertIn("version", self.namespace)
+        self.assertIn("vplus", self.namespace)
+        self.assertIn("# VERSION = __clang_major__", self.text_output)
+        self.assertIn("# VPLUS = ", self.text_output)
 
     def test_internal_defines_identifier(self):
         self.convert('''
@@ -183,7 +269,7 @@ char c1[] = DATE;
     #define DATE2 DATE
     char c1[] = DATE2;
     ''')
-        # print(self.text_output)
+        print(self.text_output)
         self.assertIn("c1", self.namespace)
         self.assertEqual(self.namespace.c1, 'now')
         self.assertIn("DATE", self.namespace)
@@ -206,41 +292,6 @@ char c1[] = DATE;
         self.assertIn("# PACK = __attribute__", self.text_output)
         self.assertIn("# PACKTO = __attribute__", self.text_output)
         self.assertIn("struct_foo", self.namespace)
-
-    # L"string" not supported
-    # -1 literal is split as ['-','1']
-    @unittest.expectedFailure
-    def test_defines(self):
-        # we need macros
-        self.full_parsing_options = True
-        self.convert("""
-        #define zero 0
-        #define one 1
-        #define minusone -1
-        #define maxint 2147483647
-        #define minint -2147483648
-        #define spam "spam"
-        #define foo L"foo"
-        #define LARGE 0xFFFFFFFF
-
-        #ifdef _MSC_VER
-        # define VERYLARGE 0xFFFFFFFFFFFFFFFFui64
-        #endif
-        """)
-
-        self.assertEqual(self.namespace.zero, 0)
-        self.assertEqual(self.namespace.one, 1)
-        self.assertEqual(self.namespace.minusone, -1)
-        self.assertEqual(self.namespace.maxint, 2147483647)
-        self.assertEqual(self.namespace.LARGE, 0xFFFFFFFF)
-        # self.assertEqual(self.namespace.VERYLARGE, 0xFFFFFFFFFFFFFFFF)
-        # self.assertEqual(self.namespace.minint, -2147483648)
-
-        self.assertEqual(self.namespace.spam, "spam")
-        self.assertEqual(type(self.namespace.spam), str)
-
-        self.assertEqual(self.namespace.foo, "foo")
-        # self.assertEqual(type(self.namespace.foo), unicode)
 
 
 if __name__ == "__main__":

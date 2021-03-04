@@ -114,7 +114,7 @@ class ClangHandler(object):
                 break
             _i+=1
         if not found:
-            raise NotImplementedError("_make_unknown_name BUG %s"%cursor.location)
+            raise NotImplementedError("_make_unknown_name BUG %s" % cursor.location)
         # truncate parent name to remove the first part (union or struct)
         _premainer = '_'.join(pname.split('_')[1:])
         name = '%s_%d'%(_premainer,_i)

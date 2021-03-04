@@ -408,40 +408,37 @@ class CursorHandler(ClangHandler):
         # indicatively: u8 for utf-8, u for utf-16, U for utf32
         # assume that the source file is utf-8
         # utf-32 not supported in 2.7, lets keep all in utf8
-        # FIXME python 3
-        if cursor.kind == CursorKind.CHARACTER_LITERAL:
-            prefix = value[:3].split("'")[0]
-        elif cursor.kind == CursorKind.STRING_LITERAL:
-            prefix = value[:3].split('"')[0]
+        # string prefixes https://en.cppreference.com/w/cpp/language/string_literal
+        # integer suffixes https://en.cppreference.com/w/cpp/language/integer_literal
+        if cursor.kind in [CursorKind.CHARACTER_LITERAL, CursorKind.STRING_LITERAL]:
+            # clean prefix
+            value = re.sub(r'''^(L|u8|u|U)(R|"|')''', r'\2', value)
+            # R for raw strings
+            # we need to remove the raw-char-sequence prefix,suffix
+            if value[0] == 'R':
+                s = value[1:]
+                # if there is no '(' in the 17 first char, its not valid
+                offset = s[:17].index('(')
+                delimiter = s[1:offset] # we skip the "
+                value = s[offset + 1:-offset - 1]
+                return value
+            # we strip string delimiters
+            return value[1:-1]
         elif cursor.kind == CursorKind.MACRO_INSTANTIATION:
             # prefix = value[:3].split('"')[0]
             return value
         elif cursor.kind == CursorKind.MACRO_DEFINITION:
-            # prefix = value[:3].split('"')[0]
-            # unsigned int / long int / unsigned long int / long long int / unsigned long long int
-            value = re.sub("(u|U|l|L|ul|UL|ll|LL|ull|ULL)$", "", value)
+            c = value[-1]
+            if c in ['"', "'"]:
+                value = re.sub('''^L%s''' % c , c, value)
+            else:
+                # unsigned int / long int / unsigned long int / long long int / unsigned long long int
+                # this works and doesn't eat STRING values because no '"' is before $ in the regexp.
+                # FIXME combinaisons of u/U, l/L, ll/LL, and combined, plus z/Z combined with u/U
+                value = re.sub("(u|U|l|L|ul|UL|ll|LL|ull|ULL|z|Z|zu|ZU)$", "", value)
             return value
         else:
-            prefix = 1
             pass
-        # max prefix len is 3 char
-        _tmp = value[len(prefix) + 1:-1]  # strip
-        if len(_tmp) == 0:
-            # there was no prefix, this is not a string.
-            return value
-        # value is a string literal
-        value = _tmp
-        # string literal only: R for raw strings
-        # we need to remove the raw-char-sequence prefix,suffix
-        if 'R' in prefix:
-            # if there is no '(' in the 17 first char, its not valid
-            offset = value[:17].index('(')
-            value = value[offset + 1:-offset - 1]
-        # then we strip encoding
-        for encoding in ['u8', 'L', 'u', 'U']:
-            if encoding in prefix:  # could be Ru ou uR
-                # value = unicode(value, 'utf-8') # FIXME PY3
-                break  # just one prefix is possible
         return value
 
     @log_entity
@@ -454,6 +451,8 @@ class CursorHandler(ClangHandler):
             # init_value = ' '.join([t.spelling for t in children[0].get_tokens()
             # if t.spelling != ';'])
         because some literal might need cleaning."""
+        # FIXME #77, internal integer literal like __clang_major__ are not working here.
+        # tokens == [] , because ??? clang problem ? so there is no spelling available.
         tokens = list(cursor.get_tokens())
         log.debug('literal has %d tokens.[ %s ]', len(tokens), ' '.join([str(t.spelling) for t in tokens]))
         if len(tokens) == 1 and cursor.kind == CursorKind.STRING_LITERAL:
@@ -1089,13 +1088,18 @@ class CursorHandler(ClangHandler):
         # args should be filled when () are in tokens,
         args = None
         if isinstance(tokens, list):
+            # TODO, if there is an UndefinedIdentifier, we need to scrap the whole thing to comments.
+            # unknowns = [_ for _ in tokens if isinstance(_, typedesc.UndefinedIdentifier)]
+            # if len(unknowns) > 0:
+            #     value = tokens
+            # elif len(tokens) == 2:
             if len(tokens) == 2:
                 # #define key value
                 value = tokens[1]
             elif len(tokens) == 3 and tokens[1] == '-':
                 value = ''.join(tokens[1:])
             elif tokens[1] == '(':
-                # function macro
+                # function macro or an expression.
                 str_tokens = [str(_) for _ in tokens[1:tokens.index(')')+1]]
                 args = ''.join(str_tokens).replace(',', ', ')
                 str_tokens = [str(_) for _ in tokens[tokens.index(')')+1:]]
@@ -1124,9 +1128,7 @@ class CursorHandler(ClangHandler):
         try:
             self.register(name, obj)
         except DuplicateDefinitionException:
-            log.info(
-                'Redefinition of %s %s->%s',
-                name, self.parser.all[name].args, value)
+            log.info('Redefinition of %s %s->%s', name, self.parser.all[name].args, value)
             # HACK
             self.parser.all[name] = obj
         self.set_location(obj, cursor)
@@ -1139,15 +1141,20 @@ class CursorHandler(ClangHandler):
         """We could use this to count instantiations
         so we now, if we need to generate python code or comment for this macro ? """
         log.debug('cursor.spelling: %s', cursor.spelling)
-        log.debug('cursor.kind: %s', cursor.kind.name)
-        log.debug('cursor.type.kind: %s', cursor.type.kind.name)
-        # no children ?
-        for child in cursor.get_children():
-            log.debug('child.spelling: %s', child.spelling)
-            log.debug('child.kind: %s', child.kind.name)
-            log.debug('child.type.kind: %s', child.type.kind.name)
+        # log.debug('cursor.kind: %s', cursor.kind.name)
+        # log.debug('cursor.type.kind: %s', cursor.type.kind.name)
+        # # no children ?
+        # for child in cursor.get_children():
+        #     log.debug('child.spelling: %s', child.spelling)
+        #     log.debug('child.kind: %s', child.kind.name)
+        #     log.debug('child.type.kind: %s', child.type.kind.name)
+        #
+        # for token in cursor.get_tokens():
+        #     log.debug('token.spelling: %s', token.spelling)
+        #     log.debug('token.kind: %s', token.kind.name)
+        #     #log.debug('token.type.kind: %s', token.type.kind.name)
 
-            # ret.append(self.parse_cursor(child))
+        # ret.append(self.parse_cursor(child))
         # log.debug('cursor.type:%s', cursor.type.kind.name)
         # self.set_location(obj, cursor)
         # set the comment in the obj
