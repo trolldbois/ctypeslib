@@ -35,7 +35,7 @@ try:
         if os.name == "posix" and sys.platform == "darwin":
             # On darwin, consider that Xcode should be installed in its default path.
             from clang import cindex
-            cindex.Config.set_library_file('/Applications/Xcode.app/Contents/Frameworks/libclang.dylib')
+            cindex.Config.set_library_file('/Library/Developer/CommandLineTools/usr/lib/libclang.dylib')
 
     def clang_version():
         return cindex.Config.library_file
