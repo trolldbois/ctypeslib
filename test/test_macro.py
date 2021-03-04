@@ -50,6 +50,26 @@ char d[] = APREPOST;''')
         self.convert('''#define BIG_NUM_ULL 0x0000000080000000ULL''')
         self.assertEqual(getattr(self.namespace, "BIG_NUM_ULL"), 0x0000000080000000)
 
+    def test_signed(self):
+        self.convert('''
+        #define POSITIVE 1
+        #define NEGATIVE -1
+        ''')
+        self.assertIn("POSITIVE", self.namespace)
+        self.assertIn("NEGATIVE", self.namespace)
+        self.assertEqual(self.namespace.POSITIVE, 1)
+        self.assertEqual(self.namespace.NEGATIVE, -1)
+
+    def test_signed_long_long(self):
+        self.convert('''
+        #define POSITIVE 0x0000000080000000ULL
+        #define NEGATIVE -0x0000000080000000ULL
+        ''')
+        self.assertIn("POSITIVE", self.namespace)
+        self.assertIn("NEGATIVE", self.namespace)
+        self.assertEqual(self.namespace.POSITIVE, 0x0000000080000000)
+        self.assertEqual(self.namespace.NEGATIVE, -0x0000000080000000)
+
     def test_simple_replace_typedef(self):
         """When macro are used as typedef, it's transparent to us. """
         # Python does not have typedef so who care what type name is a variable ?

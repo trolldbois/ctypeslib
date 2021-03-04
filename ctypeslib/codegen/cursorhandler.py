@@ -1092,6 +1092,8 @@ class CursorHandler(ClangHandler):
             if len(tokens) == 2:
                 # #define key value
                 value = tokens[1]
+            elif len(tokens) == 3 and tokens[1] == '-':
+                value = ''.join(tokens[1:])
             elif tokens[1] == '(':
                 # function macro
                 str_tokens = [str(_) for _ in tokens[1:tokens.index(')')+1]]
