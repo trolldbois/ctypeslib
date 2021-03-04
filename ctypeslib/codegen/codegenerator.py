@@ -365,68 +365,60 @@ class Generator(object):
                                           self.type_name(
                                               tp.init),
                                           [x for x in tp.typ.iterArgNames()]), file=self.stream)
-        else:
-            init_value = tp.init
-            if isinstance(tp.typ, typedesc.PointerType) or isinstance(tp.typ, typedesc.ArrayType):
-                if (isinstance(tp.typ.typ, typedesc.FundamentalType) and
-                        (tp.typ.typ.name in ["c_char", "c_wchar"])):
-                    # string
-                    # FIXME a char * is not a python string.
-                    # we should output a cstring() construct.
-                    init_value = repr(tp.init)
-                elif (isinstance(tp.typ.typ, typedesc.FundamentalType) and
-                      ('int' in tp.typ.typ.name or 'long' in tp.typ.typ.name)):
-                    # array of number
-                    # CARE: size of elements must match size of array
-                    # init_value = repr(tp.init)
-                    init_value = '[%s]' % ','.join([str(x) for x in tp.init])
-                    # we do NOT want Variable to be described as ctypes object
-                    # when we can have a python abstraction for them.
-                    # init_value_type = self.type_name(tp.typ, False)
-                    # init_value = "(%s)(%s)"%(init_value_type,init_value)
-                elif isinstance(tp.typ.typ, typedesc.Structure):
-                    self._generate(tp.typ.typ)
-                    init_value = self.type_name(tp.typ, False) + "()"
-                else:
-                    init_value = tp.init if tp.init is not None else (
-                                                                         self.type_name(tp.typ, False)
-                                                                     ) + "()"
-            elif isinstance(tp.typ, typedesc.Structure):
-                init_value = self.type_name(tp.typ, False)
-            elif isinstance(tp.typ, typedesc.FundamentalType) and tp.typ.name in ["c_char", "c_wchar"]:
-                if tp.init is not None:
-                    init_value = repr(tp.init)
-                else:
-                    init_value = '\'\\x00\''
+            self.names.add(tp.name)
+            return
+        elif isinstance(tp.typ, typedesc.PointerType) or isinstance(tp.typ, typedesc.ArrayType):
+            if (isinstance(tp.typ.typ, typedesc.FundamentalType) and
+                    (tp.typ.typ.name in ["c_char", "c_wchar"])):
+                # string
+                # FIXME a char * is not a python string.
+                # we should output a cstring() construct.
+                init_value = repr(tp.init)
+            elif (isinstance(tp.typ.typ, typedesc.FundamentalType) and
+                  ('int' in tp.typ.typ.name or 'long' in tp.typ.typ.name)):
+                # array of number
+                # CARE: size of elements must match size of array
+                # init_value = repr(tp.init)
+                init_value = '[%s]' % ','.join([str(x) for x in tp.init])
+                # we do NOT want Variable to be described as ctypes object
+                # when we can have a python abstraction for them.
+                # init_value_type = self.type_name(tp.typ, False)
+                # init_value = "(%s)(%s)"%(init_value_type,init_value)
+            elif isinstance(tp.typ.typ, typedesc.Structure):
+                self._generate(tp.typ.typ)
+                init_value = self.type_name(tp.typ, False) + "()"
             else:
-                # we want to have FundamentalType variable use the actual
-                # type default, and not be a python ctypes object
-                # if init_value is None:
-                #    init_value = ''; # use default ctypes object constructor
-                # init_value = "%s(%s)"%(self.type_name(tp.typ, False), init_value)
-                if tp.init is not None:
-                    init_value = tp.init
-                elif tp.typ.name in ['c_float', 'c_double', 'c_longdouble']:
-                    init_value = 0.0
-                else:
-                    # integers
-                    init_value = 0
-            #
-            # print it out
-            print("%s = %s # Variable %s" % (tp.name,
-                                             init_value,
-                                             self.type_name(tp.typ, False)), file=self.stream)
+                init_value = tp.init if tp.init is not None else (
+                                                                     self.type_name(tp.typ, False)
+                                                                 ) + "()"
+        elif isinstance(tp.typ, typedesc.Structure):
+            init_value = self.type_name(tp.typ, False)
+        elif isinstance(tp.typ, typedesc.FundamentalType) and tp.typ.name in ["c_char", "c_wchar"]:
+            if tp.init is not None:
+                init_value = repr(tp.init)
+            else:
+                init_value = '\'\\x00\''
+        else:
+            # we want to have FundamentalType variable use the actual
+            # type default, and not be a python ctypes object
+            # if init_value is None:
+            #    init_value = ''; # use default ctypes object constructor
+            # init_value = "%s(%s)"%(self.type_name(tp.typ, False), init_value)
+            if tp.init is not None:
+                init_value = tp.init
+            elif tp.typ.name in ['c_float', 'c_double', 'c_longdouble']:
+                init_value = 0.0
+            else:
+                # integers
+                init_value = 0
+        #
+        # print it out
+        print("%s = %s # Variable %s" % (tp.name,
+                                         init_value,
+                                         self.type_name(tp.typ, False)), file=self.stream)
         #
         self.names.add(tp.name)
-        # try:
-        #    value = self.initialize(tp.typ, tp.init)
-        # except (TypeError, ValueError, SyntaxError, NameError), detail:
-        #    log.error("Could not init %s %s %s"% (tp.name, tp.init, detail))
-        #    import code
-        #    code.interact(local=locals())
-        #    return
-        # import code
-        # code.interact(local=locals())
+        return
 
     _enumvalues = 0
 
