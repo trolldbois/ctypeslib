@@ -116,6 +116,27 @@ int tab1[] = MACRO_EXAMPLE(1,2);
         # we don't gen macro functions
         self.assertNotIn('MACRO_EXAMPLE', self.namespace)
 
+    def test_all(self):
+        """Test which macros are going to be defined """
+        self.convert('''
+        #define DATE __DATE__
+        #define DEBUG
+        #define PROD 1
+        #define MACRO_STRING "abcde"
+        #define MACRO_FUNC(x,y) {x,y}
+        #define MACRO_LIST 1 2 3 4 5 6
+
+        int tab1[] = MACRO_FUNC(1,2);
+        char date[] = DATE; 
+        ''')
+        self.assertIn('DEBUG', self.namespace.__all__)
+        self.assertIn('PROD', self.namespace.__all__)
+        self.assertIn('MACRO_STRING', self.namespace.__all__)
+        self.assertNotIn('DATE', self.namespace.__all__)
+        self.assertNotIn('__DATE__', self.namespace.__all__)
+        self.assertNotIn('MACRO_FUNC', self.namespace.__all__)
+        self.assertNotIn('MACRO_LIST', self.namespace.__all__)
+
     def test_internal_defines(self):
         self.convert('''
 #define DATE __DATE__

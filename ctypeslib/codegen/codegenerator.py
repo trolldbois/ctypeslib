@@ -211,11 +211,11 @@ class Generator(object):
         elif isinstance(macro.body, str) or isinstance(macro.body, bool):
             # either it's just a thing we gonna print, or we need to have a registered item
             print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
+            self.macros += 1
+            self.names.add(macro.name)
         else:
             # we just comment out all macro definitions, because values will be replace in situ
             print("# %s = %s # macro" % (macro.name, macro.body), file=self.stream)
-        self.macros += 1
-        self.names.add(macro.name)
         return
         # We don't know if we can generate valid, error free Python
         # code. All we can do is to try to compile the code.  If the
