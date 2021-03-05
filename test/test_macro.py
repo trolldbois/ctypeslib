@@ -169,7 +169,7 @@ fn_type fn_name(int a, int b);
 #define DEBUG
 #define PROD 1
 #define MACRO_EXAMPLE(x,y) {x,y}
-#define MY 1 2 3 4 5 6
+// #define MY 1 2 3 4 5 6
 
 int tab1[] = MACRO_EXAMPLE(1,2); 
 ''')
@@ -180,6 +180,32 @@ int tab1[] = MACRO_EXAMPLE(1,2);
         self.assertEqual(self.namespace.PROD, 1)
         # we don't gen macro functions
         self.assertNotIn('MACRO_EXAMPLE', self.namespace)
+        # self.assertEqual(self.namespace.MY, 123456)
+        # that is not a thing that compiles
+
+    def test_macro_to_variable(self):
+        """Test which macros are going to be defined """
+        self.convert('''
+        #define SPAM "spam"
+        #define NO "no"
+        #define SPACE " "
+        #define FOO L"foo"
+        #define NOSPAM NO SPAM
+        #define NO_SPAM NO SPACE SPAM
+        #define NO_SPAM_FOO NO SPACE SPAM SPACE FOO
+        ''')
+        # print(self.text_output)
+        self.assertIn('SPAM', self.namespace)
+        self.assertEqual('spam', self.namespace.SPAM)
+        self.assertIn('NO', self.namespace)
+        self.assertEqual('no', self.namespace.NO)
+        self.assertIn('SPACE', self.namespace)
+        self.assertEqual(' ', self.namespace.SPACE)
+        self.assertIn('NO_SPAM', self.namespace)
+        self.assertEqual('no spam', self.namespace.NO_SPAM)
+        self.assertIn('NO_SPAM_FOO', self.namespace)
+        self.assertEqual('no spam foo', self.namespace.NO_SPAM_FOO)
+
 
     def test_all(self):
         """Test which macros are going to be defined """
@@ -189,18 +215,19 @@ int tab1[] = MACRO_EXAMPLE(1,2);
         #define PROD 1
         #define MACRO_STRING "abcde"
         #define MACRO_FUNC(x,y) {x,y}
-        #define MACRO_LIST 1 2 3 4 5 6
+        // #define MACRO_LIST 1 2 3 4 5 6
 
         int tab1[] = MACRO_FUNC(1,2);
         char date[] = DATE; 
         ''')
+        # print(self.text_output)
         self.assertIn('DEBUG', self.namespace.__all__)
         self.assertIn('PROD', self.namespace.__all__)
         self.assertIn('MACRO_STRING', self.namespace.__all__)
         self.assertNotIn('DATE', self.namespace.__all__)
         self.assertNotIn('__DATE__', self.namespace.__all__)
         self.assertNotIn('MACRO_FUNC', self.namespace.__all__)
-        self.assertNotIn('MACRO_LIST', self.namespace.__all__)
+        # self.assertIn('MACRO_LIST', self.namespace.__all__)
 
     """
     Bug #77
@@ -222,7 +249,7 @@ char v2[] = __clang_version__;
 // this fails for now
 int v = __STDC_VERSION__;
 ''')
-        print(self.text_output)
+        # print(self.text_output)
         self.assertIn("c1", self.namespace)
         # replace leading 0 in day by a whitespace.
         this_date = datetime.datetime.now().strftime("%b %d %Y").replace(" 0", "  ")
@@ -242,7 +269,7 @@ int v = __STDC_VERSION__;
     #define DATE2 DATE
     char c1[] = DATE2;
         ''')
-        print(self.text_output)
+        # print(self.text_output)
         self.assertIn("c1", self.namespace)
         # replace leading 0 in day by a whitespace.
         this_date = datetime.datetime.now().strftime("%b %d %Y").replace(" 0", "  ")
@@ -257,7 +284,7 @@ int v = __STDC_VERSION__;
     int version = VERSION;
     int vplus = VPLUS;
         ''')
-        print(self.text_output)
+        # print(self.text_output)
         self.assertIn("version", self.namespace)
         self.assertIn("vplus", self.namespace)
         self.assertIn("# VERSION = __clang_major__", self.text_output)
@@ -269,7 +296,7 @@ int v = __STDC_VERSION__;
     #define DATE2 DATE
     char c1[] = DATE2;
     ''')
-        print(self.text_output)
+        # print(self.text_output)
         self.assertIn("c1", self.namespace)
         self.assertEqual(self.namespace.c1, 'now')
         self.assertIn("DATE", self.namespace)

@@ -44,7 +44,7 @@ class StringConstantsTest(ClangTest):
         wchar_t X = L'X';
         wchar_t w_zero = 0;
         """, ['-x', 'c++'])  # force c++ lang for wchar
-        print(self.text_output)
+        # print(self.text_output)
         self.assertEqual(self.namespace.X, 'X')
         self.assertEqual(type(self.namespace.X), str)
         self.assertEqual(self.namespace.w_zero, 0)
@@ -60,7 +60,7 @@ class StringConstantsTest(ClangTest):
         wchar_t w_zero = 0;
         """, ['-x', 'c'])  # force c lang for wchar
         # wchar_t in c is a c_int32. So type casting to a char type, not so much.
-        print(self.text_output)
+        # print(self.text_output)
         self.assertEqual(self.namespace.X, 'X')
         # self.assertEqual(type(self.namespace.X), unicode)
         self.assertEqual(type(self.namespace.X), str)
@@ -72,7 +72,7 @@ class StringConstantsTest(ClangTest):
         self.convert("""
         char X[] = R"abc(This test string)is)abc";
         """, ['-x', 'c++'])  # force c lang for wchar
-        print(self.text_output)
+        # print(self.text_output)
         self.assertEqual('This test string)is', self.namespace.X)
 
     @unittest.skip

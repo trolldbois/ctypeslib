@@ -4,6 +4,7 @@ Type descriptions are collections of typedesc instances.
 
 from __future__ import print_function
 from __future__ import unicode_literals
+from collections.abc import Iterable
 from functools import cmp_to_key
 import textwrap
 from io import StringIO
@@ -199,40 +200,68 @@ class Generator(object):
         if self.generate_comments:
             self.print_comment(macro)
 
+        def _contains_undefined_identifier(m):
+            # body is undefined
+            if isinstance(macro.body, typedesc.UndefinedIdentifier):
+                return True
+            # or one item is undefined
+            if isinstance(macro.body, list):
+                for b in macro.body:
+                    if isinstance(b, typedesc.UndefinedIdentifier):
+                        return True
+            return False
+
+        def _token_is_string(t):
+            # we need at list 2 delimiters in there
+            if not isinstance(t, Iterable) or len(t) < 2:
+                return False
+            delim = t[0]
+            return delim in ["'", '"'] and t[0] == t[-1]
+
+        def _body_is_all_string_tokens(m):
+            if isinstance(macro.body, list):
+                for b in macro.body:
+                    if _token_is_string(b):
+                        continue
+                    else:
+                        return False
+                return True
+            return False
+
+
+        # get tokens types all the way to here ?
+        # 1. clang makes the decision on type casting and validity of data.
+        # let's not try to be clever.
+        # only ignore, undefined references, macro functions...
+        # 2. or get a flag in macro that tells us if something contains undefinedIdentifier /is not codegenable ?
+        # codegen should decide what codegen can do.
         if macro.args:
             print("# def %s%s:  # macro" % (macro.name, macro.args), file=self.stream)
             print("#    return %s  " % macro.body, file=self.stream)
-        elif isinstance(macro.body, list):
-            # we can't handle that
-            print("# %s = %s # macro" % (macro.name, ' '.join([str(_) for _ in macro.body])), file=self.stream)
-        elif isinstance(macro.body, typedesc.UndefinedIdentifier):
-            # just comment is out
-            print("# %s = %s # macro" % (macro.name, macro.body.name), file=self.stream)
+        elif _contains_undefined_identifier(macro):
+            # we can't handle that, we comment it out
+            if isinstance(macro.body, typedesc.UndefinedIdentifier):
+                print("# %s = %s # macro" % (macro.name, macro.body.name), file=self.stream)
+            else:  # we assume it's a list
+                print("# %s = %s # macro" % (macro.name, ' '.join([str(_) for _ in macro.body])), file=self.stream)
         elif isinstance(macro.body, str) or isinstance(macro.body, bool):
+            # what about integers you ask ? body token that represents token are Integer here.
             # either it's just a thing we gonna print, or we need to have a registered item
             print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
             self.macros += 1
             self.names.add(macro.name)
+        # This is why we need to have token types all the way here.
+        # but at the same time, clang does not type tokens. So we might as well guess them here too
+        elif _body_is_all_string_tokens(macro.body):
+            print("%s = %s # macro" % (macro.name, ' '.join([str(_) for _ in macro.body])), file=self.stream)
+            self.macros += 1
+            self.names.add(macro.name)
         else:
-            # we just comment out all macro definitions, because values will be replace in situ
-            print("# %s = %s # macro" % (macro.name, macro.body), file=self.stream)
+            # we just try it out
+            print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
+            self.macros += 1
+            self.names.add(macro.name)
         return
-        # We don't know if we can generate valid, error free Python
-        # code. All we can do is to try to compile the code.  If the
-        # compile fails, we know it cannot work, so we comment out the
-        # generated code; the user may be able to fix it manually.
-        #
-        # If the compilation succeeds, it may still fail at runtime
-        # when the macro is called.
-        # mcode = "def %s%s: return %s # macro" % (macro.name, macro.args,
-        # macro.body)
-        # try:
-        #    compile(mcode, "<string>", "exec")
-        # except SyntaxError:
-        #    print >> self.stream, "#", mcode
-        # else:
-        #    print >> self.stream, mcode, '# Macro'
-        #    self.names.add(macro.name)
 
     _typedefs = 0
 
