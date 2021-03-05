@@ -22,20 +22,22 @@ else:
 # configure python-clang to use the local clang library
 try:
     from ctypes.util import find_library
+    from clang import cindex
     # debug for python-haystack travis-ci
     v1 = ["clang-%d" % _ for _ in range(14, 6, -1)]
     v2 = ["clang-%f" % _ for _ in range(6, 3, -1)]
     v_list = v1 + v2 + ["clang-3.9", "clang-3.8", "clang-3.7"]
     for version in ["libclang", "clang"] + v_list:
         if find_library(version) is not None:
-            from clang import cindex
             cindex.Config.set_library_file(find_library(version))
             break
     else:
         if os.name == "posix" and sys.platform == "darwin":
-            # On darwin, consider that Xcode should be installed in its default path.
-            from clang import cindex
-            cindex.Config.set_library_file('/Applications/Xcode.app/Contents/Frameworks/libclang.dylib')
+            # On darwin, consider either Xcode or CommandLineTools.
+            for f in ['/Applications/Xcode.app/Contents/Frameworks/libclang.dylib',
+                      '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib']:
+                if os.path.exists(f):
+                    cindex.Config.set_library_file(f)
 
     def clang_version():
         return cindex.Config.library_file
