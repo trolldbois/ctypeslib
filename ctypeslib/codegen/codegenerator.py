@@ -15,7 +15,7 @@ import sys
 
 from ctypeslib.codegen import clangparser
 from ctypeslib.codegen import typedesc
-from ctypeslib.codegen.util import from_c_float_literal
+from ctypeslib.codegen import util
 
 import logging
 
@@ -202,35 +202,6 @@ class Generator(object):
         if self.generate_comments:
             self.print_comment(macro)
 
-        def _contains_undefined_identifier(m):
-            # body is undefined
-            if isinstance(macro.body, typedesc.UndefinedIdentifier):
-                return True
-            # or one item is undefined
-            if isinstance(macro.body, list):
-                for b in macro.body:
-                    if isinstance(b, typedesc.UndefinedIdentifier):
-                        return True
-            return False
-
-        def _token_is_string(t):
-            # we need at list 2 delimiters in there
-            if not isinstance(t, Iterable) or len(t) < 2:
-                return False
-            delim = t[0]
-            return delim in ["'", '"'] and t[0] == t[-1]
-
-        def _body_is_all_string_tokens(m):
-            if isinstance(macro.body, list):
-                for b in macro.body:
-                    if _token_is_string(b):
-                        continue
-                    else:
-                        return False
-                return True
-            return False
-
-
         # get tokens types all the way to here ?
         # 1. clang makes the decision on type casting and validity of data.
         # let's not try to be clever.
@@ -240,7 +211,7 @@ class Generator(object):
         if macro.args:
             print("# def %s%s:  # macro" % (macro.name, macro.args), file=self.stream)
             print("#    return %s  " % macro.body, file=self.stream)
-        elif _contains_undefined_identifier(macro):
+        elif util._contains_undefined_identifier(macro):
             # we can't handle that, we comment it out
             if isinstance(macro.body, typedesc.UndefinedIdentifier):
                 print("# %s = %s # macro" % (macro.name, macro.body.name), file=self.stream)
@@ -252,7 +223,7 @@ class Generator(object):
             self.names.append(macro.name)
         elif isinstance(macro.body, str):
             body = macro.body
-            float_value = from_c_float_literal(body)
+            float_value = util.from_c_float_literal(body)
             if float_value is not None:
                 body = float_value
             # what about integers you ask ? body token that represents token are Integer here.
@@ -262,14 +233,14 @@ class Generator(object):
             self.names.append(macro.name)
         # This is why we need to have token types all the way here.
         # but at the same time, clang does not type tokens. So we might as well guess them here too
-        elif _body_is_all_string_tokens(macro.body):
+        elif util._body_is_all_string_tokens(macro.body):
             print("%s = %s # macro" % (macro.name, ' '.join([str(_) for _ in macro.body])), file=self.stream)
             self.macros += 1
             self.names.append(macro.name)
         else:
             # this might be a token list of float literal
             body = macro.body
-            float_value = from_c_float_literal(body)
+            float_value = util.from_c_float_literal(body)
             if float_value is not None:
                 body = float_value
             # or anything else that might be a valid python literal...

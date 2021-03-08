@@ -9,6 +9,8 @@ from collections.abc import Iterable
 import logging
 import re
 
+from ctypeslib.codegen import typedesc
+
 log = logging.getLogger('utils')
 
 
@@ -146,6 +148,37 @@ def from_c_float_literal(value):
     if not match:
         return None
     return match.group(1)
+
+
+def _contains_undefined_identifier(macro):
+    # body is undefined
+    if isinstance(macro.body, typedesc.UndefinedIdentifier):
+        return True
+    # or one item is undefined
+    if isinstance(macro.body, list):
+        for b in macro.body:
+            if isinstance(b, typedesc.UndefinedIdentifier):
+                return True
+    return False
+
+
+def _token_is_string(token):
+    # we need at list 2 delimiters in there
+    if not isinstance(token, Iterable) or len(token) < 2:
+        return False
+    delim = token[0]
+    return delim in ["'", '"'] and token[0] == token[-1]
+
+
+def _body_is_all_string_tokens(macro_body):
+    if isinstance(macro_body, list):
+        for b in macro_body:
+            if _token_is_string(b):
+                continue
+            else:
+                return False
+        return True
+    return False
 
 
 __all__ = [
