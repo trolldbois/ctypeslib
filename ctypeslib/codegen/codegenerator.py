@@ -14,6 +14,7 @@ import sys
 
 from ctypeslib.codegen import clangparser
 from ctypeslib.codegen import typedesc
+from ctypeslib.codegen.util import from_c_float_literal
 
 import logging
 
@@ -244,10 +245,18 @@ class Generator(object):
                 print("# %s = %s # macro" % (macro.name, macro.body.name), file=self.stream)
             else:  # we assume it's a list
                 print("# %s = %s # macro" % (macro.name, ' '.join([str(_) for _ in macro.body])), file=self.stream)
-        elif isinstance(macro.body, str) or isinstance(macro.body, bool):
+        elif isinstance(macro.body, bool):
+            print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
+            self.macros += 1
+            self.names.add(macro.name)
+        elif isinstance(macro.body, str):
+            body = macro.body
+            float_value = from_c_float_literal(body)
+            if float_value is not None:
+                body = float_value
             # what about integers you ask ? body token that represents token are Integer here.
             # either it's just a thing we gonna print, or we need to have a registered item
-            print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
+            print("%s = %s # macro" % (macro.name, body), file=self.stream)
             self.macros += 1
             self.names.add(macro.name)
         # This is why we need to have token types all the way here.
@@ -257,8 +266,13 @@ class Generator(object):
             self.macros += 1
             self.names.add(macro.name)
         else:
-            # we just try it out
-            print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
+            # this might be a token list of float literal
+            body = macro.body
+            float_value = from_c_float_literal(body)
+            if float_value is not None:
+                body = float_value
+            # or anything else that might be a valid python literal...
+            print("%s = %s # macro" % (macro.name, body), file=self.stream)
             self.macros += 1
             self.names.add(macro.name)
         return

@@ -4,8 +4,10 @@
 
 from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
+from collections.abc import Iterable
 
 import logging
+import re
 
 log = logging.getLogger('utils')
 
@@ -128,8 +130,27 @@ class ADict(dict):
             raise AttributeError(name)
 
 
+_c_literal_regex = re.compile(
+    r"^([+-]?((\d+(e|E)[+-]?\d+)|(\d+(\.\d*)?((e|E)[+-]?\d+)?)|(\.\d+((e|E)[+-]?\d+)?)))(f|F|l|L)?$"
+)
+
+
+def from_c_float_literal(value):
+    if (not isinstance(value, str) and
+            isinstance(value, Iterable) and
+            all(map(lambda v: isinstance(v, str), value))):
+        value = "".join(value)
+    if not isinstance(value, str):
+        return None
+    match = _c_literal_regex.match(value)
+    if not match:
+        return None
+    return match.group(1)
+
+
 __all__ = [
     'get_cursor',
     'get_cursors',
     'get_tu',
+    'from_c_float_literal',
 ]
