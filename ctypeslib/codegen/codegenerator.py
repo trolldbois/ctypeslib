@@ -4,6 +4,7 @@ Type descriptions are collections of typedesc instances.
 
 from __future__ import print_function
 from __future__ import unicode_literals
+import collections
 from collections.abc import Iterable
 from functools import cmp_to_key
 import textwrap
@@ -45,7 +46,7 @@ class Generator(object):
             self.searched_dlls = searched_dlls
 
         self.done = set()  # type descriptions that have been generated
-        self.names = set()  # names that have been generated
+        self.names = list() # collections.OrderedDict()  # names that have been generated
         self.macros = 0
         self.cross_arch_code_generation = cross_arch
 
@@ -248,7 +249,7 @@ class Generator(object):
         elif isinstance(macro.body, bool):
             print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
             self.macros += 1
-            self.names.add(macro.name)
+            self.names.append(macro.name)
         elif isinstance(macro.body, str):
             body = macro.body
             float_value = from_c_float_literal(body)
@@ -258,13 +259,13 @@ class Generator(object):
             # either it's just a thing we gonna print, or we need to have a registered item
             print("%s = %s # macro" % (macro.name, body), file=self.stream)
             self.macros += 1
-            self.names.add(macro.name)
+            self.names.append(macro.name)
         # This is why we need to have token types all the way here.
         # but at the same time, clang does not type tokens. So we might as well guess them here too
         elif _body_is_all_string_tokens(macro.body):
             print("%s = %s # macro" % (macro.name, ' '.join([str(_) for _ in macro.body])), file=self.stream)
             self.macros += 1
-            self.names.add(macro.name)
+            self.names.append(macro.name)
         else:
             # this might be a token list of float literal
             body = macro.body
@@ -274,7 +275,7 @@ class Generator(object):
             # or anything else that might be a valid python literal...
             print("%s = %s # macro" % (macro.name, body), file=self.stream)
             self.macros += 1
-            self.names.add(macro.name)
+            self.names.append(macro.name)
         return
 
     _typedefs = 0
@@ -297,7 +298,7 @@ class Generator(object):
                 tp.name in sized_types):
             print("%s = ctypes.%s" % \
                   (name, sized_types[tp.name]), file=self.stream)
-            self.names.add(tp.name)
+            self.names.append(tp.name)
             return
         if tp.typ not in self.done:
             # generate only declaration code for records ?
@@ -315,9 +316,9 @@ class Generator(object):
             if isinstance(tp.typ, typedesc.Enumeration):
                 print("%s__enumvalues = %s__enumvalues" % \
                       (name, self.type_name(tp.typ)), file=self.stream)
-                self.names.add("%s__enumvalues" % name)
+                self.names.append("%s__enumvalues" % name)
 
-        self.names.add(tp.name)
+        self.names.append(tp.name)
         self._typedefs += 1
         return
 
@@ -390,7 +391,7 @@ class Generator(object):
                                                   self.type_name(tp.typ),
                                                   libname,
                                                   tp.name), file=self.stream)
-            self.names.add(tp.name)
+            self.names.append(tp.name)
             # wtypes.h contains IID_IProcessInitControl, for example
             return
 
@@ -408,7 +409,7 @@ class Generator(object):
                                           self.type_name(
                                               tp.init),
                                           [x for x in tp.typ.iterArgNames()]), file=self.stream)
-            self.names.add(tp.name)
+            self.names.append(tp.name)
             return
         elif isinstance(tp.typ, typedesc.PointerType) or isinstance(tp.typ, typedesc.ArrayType):
             if (isinstance(tp.typ.typ, typedesc.FundamentalType) and
@@ -460,7 +461,7 @@ class Generator(object):
                                          init_value,
                                          self.type_name(tp.typ, False)), file=self.stream)
         #
-        self.names.add(tp.name)
+        self.names.append(tp.name)
         return
 
     _enumvalues = 0
@@ -469,7 +470,7 @@ class Generator(object):
         # FIXME should be in parser
         value = int(tp.value)
         print("%s = %d" % (tp.name, value), file=self.stream)
-        self.names.add(tp.name)
+        self.names.append(tp.name)
         self._enumvalues += 1
         return
 
@@ -496,7 +497,7 @@ class Generator(object):
             self._generate(item)
         if tp.name:
             print("%s = ctypes.c_int # enum" % tp.name, file=self.stream)
-            self.names.add(tp.name)
+            self.names.append(tp.name)
         self._enumtypes += 1
         return
 
@@ -582,7 +583,7 @@ class Generator(object):
         # special empty struct
         if inline and not head.struct.members:
             print("    pass\n", file=self.stream)
-        self.names.add(head.struct.name)
+        self.names.append(head.struct.name)
         log.debug('Head finished for %s', head.name)
 
     def StructureBody(self, body, inline=False):
@@ -823,7 +824,7 @@ class Generator(object):
                 ret=typeString(func.returns),
             ), file=self.stream)
 
-        self.names.add(func.name)
+        self.names.append(func.name)
         self._functiontypes += 1
         return
 

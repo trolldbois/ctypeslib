@@ -520,7 +520,6 @@ int tab1[] = MACRO_EXAMPLE(1,2);
         self.assertIn('NO_SPAM_FOO', self.namespace)
         self.assertEqual('no spam foo', self.namespace.NO_SPAM_FOO)
 
-
     def test_all(self):
         """Test which macros are going to be defined """
         self.convert('''
