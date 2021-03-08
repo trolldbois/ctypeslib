@@ -1118,10 +1118,12 @@ class CursorHandler(ClangHandler):
         for t in cursor.get_tokens():
             if t.kind == TokenKind.COMMENT:
                 comment = t.spelling
-        # special case. internal __null
+        # special case. internal __null or __thread
         # FIXME, there are probable a lot of others.
         # why not Cursor.kind GNU_NULL_EXPR child instead of a token ?
         if name == 'NULL' or value == '__null':
+            value = None
+        if name == '__thread' or value == '__thread':
             value = None
         log.debug('MACRO: #define %s%s %s', name, args or '', value)
         obj = typedesc.Macro(name, args, value)
