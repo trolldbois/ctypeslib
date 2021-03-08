@@ -46,7 +46,7 @@ class Generator(object):
             self.searched_dlls = searched_dlls
 
         self.done = set()  # type descriptions that have been generated
-        self.names = list() # collections.OrderedDict()  # names that have been generated
+        self.names = list()  # names that have been generated
         self.macros = 0
         self.cross_arch_code_generation = cross_arch
 
