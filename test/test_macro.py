@@ -410,6 +410,23 @@ char d[] = APREPOST;''')
         self.assertEqual(self.namespace.d, 'before after')
         # print(self.text_output)
 
+    def test_char_arrays_arm_linux(self):
+        """c_char is c_ubyte on arm-linux-gnueabihf"""
+        self.convert('''
+    #define PRE "before"
+    #define POST " after"
+    #define APREPOST PRE POST
+
+    char a[] = "what";
+    char b[] = "why" " though";
+    char c[] = PRE POST;
+    char d[] = APREPOST;''', ['-target', 'arm-linux-gnueabihf'])
+        self.assertEqual(self.namespace.a, "what")
+        self.assertEqual(self.namespace.b, "why though")
+        self.assertEqual(self.namespace.c, 'before after')
+        self.assertEqual(self.namespace.d, 'before after')
+        # print(self.text_output)
+
     @unittest.skip
     def test_define_wchar_t(self):
         """'L' means wchar_t"""

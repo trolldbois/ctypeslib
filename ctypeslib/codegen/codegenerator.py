@@ -153,7 +153,7 @@ class Generator(object):
             return self.type_name(t.typ, generate)
         elif isinstance(t, typedesc.PointerType):
             pointer_class = self.enable_pointer_type()
-            if t.typ.name == "c_char":
+            if t.typ.name in ["c_ubyte", "c_char"]:
                 self.enable_string_cast()
             return "%s(%s)" % (pointer_class, self.type_name(t.typ, generate))
         elif isinstance(t, typedesc.FunctionType):
@@ -384,7 +384,7 @@ class Generator(object):
             return
         elif isinstance(tp.typ, typedesc.PointerType) or isinstance(tp.typ, typedesc.ArrayType):
             if (isinstance(tp.typ.typ, typedesc.FundamentalType) and
-                    (tp.typ.typ.name in ["c_char", "c_wchar"])):
+                    (tp.typ.typ.name in ["c_ubyte", "c_char", "c_wchar"])):
                 # string
                 # FIXME a char * is not a python string.
                 # we should output a cstring() construct.
@@ -403,12 +403,10 @@ class Generator(object):
                 self._generate(tp.typ.typ)
                 init_value = self.type_name(tp.typ, False) + "()"
             else:
-                init_value = tp.init if tp.init is not None else (
-                                                                     self.type_name(tp.typ, False)
-                                                                 ) + "()"
+                init_value = tp.init if tp.init is not None else (self.type_name(tp.typ, False)) + "()"
         elif isinstance(tp.typ, typedesc.Structure):
             init_value = self.type_name(tp.typ, False)
-        elif isinstance(tp.typ, typedesc.FundamentalType) and tp.typ.name in ["c_char", "c_wchar"]:
+        elif isinstance(tp.typ, typedesc.FundamentalType) and tp.typ.name in ["c_ubyte", "c_char", "c_wchar"]:
             if tp.init is not None:
                 init_value = repr(tp.init)
             else:
@@ -428,9 +426,7 @@ class Generator(object):
                 init_value = 0
         #
         # print it out
-        print("%s = %s # Variable %s" % (tp.name,
-                                         init_value,
-                                         self.type_name(tp.typ, False)), file=self.stream)
+        print("%s = %s # Variable %s" % (tp.name, init_value, self.type_name(tp.typ, False)), file=self.stream)
         #
         self.names.append(tp.name)
         return
