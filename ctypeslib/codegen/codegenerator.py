@@ -211,7 +211,7 @@ class Generator(object):
         if macro.args:
             print("# def %s%s:  # macro" % (macro.name, macro.args), file=self.stream)
             print("#    return %s  " % macro.body, file=self.stream)
-        elif util._contains_undefined_identifier(macro):
+        elif util.contains_undefined_identifier(macro):
             # we can't handle that, we comment it out
             if isinstance(macro.body, typedesc.UndefinedIdentifier):
                 print("# %s = %s # macro" % (macro.name, macro.body.name), file=self.stream)
@@ -233,7 +233,7 @@ class Generator(object):
             self.names.append(macro.name)
         # This is why we need to have token types all the way here.
         # but at the same time, clang does not type tokens. So we might as well guess them here too
-        elif util._body_is_all_string_tokens(macro.body):
+        elif util.body_is_all_string_tokens(macro.body):
             print("%s = %s # macro" % (macro.name, ' '.join([str(_) for _ in macro.body])), file=self.stream)
             self.macros += 1
             self.names.append(macro.name)

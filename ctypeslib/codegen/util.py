@@ -150,7 +150,7 @@ def from_c_float_literal(value):
     return match.group(1)
 
 
-def _contains_undefined_identifier(macro):
+def contains_undefined_identifier(macro):
     # body is undefined
     if isinstance(macro.body, typedesc.UndefinedIdentifier):
         return True
@@ -162,7 +162,7 @@ def _contains_undefined_identifier(macro):
     return False
 
 
-def _token_is_string(token):
+def token_is_string(token):
     # we need at list 2 delimiters in there
     if not isinstance(token, Iterable) or len(token) < 2:
         return False
@@ -170,10 +170,10 @@ def _token_is_string(token):
     return delim in ["'", '"'] and token[0] == token[-1]
 
 
-def _body_is_all_string_tokens(macro_body):
+def body_is_all_string_tokens(macro_body):
     if isinstance(macro_body, list):
         for b in macro_body:
-            if _token_is_string(b):
+            if token_is_string(b):
                 continue
             else:
                 return False
