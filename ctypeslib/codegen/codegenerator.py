@@ -4,20 +4,17 @@ Type descriptions are collections of typedesc instances.
 
 from __future__ import print_function
 from __future__ import unicode_literals
-import collections
-from collections.abc import Iterable
-from functools import cmp_to_key
-import textwrap
-from io import StringIO
 
+import collections
+import logging
 import os
 import sys
+import textwrap
+from io import StringIO
 
 from ctypeslib.codegen import clangparser
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen import util
-
-import logging
 
 log = logging.getLogger('codegen')
 
@@ -45,8 +42,10 @@ class Generator(object):
         else:
             self.searched_dlls = searched_dlls
 
-        self.done = set()  # type descriptions that have been generated
+        # we use collections.OrderedDict() to keep ordering
+        self.done = collections.OrderedDict()  # type descriptions that have been generated
         self.names = list()  # names that have been generated
+        self.more = collections.OrderedDict()
         self.macros = 0
         self.cross_arch_code_generation = cross_arch
 
@@ -332,7 +331,7 @@ class Generator(object):
             self._generate(tp.typ)
         elif type(tp.typ) in (typedesc.Union, typedesc.Structure):
             self._generate(tp.typ.get_head())
-            self.more.add(tp.typ)
+            self.more[tp.typ] = True
         elif isinstance(tp.typ, typedesc.Typedef):
             self._generate(tp.typ)
         else:
@@ -498,7 +497,8 @@ class Generator(object):
         # look in bases class for dependencies
         # FIXME - need a real dependency graph maker
         # remove myself, just in case.
-        self.done.remove(struct)
+        if struct in self.done:
+            del self.done[struct]
         # checks members dependencies in bases
         for b in struct.bases:
             depends.update([self.get_undeclared_type(m.type)
@@ -506,7 +506,7 @@ class Generator(object):
         # checks members dependencies
         depends.update([self.get_undeclared_type(m.type)
                         for m in struct.members])
-        self.done.add(struct)
+        self.done[struct] = True
         depends.discard(None)
         if len(depends) > 0:
             log.debug('Generate %s DEPENDS %s', struct.name, depends)
@@ -532,7 +532,7 @@ class Generator(object):
         for struct in head.struct.bases:
             self._generate(struct.get_head())
             # add dependencies
-            self.more.add(struct)
+            self.more[struct] = True
         basenames = [self.type_name(b) for b in head.struct.bases]
         if basenames:
             ### method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
@@ -712,8 +712,9 @@ class Generator(object):
         else:
             global_flag = ""
         if library._name not in self._c_libraries:
-            print("_libraries[%r] =%s ctypes.CDLL(%r%s)" % (library._name, stub_comment, library._filepath, global_flag),
-                  file=self.imports)
+            print(
+                "_libraries[%r] =%s ctypes.CDLL(%r%s)" % (library._name, stub_comment, library._filepath, global_flag),
+                file=self.imports)
             self._c_libraries[library._name] = None
         return "_libraries[%r]" % library._name
 
@@ -759,9 +760,10 @@ class Generator(object):
             class LibraryStub:
                 _filepath = 'FIXME_STUB'
                 _name = 'FIXME_STUB'
+
             libname = self.get_sharedlib(LibraryStub(), cc, stub=True)
 
-        argnames = [a or "p%d" % (i+1) for i, a in enumerate(func.iterArgNames())]
+        argnames = [a or "p%d" % (i + 1) for i, a in enumerate(func.iterArgNames())]
 
         if self.generate_locations and func.location:
             print("# %s %s" % func.location, file=self.stream)
@@ -821,21 +823,9 @@ class Generator(object):
         if self.generate_comments:
             self.print_comment(item)
         log.debug("generate %s, %s", item.__class__.__name__, item.name)
-        #
-        # log.debug('generate: %s( %s )', type(item).__name__, name)
-        # if name in self.known_symbols:
-        #    log.debug('item is in known_symbols %s'% name )
-        #    mod = self.known_symbols[name]
-        #    print >> self.imports, "from %s import %s" % (mod, name)
-        #    self.done.add(item)
-        #    if isinstance(item, typedesc.Structure):
-        #        self.done.add(item.get_head())
-        #        self.done.add(item.get_body())
-        #    return
-        #
         # to avoid infinite recursion, we have to mark it as done
         # before actually generating the code.
-        self.done.add(item)
+        self.done[item] = True
         # go to specific treatment
         mth = getattr(self, type(item).__name__)
         mth(item, *args)
@@ -853,29 +843,24 @@ class Generator(object):
             self._generate(item)
         return
 
-    def cmpitems(a, b):
-        loc_a = getattr(a, "location", None)
-        loc_b = getattr(b, "location", None)
-        if loc_a is None:
-            return -1
-        if loc_b is None:
-            return 1
-        # FIXME: PY3 - can we do simpler ?
-        _cmp = lambda x, y: (x > y) - (x < y)
-        return _cmp(loc_a[0], loc_b[0]) or _cmp(int(loc_a[1]), int(loc_b[1]))
-
-    cmpitems = staticmethod(cmpitems)
-
     def generate_items(self, items):
-        items = set(items)
+        # items = set(items)
         loops = 0
         while items:
             loops += 1
-            self.more = set()
-            self.generate_all(sorted(items, key=cmp_to_key(self.cmpitems)))
+            self.more = collections.OrderedDict()
+            self.generate_all(items)
 
-            items |= self.more
-            items -= self.done
+            # items |= self.more , but keeping ordering
+            _s = set(items)
+            [items.append(k) for k in self.more.keys() if k not in _s]
+
+            # items -= self.done, but keep ordering
+            _done = self.done.keys()
+            for i in list(items):
+                if i in _done:
+                    items.remove(i)
+
         return loops
 
     def generate(self, parser, items):
@@ -962,6 +947,7 @@ def generate_code(srcfiles,
         # verifying that is really a file we can open
         with open(srcfile):
             pass
+        log.debug("Parsing input file %s", srcfile)
         parser.parse(srcfile)
     items += parser.get_result()
     log.debug('Input was parsed')
@@ -1006,6 +992,7 @@ def generate_code(srcfiles,
         items = todo
 
     ################
+    # TODO FIX this
     cross_arch = '-target' in ' '.join(flags)
     gen = Generator(outfile,
                     generate_locations=generate_locations,
@@ -1022,4 +1009,4 @@ def generate_code(srcfiles,
     loops = gen.generate_code(items)
     if verbose:
         gen.print_stats(sys.stderr)
-        print("needed %d loop(s)" % loops, file=sys.stderr)
+        log.info("needed %d loop(s)" % loops)

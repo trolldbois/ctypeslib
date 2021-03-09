@@ -1,5 +1,4 @@
 import unittest
-import ctypes
 
 from test.util import ClangTest
 

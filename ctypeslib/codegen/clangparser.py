@@ -2,6 +2,7 @@
 
 import logging
 import os
+import collections
 
 from clang.cindex import Index, TranslationUnit
 from clang.cindex import TypeKind
@@ -60,7 +61,8 @@ class Clang_Parser(object):
     }
 
     def __init__(self, flags):
-        self.all = {}
+        self.all = collections.OrderedDict()
+        # a shortcut to identify registered decl in cases of records
         self.all_set = set()
         self.cpp_data = {}
         self._unhandled = []
@@ -399,8 +401,5 @@ typedef void* pointer_t;''', flags=_flags)
             if isinstance(i, interesting):
                 result.append(i)
 
-        # print 'self.all', self.all
-        # code.interact(local=locals())
-
-        # print 'clangparser get_result:',result
+        log.debug("parsed items order: %s", result)
         return result

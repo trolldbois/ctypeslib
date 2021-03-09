@@ -1,4 +1,3 @@
-import os
 import subprocess
 import sys
 import unittest
@@ -24,8 +23,6 @@ clang2py_path = clang2py_path.strip()
 
 def clang2py(args):
     return run([sys.executable, clang2py_path] + args)
-    # return run([clang2py_path] + args)
-
 
 
 class InputOutput(ClangTest):
@@ -200,7 +197,7 @@ class ArgumentVerbose(ClangTest):
     def test_verbose(self):
         """run clang2py --verbose test/data/test-records.c"""
         p, output, stderr = clang2py(['--verbose', 'test/data/test-records.c'])
-        self.assertEqual(0, p.returncode)
+        self.assertEqual(0, p.returncode, stderr)
         self.assertNotIn("DEBUG:", stderr)
         self.assertNotIn("DEBUG:", output)
         self.assertIn("# Total symbols:", stderr)
@@ -275,6 +272,23 @@ class ModuleTesting(ClangTest):
             self.assertIn("# TARGET arch is: []", fake_out.getvalue())
             self.assertIn("i = 2", fake_out.getvalue())
 
+
+class OrderingTest(ClangTest):
+
+    def test_brute(self):
+        """run 20 times clang2py to identify ordering differences"""
+        outputs = []
+        for i in range(20):
+            p, output, stderr = clang2py(['./test/data/test-include-order2.h'])
+            outputs.append(output)
+            var = output.index("f = struct_foo_s")
+            decl = output.index("class struct_foo_s(Structure)")
+            self.assertGreater(var, decl)
+            if var < decl:
+                self.fail("Generated incorrect ordering")
+
+        set_outputs = set(outputs)
+        self.assertEqual(len(set_outputs), 1)
 
 
 if __name__ == "__main__":
