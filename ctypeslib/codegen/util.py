@@ -7,9 +7,10 @@ from clang.cindex import TranslationUnit
 from collections.abc import Iterable
 
 import logging
-import re
+import textwrap
 
 from ctypeslib.codegen import typedesc
+from ctypeslib.codegen.preprocess import *
 
 log = logging.getLogger('utils')
 
@@ -132,40 +133,31 @@ class ADict(dict):
             raise AttributeError(name)
 
 
-_c_literal_regex = re.compile(
-    r"^([+-]?((\d+(e|E)[+-]?\d+)|(\d+(\.\d*)?((e|E)[+-]?\d+)?)|(\.\d+((e|E)[+-]?\d+)?)))(f|F|l|L)?$"
-)
+def expand_macro_function(macro, args):
+    args = ", ".join(args)
+    code = f"{macro.name}({args})"
+    try:
+        return eval_processed_macro(code)
+    except (SyntaxError, NameError):
+        return typedesc.InvalidGeneratedMacro(code)
 
 
-def from_c_float_literal(value):
-    if (not isinstance(value, str) and
-            isinstance(value, Iterable) and
-            all(map(lambda v: isinstance(v, str), value))):
-        value = "".join(value)
-    if not isinstance(value, str):
-        return None
-    match = _c_literal_regex.match(value)
-    if not match:
-        return None
-    return match.group(1)
-
-
-def contains_undefined_identifier(macro):
+def contains_invalid_code(macro):
     # body is undefined
-    if isinstance(macro.body, typedesc.UndefinedIdentifier):
+    if isinstance(macro.body, typedesc.InvalidGeneratedCode):
         return True
 
-    def _list_contains_undefined_identifier(l):
+    def _list_contains_invalid_code(l):
         for b in l:
-            if isinstance(b, typedesc.UndefinedIdentifier):
+            if isinstance(b, typedesc.InvalidGeneratedCode):
                 return True
-            if isinstance(b, list) and _list_contains_undefined_identifier(b):
+            if isinstance(b, list) and _list_contains_invalid_code(b):
                 return True
         return False
 
     # or one item is undefined
     if isinstance(macro.body, list):
-        if _list_contains_undefined_identifier(macro.body):
+        if _list_contains_invalid_code(macro.body):
             return True
 
     return False
@@ -195,4 +187,6 @@ __all__ = [
     'get_cursors',
     'get_tu',
     'from_c_float_literal',
+    'remove_outermost_parentheses',
+    'replace_builtins',
 ]

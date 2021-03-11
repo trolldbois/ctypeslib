@@ -10,9 +10,55 @@ from ctypeslib.codegen.handler import ClangHandler
 from ctypeslib.codegen.handler import CursorKindException
 from ctypeslib.codegen.handler import DuplicateDefinitionException
 from ctypeslib.codegen.handler import InvalidDefinitionError
-from ctypeslib.codegen.util import log_entity
+from ctypeslib.codegen.util import (
+    contains_invalid_code,
+    expand_macro_function,
+    is_identifier,
+    log_entity,
+    remove_outermost_parentheses,
+)
 
 log = logging.getLogger('cursorhandler')
+
+
+class CursorTokens:
+    def __init__(self, tokens):
+        self._tokens = list(tokens)
+        self._index = 0
+
+    @property
+    def index(self):
+        return self._index
+
+    def __len__(self):
+        return len(self._tokens)
+
+    def __iter__(self):
+        return iter(self._tokens)
+
+    def __getitem__(self, i):
+        return self._tokens[i]
+
+    def __bool__(self):
+        return self._index < len(self._tokens)
+
+    @property
+    def current(self):
+        if not self:
+            return None
+        return self._tokens[self._index]
+
+    def consume(self, count=1):
+        if self:
+            ret = self.current
+            self._index += count
+        return ret
+
+    def consume_lit(self, lit):
+        if self.current.spelling == lit:
+            self.consume()
+            return True
+        return False
 
 
 class CursorHandler(ClangHandler):
@@ -441,6 +487,32 @@ class CursorHandler(ClangHandler):
             pass
         return value
 
+    def _macro_args_handling(self, tokens, call_args=False):
+        if tokens.current is None:
+            return tuple()
+        args = []
+        if not tokens.consume_lit("("):
+            return None
+        balance = 0
+        while tokens:
+            if balance == 0 and tokens.consume_lit(")"):
+                break
+            if tokens.consume_lit(","):
+                continue
+            if tokens.consume_lit("("):
+                balance += 1
+            elif tokens.consume_lit(")"):
+                balance -= 1
+            elif is_identifier(str(tokens.current.spelling)):
+                args.append(tokens.consume().spelling)
+            else:
+                if call_args:
+                    args.append(tokens.consume().spelling)
+                else:
+                    return None
+        return tuple(args)
+
+
     @log_entity
     def _literal_handling(self, cursor):
         """Parse all literal associated with this cursor.
@@ -453,7 +525,7 @@ class CursorHandler(ClangHandler):
         because some literal might need cleaning."""
         # FIXME #77, internal integer literal like __clang_major__ are not working here.
         # tokens == [] , because ??? clang problem ? so there is no spelling available.
-        tokens = list(cursor.get_tokens())
+        tokens = CursorTokens(cursor.get_tokens())
         log.debug('literal has %d tokens.[ %s ]', len(tokens), ' '.join([str(t.spelling) for t in tokens]))
         if len(tokens) == 1 and cursor.kind == CursorKind.STRING_LITERAL:
             # use a shortcut that works for unicode
@@ -468,7 +540,8 @@ class CursorHandler(ClangHandler):
         final_value = []
         # code.interact(local=locals())
         log.debug('cursor.type:%s', cursor.type.kind.name)
-        for i, token in enumerate(tokens):
+        while tokens:
+            token = tokens.current
             value = token.spelling
             log.debug('token:%s tk.kd:%11s tk.cursor.kd:%15s cursor.kd:%15s',
                       token.spelling, token.kind.name, token.cursor.kind.name,
@@ -477,11 +550,17 @@ class CursorHandler(ClangHandler):
             # but only in specific case: ';' endl, or part of list_expr
             if (token.kind == TokenKind.PUNCTUATION and
                     (token.cursor.kind == CursorKind.INVALID_FILE or
-                             token.cursor.kind == CursorKind.INIT_LIST_EXPR)):
+                        token.cursor.kind == CursorKind.INIT_LIST_EXPR)):
                 log.debug('IGNORE token %s', value)
+                # consume token
+                tokens.consume()
+                token = tokens.current
                 continue
             elif token.kind == TokenKind.COMMENT:
                 log.debug('Ignore comment %s', value)
+                # consume token
+                tokens.consume()
+                token = tokens.current
                 continue
             # elif token.cursor.kind == CursorKind.VAR_DECL:
             elif token.location not in cursor.extent:
@@ -497,6 +576,9 @@ class CursorHandler(ClangHandler):
                 # Lexer is choking ?
                 # FIXME BUG: token.location not in cursor.extent
                 # code.interact(local=locals())
+                # consume token
+                tokens.consume()
+                token = tokens.current
                 continue
             # Cleanup specific c-lang or c++ prefix/suffix for POD types.
             if token.cursor.kind == CursorKind.INTEGER_LITERAL:
@@ -507,47 +589,97 @@ class CursorHandler(ClangHandler):
                     value = '0x%s' % value[2:]  # "int(%s,16)"%(value)
                 else:
                     value = int(value)
+                # consume token
+                tokens.consume()
+                token = tokens.current
             elif token.cursor.kind == CursorKind.FLOATING_LITERAL:
                 # strip type suffix for constants
                 value = value.replace('f', '').replace('F', '')
                 value = float(value)
+                # consume token
+                tokens.consume()
+                token = tokens.current
             elif (token.cursor.kind == CursorKind.CHARACTER_LITERAL or
                           token.cursor.kind == CursorKind.STRING_LITERAL):
                 value = self._clean_string_literal(token.cursor, value)
+                # consume token
+                tokens.consume()
+                token = tokens.current
             elif token.cursor.kind == CursorKind.MACRO_INSTANTIATION:
                 # get the macro value
                 value = self.get_registered(value).body
+                # consume token
+                tokens.consume()
+                token = tokens.current
                 # already cleaned value = self._clean_string_literal(token.cursor, value)
             elif token.cursor.kind == CursorKind.MACRO_DEFINITION:
                 tk = token.kind
-                if i == 0:
+                if tokens.index == 0:
                     # ignore, macro name
-                    pass
+                    # consume token
+                    tokens.consume()
+                    token = tokens.current
                 elif token.kind == TokenKind.LITERAL:
                     # and just clean it
                     value = self._clean_string_literal(token.cursor, value)
+                    # consume token
+                    tokens.consume()
+                    token = tokens.current
                 elif token.kind == TokenKind.IDENTIFIER:
                     # log.debug("Ignored MACRO_DEFINITION token identifier : %s", value)
                     # Identifier in Macro... Not sure what to do with that.
                     if self.is_registered(value):
                         # FIXME: if Macro is not a simple value replace, it should not be registered in the first place
                         # parse that, try to see if there is another Macro in there.
-                        value = self.get_registered(value).body
-                        log.debug("Found MACRO_DEFINITION token identifier : %s", value)
+                        if hasattr(self.get_registered(value), "body"):
+                            macro = self.get_registered(value)
+                            if contains_invalid_code(macro):
+                                log.debug("MACRO_DEFINITION contains invalid code(s) : %s", value)
+                                value = typedesc.UndefinedIdentifier(value)
+                                # consume token
+                                tokens.consume()
+                                token = tokens.current
+                            else:
+                                log.debug("Found MACRO_DEFINITION token identifier : %s", value)
+                                if macro.args:
+                                    tokens.consume()
+                                    token = tokens.current
+                                    call_args = self._macro_args_handling(tokens, call_args=True)
+                                    value = expand_macro_function(macro, call_args)
+                                    token = tokens.current
+                                else:
+                                    value = macro.body
+                                    # consume token
+                                    tokens.consume()
+                                    token = tokens.current
+                        else:
+                            value = typedesc.UndefinedIdentifier(value)
+                            log.debug("Undefined MACRO_DEFINITION token identifier : %s", value)
+                            # consume token
+                            tokens.consume()
+                            token = tokens.current
                     else:
                         value = typedesc.UndefinedIdentifier(value)
                         log.debug("Undefined MACRO_DEFINITION token identifier : %s", value)
-                    pass
+                        # consume token
+                        tokens.consume()
+                        token = tokens.current
                 elif token.kind == TokenKind.KEYWORD:
                     log.debug("Got a MACRO_DEFINITION referencing a KEYWORD token.kind: %s", token.kind.name)
                     value = typedesc.UndefinedIdentifier(value)
+                    # consume token
+                    tokens.consume()
+                    token = tokens.current
                 elif token.kind in [TokenKind.COMMENT, TokenKind.PUNCTUATION]:
                     # log.debug("Ignored MACRO_DEFINITION token.kind: %s", token.kind.name)
-                    pass
+                    # consume token
+                    tokens.consume()
+                    token = tokens.current
 
             # add token
             if value is not None:
                 final_value.append(value)
+
         # return the EXPR
         # code.interact(local=locals())
         # FIXME, that will break. We need constant type return
@@ -1071,16 +1203,6 @@ class CursorHandler(ClangHandler):
         used with TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD.
         By default, macro are not parsed. requires -k m || parser.activate_macros_parsing()
         """
-        # macro parsing takes a LOT of time.
-        # ignore system macro
-        if (not hasattr(cursor, 'location') or cursor.location is None or
-                cursor.location.file is None):
-            # keep track of sizes from clang directly
-            # but we already did that elsewhere in clangparser.py make_ctypes_convertor
-            # if cursor.displayname.startswith('__SIZEOF_'):
-            #     typ = cursor.displayname[len('__SIZEOF_'):-2]
-            #     self.__sizeof[typ] = list(cursor.get_tokens())[1].spelling
-            return False
         name = self.get_unique_name(cursor)
         # MACRO_DEFINITION are a list of Tokens
         # .kind = {IDENTIFIER, KEYWORD, LITERAL, PUNCTUATION, COMMENT ? }
@@ -1092,11 +1214,6 @@ class CursorHandler(ClangHandler):
         # args should be filled when () are in tokens,
         args = None
         if isinstance(tokens, list):
-            # TODO, if there is an UndefinedIdentifier, we need to scrap the whole thing to comments.
-            # unknowns = [_ for _ in tokens if isinstance(_, typedesc.UndefinedIdentifier)]
-            # if len(unknowns) > 0:
-            #     value = tokens
-            # elif len(tokens) == 2:
             if len(tokens) == 2:
                 # #define key value
                 value = tokens[1]
@@ -1105,17 +1222,45 @@ class CursorHandler(ClangHandler):
             elif tokens[1] == '(':
                 # TODO, differentiate between function-like macro and expression in ()
                 # function macro or an expression.
-                str_tokens = [str(_) for _ in tokens[1:tokens.index(')')+1]]
-                args = ''.join(str_tokens).replace(',', ', ')
-                str_tokens = [str(_) for _ in tokens[tokens.index(')')+1:]]
-                value = ''.join(str_tokens)
-            elif len(tokens) > 2:
+                tokens = remove_outermost_parentheses(tokens[1:])
+                if tokens and tokens[0] == "(":
+                    # function
+                    str_tokens = "".join((map(str, tokens[0:tokens.index(')') + 1]))).strip()
+                    str_tokens = remove_outermost_parentheses(str_tokens)
+                    args = list(map(
+                        lambda a: a.strip(), str_tokens.split(',')
+                    ))
+                    str_tokens = "".join((map(str, tokens[tokens.index(')') + 1:])))
+                    if all(map(lambda a: is_identifier(a) and a not in str_tokens, args)):
+                        value = "".join(map(str, tokens))
+                    else:
+                        value = str_tokens
+
+                elif all(map(lambda a: a == "," or is_identifier(str(a)), tokens)):
+                    # no-op function
+                    args = list(map(
+                        lambda a: str(a).strip(), tokens
+                    ))
+                    value = "''"
+                else:
+                    # expression
+                    if not any(map(lambda t: isinstance(t, typedesc.UndefinedIdentifier), tokens)):
+                        value = " ".join(map(str, tokens))
+                    else:
+                        value = None
+            elif len(tokens) > 1:
                 # #define key a b c
-                value = list(tokens[1:])
+                if not any(map(lambda t: isinstance(t, typedesc.UndefinedIdentifier), tokens)):
+                    value = " ".join(tokens[1:])
+                else:
+                    value = None
             else:
                 # FIXME no reach ?!
                 # just merge the list of tokens
-                value = ' '.join(tokens[1:])
+                if not any(map(lambda t: isinstance(t, typedesc.UndefinedIdentifier), tokens)):
+                    value = "".join(tokens[1:])
+                else:
+                    value = None
         elif isinstance(tokens, str):
             # #define only
             value = True
@@ -1144,7 +1289,7 @@ class CursorHandler(ClangHandler):
     @log_entity
     def MACRO_INSTANTIATION(self, cursor):
         """We could use this to count instantiations
-        so we now, if we need to generate python code or comment for this macro ? """
+        so we know, if we need to generate python code or comment for this macro ? """
         log.debug('cursor.spelling: %s', cursor.spelling)
         # log.debug('cursor.kind: %s', cursor.kind.name)
         # log.debug('cursor.type.kind: %s', cursor.type.kind.name)

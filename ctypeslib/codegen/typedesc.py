@@ -277,13 +277,24 @@ class Variable(T):
 ################################################################
 
 
-class UndefinedIdentifier(T):
+class InvalidGeneratedCode(T):
+    pass
+
+
+class UndefinedIdentifier(InvalidGeneratedCode):
     def __init__(self, name):
         self.name = name
 
     def __str__(self):
         return self.name
 
+
+class InvalidGeneratedMacro(InvalidGeneratedCode):
+    def __init__(self, code):
+        self.code = code
+
+    def __str__(self):
+        return self.code
 
 def is_record(t):
     return isinstance(t, Structure) or isinstance(t, Union)

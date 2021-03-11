@@ -109,6 +109,16 @@ class Generator:
         headers = headers.replace("__POINTER_TYPE__", self.enable_pointer_type())
         print(headers, file=self.imports)
 
+    def enable_macro_processing(self):
+        """
+        If a structure type is used, declare our ctypes.Structure extension type
+        """
+        self.enable_macro_processing = lambda: True
+        import pkgutil
+        shared = pkgutil.get_data('ctypeslib', 'codegen/preprocess.py').decode()
+        print(shared, file=self.imports)
+        return
+
     def generate_headers(self, parser):
         # fix parser in self for later use
         self.parser = parser
@@ -190,6 +200,7 @@ class Generator:
         if macro.location is None:
             log.info("Ignoring %s with no location", macro.name)
             return
+        self.enable_macro_processing()
         if self.generate_locations:
             print("# %s:%s" % macro.location, file=self.stream)
         if self.generate_comments:
@@ -202,46 +213,65 @@ class Generator:
         # 2. or get a flag in macro that tells us if something contains undefinedIdentifier
         # is not code-generable ?
         # codegen should decide what codegen can do.
-        if macro.args:
-            print("# def %s%s:  # macro" % (macro.name, macro.args), file=self.stream)
-            print("#    return %s  " % macro.body, file=self.stream)
-        elif util.contains_undefined_identifier(macro):
+        macro_args = macro.args
+        macro_body = macro.body
+        if util.contains_invalid_code(macro):
             # we can't handle that, we comment it out
-            if isinstance(macro.body, typedesc.UndefinedIdentifier):
-                print("# %s = %s # macro" % (macro.name, macro.body.name), file=self.stream)
+            if isinstance(macro.body, typedesc.InvalidGeneratedMacro):
+                print(
+                    "# %s = %s # macro" % (
+                        macro.name, macro.body.code),
+                    file=self.stream
+                )
+            elif isinstance(macro.body, typedesc.UndefinedIdentifier):
+                print(
+                    "# %s = %s # macro" % (
+                        macro.name, macro.body.name),
+                    file=self.stream
+                )
             else:  # we assume it's a list
-                print("# %s = %s # macro" % (macro.name, " ".join([str(_) for _ in macro.body])), file=self.stream)
-        elif isinstance(macro.body, bool):
-            print("%s = %s # macro" % (macro.name, macro.body), file=self.stream)
+                print(
+                    "# %s = %s # macro" % (
+                        macro.name,
+                        ' '.join([str(_) for _ in macro.body])),
+                    file=self.stream
+                )
+        elif macro_args:
+            macro_func = util.process_macro_function(macro.name, macro.args, macro.body)
+            if macro_func is not None:
+                print("\n# macro function %s%s" % (macro.name, macro_func), file=self.stream)
+            else:
+                print("\n# invalid macro function %s%s" % (macro.name, macro.body), file=self.stream)
+
+        elif isinstance(macro_body, bool):
+            print("%s = %s # macro" % (macro.name, macro_body), file=self.stream)
             self.macros += 1
             self.names.append(macro.name)
-        elif isinstance(macro.body, str):
-            if macro.body == "":
-                print("# %s = %s # macro" % (macro.name, macro.body), file=self.stream)
-            else:
-                body = macro.body
-                float_value = util.from_c_float_literal(body)
-                if float_value is not None:
-                    body = float_value
-                # what about integers you ask ? body token that represents token are Integer here.
-                # either it's just a thing we gonna print, or we need to have a registered item
-                print("%s = %s # macro" % (macro.name, body), file=self.stream)
-                self.macros += 1
-                self.names.append(macro.name)
+        elif isinstance(macro_body, str):
+            body = macro_body
+            body = util.process_c_literals(body)
+            body = util.replace_builtins(body)
+            body = util.replace_pointer_types(body)
+            # what about integers you ask ? body token that represents token are Integer here.
+            # either it's just a thing we gonna print, or we need to have a registered item
+            print("%s = (%s) # macro" % (macro.name, body), file=self.stream)
+            self.macros += 1
+            self.names.append(macro.name)
         # This is why we need to have token types all the way here.
         # but at the same time, clang does not type tokens. So we might as well guess them here too
         elif util.body_is_all_string_tokens(macro.body):
-            print("%s = %s # macro" % (macro.name, " ".join([str(_) for _ in macro.body])), file=self.stream)
+            print("%s = (%s) # macro" % (macro.name, "".join([str(_) for _ in macro_body])), file=self.stream)
             self.macros += 1
             self.names.append(macro.name)
+        elif macro_body is None:
+            print("# %s = (%s) # macro" % (macro.name, macro.body), file=self.stream)
         else:
             # this might be a token list of float literal
-            body = macro.body
-            float_value = util.from_c_float_literal(body)
-            if float_value is not None:
-                body = float_value
+            body = macro_body
+            body = util.process_c_literals(body)
+            body = util.replace_builtins(body)
             # or anything else that might be a valid python literal...
-            print("%s = %s # macro" % (macro.name, body), file=self.stream)
+            print("%s = (%s) # macro" % (macro.name, body), file=self.stream)
             self.macros += 1
             self.names.append(macro.name)
         return

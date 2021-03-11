@@ -376,11 +376,6 @@ typedef void* pointer_t;''', flags=_flags)
             if location and hasattr(location, 'file'):
                 _item.location = location.file.name, location.line
                 log.error('%s %s came in with a SourceLocation', _id, _item)
-            elif location is None:
-                # FIXME make this optional to be able to see internals
-                # FIXME macro/alias are here
-                log.warning("No source location in %s - ignoring", _id)
-                remove.append(_id)
 
         for _x in remove:
             self.remove_registered(_x)
