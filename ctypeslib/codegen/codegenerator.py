@@ -462,7 +462,22 @@ class Generator(object):
         for item in tp.values:
             self._generate(item)
         if tp.name:
-            print("%s = ctypes.c_int # enum" % tp.name, file=self.stream)
+            # Enums can be forced to occupy less space than an int if possible:
+            #  1) Add the attribute `__attribute__((__packed__))` to the C variable declarations
+            #  2) Set the compiler flag ` CFLAGS += -fshort-enums`
+            # In any case, we should trust the enum size returned by the compiler.
+            # https://stackoverflow.com/a/54527229/1641819
+            # https://stackoverflow.com/a/56432050/1641819
+            if tp.size == 1:
+                enum_size = 'ctypes.c_byte'
+            elif tp.size == 2:
+                enum_size = 'ctypes.c_int16'
+            elif tp.size == 4:
+                enum_size = 'ctypes.c_int32'
+            else:
+                enum_size = 'ctypes.c_int'
+
+            print("%s = %s # enum" % (tp.name, enum_size), file=self.stream)
             self.names.append(tp.name)
         self._enumtypes += 1
         return
