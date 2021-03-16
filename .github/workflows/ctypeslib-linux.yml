@@ -2,7 +2,7 @@
 # good example https://github.com/thenewguy/django-randomfields/blob/master/.github/workflows/sdist.yml
 name: ctypeslib-linux
 
-on: [push]
+on: [push, pull_request]
 
 
 jobs:
