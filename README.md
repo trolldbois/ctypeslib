@@ -44,11 +44,22 @@ Stable Distribution is available through PyPi at https://pypi.python.org/pypi/ct
 
 See the LLVM Clang instructions at http://apt.llvm.org/ or use your distribution's packages.
 
-## Examples
+## Examples - Library usage
 
-Look at `test/test_example_script.py`
 
-## Other example
+    import ctypeslib
+    py_module = ctypeslib.translate('''int i = 12;''')
+    print(py_module.i)  # Prints 12
+
+    py_module2 = ctypeslib.translate('''struct coordinates { int i ; int y; };''')
+    print(py_module.struct_coordinates)  # <class 'struct_coordinates'>
+    print(py_module.struct_coordinates(1,2))  # <struct_coordinates object at 0xabcde12345>
+
+
+Look at `test/test_example_script.py` for more advanced Library usage
+
+
+## Other example - CLI
 
 Source file:
 

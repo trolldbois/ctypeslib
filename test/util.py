@@ -11,7 +11,7 @@ from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
 import unittest
 from ctypeslib.codegen import clangparser, codegenerator
-from ctypeslib.codegen import util
+from ctypeslib.codegen import util as codegen_util
 from ctypeslib.library import Library
 
 import tempfile
@@ -21,14 +21,6 @@ def mktemp(suffix):
     handle, fnm = tempfile.mkstemp(suffix)
     os.close(handle)
     return fnm
-
-
-class ADict(dict):
-    def __getattr__(self, name):
-        try:
-            return self[name]
-        except KeyError:
-            raise AttributeError(name)
 
 
 class ClangTest(unittest.TestCase):
@@ -82,7 +74,7 @@ class ClangTest(unittest.TestCase):
             raise
         # except NameError:
         #     print(output)
-        self.namespace = ADict(namespace)
+        self.namespace = codegen_util.ADict(namespace)
         if debug:
             print(output)
         return
@@ -103,11 +95,11 @@ class ClangTest(unittest.TestCase):
     def _get_target_with_struct_hack(self, name):
         """ because we rename "struct x" to struct_x, we have to reverse that
         """
-        target = util.get_cursor(self.parser.tu, name)
+        target = codegen_util.get_cursor(self.parser.tu, name)
         if target is None:
-            target = util.get_cursor(self.parser.tu, name.replace('struct_', ''))
+            target = codegen_util.get_cursor(self.parser.tu, name.replace('struct_', ''))
         if target is None:
-            target = util.get_cursor(self.parser.tu, name.replace('union_', ''))
+            target = codegen_util.get_cursor(self.parser.tu, name.replace('union_', ''))
         return target
 
     def assertSizes(self, name):
