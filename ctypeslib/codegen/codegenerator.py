@@ -221,15 +221,18 @@ class Generator(object):
             self.macros += 1
             self.names.append(macro.name)
         elif isinstance(macro.body, str):
-            body = macro.body
-            float_value = util.from_c_float_literal(body)
-            if float_value is not None:
-                body = float_value
-            # what about integers you ask ? body token that represents token are Integer here.
-            # either it's just a thing we gonna print, or we need to have a registered item
-            print("%s = %s # macro" % (macro.name, body), file=self.stream)
-            self.macros += 1
-            self.names.append(macro.name)
+            if macro.body == '':
+                print("# %s = %s # macro" % (macro.name, macro.body), file=self.stream)
+            else:
+                body = macro.body
+                float_value = util.from_c_float_literal(body)
+                if float_value is not None:
+                    body = float_value
+                # what about integers you ask ? body token that represents token are Integer here.
+                # either it's just a thing we gonna print, or we need to have a registered item
+                print("%s = %s # macro" % (macro.name, body), file=self.stream)
+                self.macros += 1
+                self.names.append(macro.name)
         # This is why we need to have token types all the way here.
         # but at the same time, clang does not type tokens. So we might as well guess them here too
         elif util.body_is_all_string_tokens(macro.body):

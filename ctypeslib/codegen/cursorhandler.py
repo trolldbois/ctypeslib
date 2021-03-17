@@ -530,6 +530,7 @@ class CursorHandler(ClangHandler):
                     # log.debug("Ignored MACRO_DEFINITION token identifier : %s", value)
                     # Identifier in Macro... Not sure what to do with that.
                     if self.is_registered(value):
+                        # FIXME: if Macro is not a simple value replace, it should not be registered in the first place
                         # parse that, try to see if there is another Macro in there.
                         value = self.get_registered(value).body
                         log.debug("Found MACRO_DEFINITION token identifier : %s", value)
@@ -537,7 +538,10 @@ class CursorHandler(ClangHandler):
                         value = typedesc.UndefinedIdentifier(value)
                         log.debug("Undefined MACRO_DEFINITION token identifier : %s", value)
                     pass
-                elif token.kind in [TokenKind.COMMENT, TokenKind.KEYWORD, TokenKind.PUNCTUATION]:
+                elif token.kind == TokenKind.KEYWORD:
+                    log.debug("Got a MACRO_DEFINITION referencing a KEYWORD token.kind: %s", token.kind.name)
+                    value = typedesc.UndefinedIdentifier(value)
+                elif token.kind in [TokenKind.COMMENT, TokenKind.PUNCTUATION]:
                     # log.debug("Ignored MACRO_DEFINITION token.kind: %s", token.kind.name)
                     pass
 
@@ -1099,6 +1103,7 @@ class CursorHandler(ClangHandler):
             elif len(tokens) == 3 and tokens[1] == '-':
                 value = ''.join(tokens[1:])
             elif tokens[1] == '(':
+                # TODO, differentiate between function-like macro and expression in ()
                 # function macro or an expression.
                 str_tokens = [str(_) for _ in tokens[1:tokens.index(')')+1]]
                 args = ''.join(str_tokens).replace(',', ', ')

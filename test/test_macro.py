@@ -650,6 +650,22 @@ int v = __STDC_VERSION__;
         self.assertIn("# PACKTO = __attribute__", self.text_output)
         self.assertIn("struct_foo", self.namespace)
 
+    def test_enum_macro(self):
+        self.convert(
+            '''
+        #include <stdint.h>
+        enum myEnum {
+            MIN=INT32_MIN, 
+            MAX=INT32_MAX
+        };
+        ''')
+
+        # Expect enum stored as 1 byte
+        import ctypes
+        self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 4)
+        self.assertEqual(self.namespace.MIN, -2147483648)
+        self.assertEqual(self.namespace.MAX, 2147483647)
+
 
 if __name__ == "__main__":
     import logging

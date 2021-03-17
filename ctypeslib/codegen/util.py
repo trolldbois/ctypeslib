@@ -154,11 +154,20 @@ def contains_undefined_identifier(macro):
     # body is undefined
     if isinstance(macro.body, typedesc.UndefinedIdentifier):
         return True
-    # or one item is undefined
-    if isinstance(macro.body, list):
-        for b in macro.body:
+
+    def _list_contains_undefined_identifier(l):
+        for b in l:
             if isinstance(b, typedesc.UndefinedIdentifier):
                 return True
+            if isinstance(b, list) and _list_contains_undefined_identifier(b):
+                return True
+        return False
+
+    # or one item is undefined
+    if isinstance(macro.body, list):
+        if _list_contains_undefined_identifier(macro.body):
+            return True
+
     return False
 
 
