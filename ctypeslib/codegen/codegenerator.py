@@ -420,6 +420,7 @@ class Generator(object):
             #    init_value = ''; # use default ctypes object constructor
             # init_value = "%s(%s)"%(self.type_name(tp.typ, False), init_value)
             if tp.init is not None:
+                # TODO, check that if tp.init is a string literal that there is a definition for it ?
                 init_value = tp.init
             elif tp.typ.name in ['c_float', 'c_double', 'c_longdouble']:
                 init_value = 0.0

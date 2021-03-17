@@ -427,11 +427,10 @@ char d[] = APREPOST;''')
         self.assertEqual(self.namespace.d, 'before after')
         # print(self.text_output)
 
-    @unittest.skip
+    @unittest.expectedFailure
     def test_define_wchar_t(self):
         """'L' means wchar_t"""
-        # currently this fails because of Bug #77 , in C
-        # wchar.h contains recursive INTEGER_LITERAL MACROS that fail to be codegen properly
+        # currently this fails because of wchar being an int on this arch.
         self.convert("""
         #define SPAM "spam"
         #define STRING_NULL "NULL"
@@ -440,7 +439,7 @@ char d[] = APREPOST;''')
         #include <wchar.h>
         wchar_t * my_foo = FOO;
         """)
-
+        print(self.text_output)
         self.assertEqual(self.namespace.SPAM, "spam")
         self.assertEqual(self.namespace.STRING_NULL, "NULL")
         self.assertEqual(self.namespace.FOO, "foo")
@@ -568,7 +567,7 @@ int tab1[] = MACRO_EXAMPLE(1,2);
     https://blog.kowalczyk.info/article/j/guide-to-predefined-macros-in-c-compilers-gcc-clang-msvc-etc..html
     """
 
-    @unittest.skip
+    @unittest.expectedFailure
     def test_defines_predefined(self):
         self.convert('''
 #define DATE __DATE__

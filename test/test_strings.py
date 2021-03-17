@@ -51,9 +51,9 @@ class StringConstantsTest(ClangTest):
         # type cast will not work.
         # self.assertEqual(type(self.namespace.w_zero), unicode)
 
-    @unittest.skip
+    @unittest.expectedFailure
     def test_wchar(self):
-        # fails because of bug #77 and macros in wchar.h in C
+        # fails because wchar is an int here.
         self.convert("""
         #include <wchar.h>
         wchar_t X = L'X';
