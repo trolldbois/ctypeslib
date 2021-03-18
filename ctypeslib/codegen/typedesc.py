@@ -283,3 +283,7 @@ class UndefinedIdentifier(T):
 
     def __str__(self):
         return self.name
+
+
+def is_record(t):
+    return isinstance(t, Structure) or isinstance(t, Union)

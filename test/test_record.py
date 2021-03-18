@@ -1,9 +1,11 @@
 import ctypes
-import logging
-import sys
 import unittest
 
 from test.util import ClangTest
+
+import logging
+
+# logging.basicConfig(level=logging.DEBUG)
 
 
 class RecordTest(ClangTest):
@@ -223,6 +225,21 @@ void do_something(struct Foo* foo);
         ''')
         self.assertTrue(hasattr(self.namespace, 'struct_Foo'))
         self.assertEqual(ctypes.sizeof(self.namespace.struct_Foo), 0)
+
+    def test_record_ordering(self):
+        """Raises _fields_ is final if incorrect"""
+        self.convert('''
+struct A;
+
+struct B {
+        struct A* a;
+};
+struct A {
+        struct B b;
+};        ''')
+        print(self.text_output)
+        self.assertIn('struct_A', self.namespace)
+        self.assertIn('struct_B', self.namespace)
 
 
 if __name__ == "__main__":

@@ -48,6 +48,9 @@ class Generator(object):
         self.more = collections.OrderedDict()
         self.macros = 0
         self.cross_arch_code_generation = cross_arch
+        # what record dependency were generated
+        self.head_generated = set()
+        self.body_generated = set()
 
     # pylint: disable=method-hidden
     def enable_fundamental_type_wrappers(self):
@@ -491,6 +494,8 @@ class Generator(object):
         Checks if a typed has already been declared in the python output
         or is a builtin python type.
         """
+        if item.name in self.head_generated:
+            return None
         if item in self.done:
             return None
         if isinstance(item, typedesc.FundamentalType):
@@ -502,9 +507,38 @@ class Generator(object):
         # else its an undeclared structure.
         return item
 
+    def _get_undefined_head_dependencies(self, struct):
+        """ Return head dependencies on other record types.
+        Head dependencies is exclusive of body dependency. It's one or the other.
+        """
+        r = set()
+        for m in struct.members:
+            if isinstance(m.type, typedesc.PointerType) and typedesc.is_record(m.type.typ):
+                r.add(m.type)
+        # remove all already defined heads
+        r = [_ for _ in r if _.name not in self.head_generated]
+        return r
+
+    def _get_undefined_body_dependencies(self, struct):
+        """ Return head dependencies on other record types.
+        Head dependencies is exclusive of body dependency. It's one or the other.
+        """
+        r = set()
+        for m in struct.members:
+            if isinstance(m.type, typedesc.ArrayType) and typedesc.is_record(m.type.typ):
+                r.add(m.type.typ)
+            elif typedesc.is_record(m.type):
+                r.add(m.type)
+        # remove all already defined bodies
+        r = [_ for _ in r if _.name not in self.body_generated]
+        return r
+
     _structures = 0
 
     def Structure(self, struct):
+        if struct.name in self.head_generated and struct.name in self.body_generated:
+            self.done[struct] = True
+            return
         self.enable_structure_type()
         self._structures += 1
         depends = set()
@@ -522,31 +556,65 @@ class Generator(object):
         for b in struct.bases:
             depends.update([self.get_undeclared_type(m.type)
                             for m in b.members])
-        # checks members dependencies
-        depends.update([self.get_undeclared_type(m.type)
-                        for m in struct.members])
-        self.done[struct] = True
         depends.discard(None)
         if len(depends) > 0:
-            log.debug('Generate %s DEPENDS %s', struct.name, depends)
-            self._generate(struct.get_head(), False)
-            # generate dependencies
+            log.debug('Generate %s DEPENDS for Bases %s', struct.name, depends)
             for dep in depends:
                 self._generate(dep)
-            self._generate(struct.get_body(), False)
-        else:
-            log.debug('No depends for %s', struct.name)
-            if struct.name in self.names:
-                # headers already produced
-                self._generate(struct.get_body(), False)
+
+        # checks members dependencies
+        # test_record_ordering head does not mean declared. _fields_ mean declared
+        # CPOINTER members just require a class definition
+        # whereas members that are non pointers require a full _fields_ declaration
+        # before this record body is defined fully
+        # depends.update([self.get_undeclared_type(m.type)
+        #                 for m in struct.members])
+        # self.done[struct] = True
+        # hard dependencies for members types that are not pointer but records
+        # soft dependencies for members pointers to record
+        undefined_head_dependencies = self._get_undefined_head_dependencies(struct)
+        undefined_body_dependencies = self._get_undefined_body_dependencies(struct)
+
+        if len(undefined_body_dependencies) == 0:
+            if len(undefined_head_dependencies) == 0:
+                # generate this head and body in one go
+                # if struct.get_head() not in self.done:
+                if struct.name not in self.head_generated:
+                    self._generate(struct.get_head(), True)
+                    self._generate(struct.get_body(), True)
+                else:
+                    self._generate(struct.get_body(), False)
             else:
-                self._generate(struct.get_head(), True)
-                self._generate(struct.get_body(), True)
+                # generate this head first, to avoid recursive issue, then the dep, then this body
+                self._generate(struct.get_head(), False)
+                for dep in undefined_head_dependencies:
+                    self._generate(dep)
+                self._generate(struct.get_body(), False)
+        else:
+            # hard dep on defining the body of these dependencies
+            # generate this head first, to avoid recursive issue, then the dep, then this body
+            self._generate(struct.get_head(), False)
+            for dep in undefined_head_dependencies:
+                self._generate(dep)
+            for dep in undefined_body_dependencies:
+                self._generate(dep)
+            for dep in undefined_body_dependencies:
+                if isinstance(dep, typedesc.Structure):
+                    self._generate(dep.get_body(), False)
+            self._generate(struct.get_body(), False)
+
+        # we defined ourselve
+        self.done[struct] = True
+
+
         return
 
     Union = Structure
 
     def StructureHead(self, head, inline=False):
+        if head.name in self.head_generated:
+            log.debug('Skipping - Head already generated for %s', head.name)
+            return
         log.debug('Head start for %s inline:%s', head.name, inline)
         for struct in head.struct.bases:
             self._generate(struct.get_head())
@@ -571,8 +639,12 @@ class Generator(object):
             print("    pass\n", file=self.stream)
         self.names.append(head.struct.name)
         log.debug('Head finished for %s', head.name)
+        self.head_generated.add(head.name)
 
     def StructureBody(self, body, inline=False):
+        if body.name in self.body_generated:
+            log.debug('Skipping - Body already generated for %s', body.name)
+            return
         log.debug('Body start for %s', body.name)
         fields = []
         methods = []
@@ -660,6 +732,7 @@ class Generator(object):
                 print(prefix, end=' ', file=self.stream)
             print("]\n", file=self.stream)
         log.debug('Body finished for %s', body.name)
+        self.body_generated.add(body.name)
         return
 
     def find_library_with_func(self, func):
