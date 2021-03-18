@@ -699,14 +699,11 @@ class Generator(object):
                     f.type, (typedesc.Structure, typedesc.Union)):
                 unnamed_fields[f] = "_%d" % len(unnamed_fields)
         if unnamed_fields:
-            print("%s_anonymous_ = %r" % \
-                  (prefix, unnamed_fields.values()), file=self.stream)
+            print("%s_anonymous_ = %r" % (prefix, unnamed_fields.values()), file=self.stream)
         if len(fields) > 0:
-            print("%s_fields_ = [" % (prefix), file=self.stream)
-
+            print("%s_fields_ = [" % prefix, file=self.stream)
             if self.generate_locations and body.struct.location:
                 print("    # %s %s" % body.struct.location, file=self.stream)
-            index = 0
             for f in fields:
                 fieldname = unnamed_fields.get(f, f.name)
                 type_name = self.type_name(f.type)
@@ -715,19 +712,14 @@ class Generator(object):
                     type_name = "globals()['%s']" % type_name
                 # a bitfield needs a triplet
                 if f.is_bitfield is False:
-                    print("    ('%s', %s)," % \
-                          (fieldname, type_name), file=self.stream)
+                    print("    ('%s', %s)," % (fieldname, type_name), file=self.stream)
                 else:
                     # FIXME: Python bitfield is int32 only.
                     # from clang.cindex import TypeKind
                     # print fieldname
                     # import code
                     # code.interact(local=locals())
-                    print("    ('%s', %s, %s)," % \
-                          (fieldname,
-                           # self.parser.get_ctypes_name(TypeKind.LONG),
-                           self.type_name(f.type),
-                           f.bits), file=self.stream)
+                    print("    ('%s', %s, %s)," % (fieldname, self.type_name(f.type), f.bits), file=self.stream)
             if inline:
                 print(prefix, end=' ', file=self.stream)
             print("]\n", file=self.stream)
