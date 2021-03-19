@@ -57,7 +57,9 @@ class ClangTest(unittest.TestCase):
         ofi = StringIO()
         gen = self._gen(ofi, fname, flags=flags, dlls=dlls)
         # load code
-        namespace = {}
+        namespace = {
+            "__file__": os.path.join(os.path.dirname(__file__), "data", "test_util.py"),
+        }
         # DEBUG
         # print ofi.getvalue()
         # DEBUG

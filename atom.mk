@@ -15,6 +15,9 @@ LOCAL_COPY_FILES := \
 	ctypeslib/codegen/typedesc.py:usr/lib/python/site-packages/ctypeslib/codegen/ \
 	ctypeslib/codegen/typehandler.py:usr/lib/python/site-packages/ctypeslib/codegen/ \
 	ctypeslib/codegen/preprocess.py:usr/lib/python/site-packages/ctypeslib/codegen/ \
+	ctypeslib/codegen/cache.py:usr/lib/python/site-packages/ctypeslib/codegen/ \
+	ctypeslib/codegen/cindex.py:usr/lib/python/site-packages/ctypeslib/codegen/ \
+	ctypeslib/codegen/hash.py:usr/lib/python/site-packages/ctypeslib/codegen/ \
 	ctypeslib/codegen/util.py:usr/lib/python/site-packages/ctypeslib/codegen/ \
 	ctypeslib/data/fundamental_type_name.tpl:usr/lib/python/site-packages/ctypeslib/data/ \
 	ctypeslib/data/headers.tpl:usr/lib/python/site-packages/ctypeslib/data/ \

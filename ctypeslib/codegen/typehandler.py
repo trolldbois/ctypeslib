@@ -3,6 +3,7 @@
 from clang.cindex import TypeKind
 
 from ctypeslib.codegen import typedesc
+from ctypeslib.codegen.cache import cached_pure_method
 from ctypeslib.codegen.util import log_entity
 from ctypeslib.codegen.handler import ClangHandler
 from ctypeslib.codegen.handler import InvalidDefinitionError
@@ -34,6 +35,7 @@ class TypeHandler(ClangHandler):
             setattr(self, TypeKind.from_id(_id).name,
                     self._handle_fundamental_types)
 
+    @cached_pure_method()
     def _handle_fundamental_types(self, typ):
         """
         Handles POD types nodes.
@@ -70,6 +72,7 @@ class TypeHandler(ClangHandler):
     # not listed has node in the AST.
     # not very useful in python anyway.
 
+    @cached_pure_method()
     @log_entity
     def TYPEDEF(self, _cursor_type):
         """
@@ -84,8 +87,9 @@ class TypeHandler(ClangHandler):
             obj = self.parse_cursor(_decl)
         return obj
 
+    @cached_pure_method()
     @log_entity
-    def ENUM(self, _cursor_type):
+    def ENUM(self,  _cursor_type):
         """
         Handles ENUM typedef.
         """
@@ -98,6 +102,7 @@ class TypeHandler(ClangHandler):
             obj = self.parse_cursor(_decl)
         return obj
 
+    @cached_pure_method()
     @log_entity
     def ELABORATED(self, _cursor_type):
         """
@@ -112,6 +117,8 @@ class TypeHandler(ClangHandler):
             obj = self.parse_cursor(_decl)
         return obj
 
+    # FIXME: this can't be cached?
+    #@cached_pure_method()
     @log_entity
     def POINTER(self, _cursor_type):
         """
@@ -164,6 +171,8 @@ class TypeHandler(ClangHandler):
             obj.comment = comment
         return obj
 
+    # FIXME: this can't be cached?
+    #@cached_pure_method()
     @log_entity
     def _array_handler(self, _cursor_type):
         """
@@ -205,6 +214,7 @@ class TypeHandler(ClangHandler):
     VARIABLEARRAY = _array_handler
     DEPENDENTSIZEDARRAY = _array_handler
 
+    @cached_pure_method()
     @log_entity
     def FUNCTIONPROTO(self, _cursor_type):
         """Handles function prototype."""
@@ -223,6 +233,7 @@ class TypeHandler(ClangHandler):
         self.set_location(obj, None)
         return obj
 
+    @cached_pure_method()
     @log_entity
     def FUNCTIONNOPROTO(self, _cursor_type):
         """Handles function with no prototype."""
@@ -238,6 +249,7 @@ class TypeHandler(ClangHandler):
 
     # structures, unions, classes
 
+    @cached_pure_method()
     @log_entity
     def RECORD(self, _cursor_type):
         """
@@ -257,6 +269,7 @@ class TypeHandler(ClangHandler):
             obj = self.parse_cursor(_decl)
         return obj
 
+    @cached_pure_method()
     @log_entity
     def UNEXPOSED(self, _cursor_type):
         """

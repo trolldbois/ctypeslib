@@ -22,13 +22,14 @@ else:
 # configure python-clang to use the local clang library
 try:
     from ctypes.util import find_library
-    from clang import cindex
+    from ctypeslib.codegen import cindex
     # debug for python-haystack travis-ci
     v1 = ["clang-%d" % _ for _ in range(14, 6, -1)]
     v2 = ["clang-%f" % _ for _ in range(6, 3, -1)]
     v_list = v1 + v2 + ["clang-3.9", "clang-3.8", "clang-3.7"]
     for version in ["libclang", "clang"] + v_list:
         if find_library(version) is not None:
+            from ctypeslib.codegen import cindex
             cindex.Config.set_library_file(find_library(version))
             break
     else:
@@ -40,6 +41,7 @@ try:
                     cindex.Config.set_library_file(f)
 
     def clang_version():
+        from ctypeslib.codegen import cindex
         return cindex.Config.library_file
 except ImportError as e:
     print(e)

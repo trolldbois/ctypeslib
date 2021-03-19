@@ -3,13 +3,14 @@
 import logging
 import re
 
-from clang.cindex import CursorKind, LinkageKind, TypeKind, TokenKind
+from ctypeslib.codegen.cindex import CursorKind, LinkageKind, TypeKind, TokenKind
 
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.handler import ClangHandler
 from ctypeslib.codegen.handler import CursorKindException
 from ctypeslib.codegen.handler import DuplicateDefinitionException
 from ctypeslib.codegen.handler import InvalidDefinitionError
+from ctypeslib.codegen.cache import cached_pure_method
 from ctypeslib.codegen.util import (
     contains_invalid_code,
     expand_macro_function,
@@ -17,6 +18,7 @@ from ctypeslib.codegen.util import (
     log_entity,
     remove_outermost_parentheses,
 )
+
 
 log = logging.getLogger('cursorhandler')
 
@@ -79,8 +81,10 @@ class CursorHandler(ClangHandler):
     def __init__(self, parser):
         ClangHandler.__init__(self, parser)
 
+    @cached_pure_method()
     def parse_cursor(self, cursor):
-        mth = getattr(self, cursor.kind.name)
+        name = cursor.kind.name
+        mth = getattr(self, name)
         return mth(cursor)
 
         ##########################################################################
@@ -194,9 +198,10 @@ class CursorHandler(ClangHandler):
             return self.get_registered(name)
         align = cursor.type.get_align()
         size = cursor.type.get_size()
-        obj = self.register(name, typedesc.Enumeration(name, size, align))
+        obj = typedesc.Enumeration(name, size, align)
         self.set_location(obj, cursor)
         self.set_comment(obj, cursor)
+        obj = self.register(name, obj)
         # parse all children
         for child in cursor.get_children():
             self.parse_cursor(child)  # FIXME, where is the starElement
@@ -213,15 +218,16 @@ class CursorHandler(ClangHandler):
         attributes = []
         extern = False
         obj = typedesc.Function(name, returns, attributes, extern)
+        obj = self.register(name, obj)
         for arg in cursor.get_arguments():
             arg_obj = self.parse_cursor(arg)
             # if arg_obj is None:
             #    code.interact(local=locals())
             obj.add_argument(arg_obj)
         # code.interact(local=locals())
-        self.register(name, obj)
         self.set_location(obj, cursor)
         self.set_comment(obj, cursor)
+        obj = self.update_register(name, obj)
         return obj
 
     @log_entity
@@ -229,7 +235,7 @@ class CursorHandler(ClangHandler):
         """Handles parameter declarations."""
         # try and get the type. If unexposed, The canonical type will work.
         _type = cursor.type
-        _name = cursor.spelling
+        name = cursor.spelling
         if (self.is_array_type(_type) or
                 self.is_fundamental_type(_type) or
                 self.is_pointer_type(_type) or
@@ -243,7 +249,7 @@ class CursorHandler(ClangHandler):
                 _argtype = self.parse_cursor_type(_type)
             else:
                 _argtype = self.get_registered(_argtype_name)
-        obj = typedesc.Argument(_name, _argtype)
+        obj = typedesc.Argument(name, _argtype)
         self.set_location(obj, cursor)
         self.set_comment(obj, cursor)
         return obj
@@ -276,9 +282,10 @@ class CursorHandler(ClangHandler):
                 'Bad TYPEREF parsing in TYPEDEF_DECL: %s' %
                 (_type.spelling))
         # register the type
-        obj = self.register(name, typedesc.Typedef(name, p_type))
+        obj = typedesc.Typedef(name, p_type)
         self.set_location(obj, cursor)
         self.set_comment(obj, cursor)
+        obj = self.register(name, obj)
         return obj
 
     @log_entity
@@ -298,9 +305,10 @@ class CursorHandler(ClangHandler):
         log.debug('VAR_DECL: _type:%s', _type.name)
         log.debug('VAR_DECL: _init:%s', init_value)
         log.debug('VAR_DECL: location:%s', getattr(cursor, 'location'))
-        obj = self.register(name, typedesc.Variable(name, _type, init_value, extern))
+        obj = typedesc.Variable(name, _type, init_value, extern)
         self.set_location(obj, cursor)
         self.set_comment(obj, cursor)
+        obj = self.register(name, obj)
         return True
 
     def _VAR_DECL_type(self, cursor):
@@ -324,7 +332,8 @@ class CursorHandler(ClangHandler):
             # for example, extern Function pointer
             if self.is_unexposed_type(_ctype.get_pointee()):
                 _type = self.parse_cursor_type(
-                    _ctype.get_canonical().get_pointee())
+                    _ctype.get_canonical().get_pointee()
+                )
             elif _ctype.get_pointee().kind == TypeKind.FUNCTIONPROTO:
                 # Function pointers
                 # Arguments are handled in here
@@ -449,6 +458,7 @@ class CursorHandler(ClangHandler):
         log.debug('_get_var_decl_init_value_single: returns %s', str(init_value))
         return init_value
 
+    @cached_pure_method()
     def _clean_string_literal(self, cursor, value):
         # strip wchar_t type prefix for string/character
         # indicatively: u8 for utf-8, u for utf-16, U for utf32
@@ -487,6 +497,7 @@ class CursorHandler(ClangHandler):
             pass
         return value
 
+    @cached_pure_method()
     def _macro_args_handling(self, tokens, call_args=False):
         if tokens.current is None:
             return tuple()
@@ -512,8 +523,12 @@ class CursorHandler(ClangHandler):
                     return None
         return tuple(args)
 
+    @cached_pure_method()
+    def _get_cursor_tokens(self, cursor):
+        return CursorTokens(cursor.get_tokens())
 
     @log_entity
+    @cached_pure_method()
     def _literal_handling(self, cursor):
         """Parse all literal associated with this cursor.
 
@@ -525,18 +540,19 @@ class CursorHandler(ClangHandler):
         because some literal might need cleaning."""
         # FIXME #77, internal integer literal like __clang_major__ are not working here.
         # tokens == [] , because ??? clang problem ? so there is no spelling available.
-        tokens = CursorTokens(cursor.get_tokens())
+        tokens = self._get_cursor_tokens(cursor)
         log.debug('literal has %d tokens.[ %s ]', len(tokens), ' '.join([str(t.spelling) for t in tokens]))
-        if len(tokens) == 1 and cursor.kind == CursorKind.STRING_LITERAL:
-            # use a shortcut that works for unicode
-            value = tokens[0].spelling
-            value = self._clean_string_literal(cursor, value)
-            return value
-        elif cursor.kind == CursorKind.STRING_LITERAL:
-            # use a shortcut - does not work on unicode var_decl
-            value = cursor.displayname
-            value = self._clean_string_literal(cursor, value)
-            return value
+        if cursor.kind == CursorKind.STRING_LITERAL:
+            if len(tokens) == 1:
+                # use a shortcut that works for unicode
+                value = tokens[0].spelling
+                value = self._clean_string_literal(cursor, value)
+                return value
+            else:
+                # use a shortcut - does not work on unicode var_decl
+                value = cursor.displayname
+                value = self._clean_string_literal(cursor, value)
+                return value
         final_value = []
         # code.interact(local=locals())
         log.debug('cursor.type:%s', cursor.type.kind.name)
@@ -670,11 +686,26 @@ class CursorHandler(ClangHandler):
                     # consume token
                     tokens.consume()
                     token = tokens.current
-                elif token.kind in [TokenKind.COMMENT, TokenKind.PUNCTUATION]:
+                elif token.kind == TokenKind.PUNCTUATION:
+                    # FIXME: handle PUNCTUATION
                     # log.debug("Ignored MACRO_DEFINITION token.kind: %s", token.kind.name)
                     # consume token
                     tokens.consume()
                     token = tokens.current
+                else:
+                    log.warning("Unhandled token %s" % token.kind)
+                    # consume token
+                    tokens.consume()
+                    token = tokens.current
+            elif token.kind == TokenKind.PUNCTUATION:
+                # consume token
+                tokens.consume()
+                token = tokens.current
+            else:
+                log.warning("Unhandled token %s" % token.kind)
+                # consume token
+                tokens.consume()
+                token = tokens.current
 
             # add token
             if value is not None:
@@ -803,10 +834,10 @@ class CursorHandler(ClangHandler):
                 # save the type in the registry. Useful for not looping in case of
                 # members with forward references
                 obj = _output_type(name, align, None, bases, size, packed=False)
-                self.register(name, obj)
                 self.set_location(obj, cursor)
                 self.set_comment(obj, cursor)
                 declared_instance = True
+                obj = self.register(name, obj)
         else:
             obj = self.get_registered(name)
             declared_instance = False
@@ -820,6 +851,7 @@ class CursorHandler(ClangHandler):
         for field in fields:
             log.debug('creating FIELD_DECL for %s/%s', field.kind.name, field.spelling)
             members.append(self.FIELD_DECL(field))
+        obj.members = members
         # FIXME BUG clang: anonymous structure field with only one anonymous field
         # is not a FIELD_DECL. does not appear in get_fields() !!!
         #
@@ -842,11 +874,10 @@ class CursorHandler(ClangHandler):
         # by now, the type is registered.
         if not declared_instance:
             log.debug('_record_decl: %s was previously registered', name)
-        obj = self.get_registered(name)
-        obj.members = members
         # obj.packed = packed
         # final fixup
         self._fixup_record(obj)
+        obj = self.update_register(name, obj)
         return obj
 
     def _fixup_record_bitfields_type(self, s):
@@ -1275,15 +1306,15 @@ class CursorHandler(ClangHandler):
             value = None
         log.debug('MACRO: #define %s%s %s', name, args or '', value)
         obj = typedesc.Macro(name, args, value)
+        self.set_location(obj, cursor)
+        # set the comment in the obj
+        obj.comment = comment
         try:
             self.register(name, obj)
         except DuplicateDefinitionException:
             log.info('Redefinition of %s %s->%s', name, self.parser.all[name].args, value)
             # HACK
             self.parser.all[name] = obj
-        self.set_location(obj, cursor)
-        # set the comment in the obj
-        obj.comment = comment
         return True
 
     @log_entity

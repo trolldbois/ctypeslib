@@ -2,8 +2,9 @@
 # This file provides common utility functions for the test suite.
 #
 
-from clang.cindex import Cursor
-from clang.cindex import TranslationUnit
+from ctypeslib.codegen.cindex import Cursor
+from ctypeslib.codegen.cindex import TranslationUnit
+from ctypeslib.codegen.cindex import Type
 from collections.abc import Iterable
 
 import logging
@@ -113,12 +114,13 @@ def decorator(dec):
 @decorator
 def log_entity(func):
     def fn(*args, **kwargs):
-        name = args[0].get_unique_name(args[1])
+        cursor = next(arg for arg in args if isinstance(arg, (Type, Cursor)))
+        name = args[0].get_unique_name(cursor)
         if name == '':
-            parent = args[1].semantic_parent
+            parent = cursor.semantic_parent
             if parent:
                 name = 'child of %s' % parent.displayname
-        log.debug("%s: displayname:'%s'",func.__name__, name)
+        log.debug("%s: displayname:'%s'", func.__name__, name)
         # print 'calling {}'.format(func.__name__)
         return func(*args, **kwargs)
     return fn

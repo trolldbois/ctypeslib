@@ -1,19 +1,22 @@
 """clangparser - use clang to get preprocess a source code."""
 
+import collections
 import logging
 import os
-import collections
 
-from clang.cindex import Index, TranslationUnit
-from clang.cindex import TypeKind
+from ctypeslib.codegen.cindex import Index, TranslationUnit
+from ctypeslib.codegen.cindex import TypeKind
+from ctypeslib.codegen.hash import hash_combine
 
 from ctypeslib.codegen import cursorhandler
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen import typehandler
+from ctypeslib.codegen import cache
 from ctypeslib.codegen import util
 from ctypeslib.codegen.handler import DuplicateDefinitionException
 from ctypeslib.codegen.handler import InvalidDefinitionError
 from ctypeslib.codegen.handler import InvalidTranslationUnitException
+
 
 log = logging.getLogger('clangparser')
 
@@ -97,6 +100,17 @@ class Clang_Parser(object):
         self.__filter_location = list(
             map(lambda f: os.path.abspath(f), src_files))
 
+    @cache.cached_pure_method()
+    def _do_parse(self, filename):
+        if os.path.abspath(filename) in self.__processed_location:
+            return
+        index = Index.create()
+        tu = index.parse(filename, self.flags, options=self.tu_options)
+        if not tu:
+            log.warning("unable to load input")
+            return
+        return tu
+
     def parse(self, filename):
         """
         . reads 1 file
@@ -109,25 +123,23 @@ class Clang_Parser(object):
         . for each VAR_DECL, register a Variable
         . for each TYPEREF ??
         """
-        if os.path.abspath(filename) in self.__processed_location:
-            return
-        index = Index.create()
-        tu = index.parse(filename, self.flags, options=self.tu_options)
-        if not tu:
-            log.warning("unable to load input")
-            return
-        self._parse_tu_diagnostics(tu, filename)
-        self.tu = tu
+        self.tu = self._do_parse(filename)
+        self._parse_tu_diagnostics(self.tu, filename)
         root = self.tu.cursor
         for node in root.get_children():
             self.startElement(node)
         return
 
-    def parse_string(self, input_data, lang='c', all_warnings=False, flags=None):
+    @cache.cached_pure_method()
+    def _do_parse_string(self, input_data, lang='c', all_warnings=False, flags=None):
         """Use this parser on a memory string/file, instead of a file on disk"""
         tu = util.get_tu(input_data, lang, all_warnings, flags)
-        self._parse_tu_diagnostics(tu, "memory_input.c")
-        self.tu = tu
+        return tu
+
+    def parse_string(self, input_data, lang='c', all_warnings=False, flags=None):
+        """Use this parser on a memory string/file, instead of a file on disk"""
+        self.tu = self._do_parse_string(input_data, lang, all_warnings, flags)
+        self._parse_tu_diagnostics(self.tu, "memory_input.c")
         root = self.tu.cursor
         for node in root.get_children():
             self.startElement(node)
@@ -197,7 +209,8 @@ class Clang_Parser(object):
 
     def register(self, name, obj):
         """Registers an unique type description"""
-        if (name, obj) in self.all_set:
+        all_set_key = hash_combine((name, hash(obj)))
+        if all_set_key in self.all_set and name in self.all:
             log.debug('register: %s already defined: %s', name, obj.name)
             return self.all[name]
         if name in self.all:
@@ -214,7 +227,7 @@ class Clang_Parser(object):
                 return obj
         log.debug('register: %s ', name)
         self.all[name] = obj
-        self.all_set.add((name, obj))
+        self.all_set.add(all_set_key)
         return obj
 
     def get_registered(self, name):
@@ -225,11 +238,25 @@ class Clang_Parser(object):
         """Checks if a named type description is registered"""
         return name in self.all
 
+    def update_register(self, name, new_obj):
+        assert self.is_registered(name)
+        obj = self.all.pop(name)
+        all_set_key = hash_combine((name, obj))
+        try:
+            self.all_set.remove(all_set_key)
+        except KeyError:
+            # leak the previous definition hash in all_set
+            pass
+        all_set_key = hash_combine((name, new_obj))
+        self.all[name] = new_obj
+        self.all_set.add(all_set_key)
+        return new_obj
+
     def remove_registered(self, name):
         """Removes a named type"""
         log.debug('Unregister %s', name)
-        self.all_set.remove((name, self.all[name]))
-        del self.all[name]
+        obj = self.all.pop(name)
+        self.all_set.remove(hash_combine((name, obj)))
 
     def make_ctypes_convertor(self, _flags):
         """
@@ -397,4 +424,4 @@ typedef void* pointer_t;''', flags=_flags)
                 result.append(i)
 
         log.debug("parsed items order: %s", result)
-        return result
+        return tuple(result)

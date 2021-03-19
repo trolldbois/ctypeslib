@@ -35,6 +35,7 @@ class DuplicateDefinitionException(KeyError):
     pass
 
 
+
 ################################################################
 
 class ClangHandler(object):
@@ -55,6 +56,9 @@ class ClangHandler(object):
 
     def is_registered(self, name):
         return self.parser.is_registered(name)
+
+    def update_register(self, name, obj):
+        return self.parser.update_register(name, obj)
 
     def remove_registered(self, name):
         return self.parser.remove_registered(name)
