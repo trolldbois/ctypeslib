@@ -21,129 +21,155 @@ class EnumTest(ClangTest):
 
     def test_enum_short_option_uint8(self):
         """
-        Enums can be forced to occupy less space than an int if possible:
-          1) Add the attribute `__attribute__((__packed__))` to the C variable declarations
-          2) Set the compiler flag ` CFLAGS += -fshort-enums`
-        In any case, we should trust the enum size returned by the compiler.
+        Test the enum size when compiler flag '-fshort-enums' is used.
+        Test the signedness of the enum, based on the sign of the values it contains.
         """
-        flags = ['-target', 'i386-linux', '-fshort-enums']
+        flags = ['-fshort-enums']
         self.convert(
             '''
         enum myEnum {
-            MIN=0,   /* UINT8_MIN */
-            MAX=0xFF /* UINT8_MAX */
+            MIN = 0,   /* UINT8_MIN */
+            MAX = 0xFF /* UINT8_MAX */
         };
         ''', flags)
 
-        # Expect enum stored as 1 byte
         self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 1)
+        self.assertEqual(self.namespace.myEnum, ctypes.c_uint8)
         self.assertEqual(self.namespace.MIN, 0)
         self.assertEqual(self.namespace.MAX, 0xFF)
 
     def test_enum_short_option_uint16(self):
         """
-        Enums can be forced to occupy less space than an int if possible:
-          1) Add the attribute `__attribute__((__packed__))` to the C variable declarations
-          2) Set the compiler flag ` CFLAGS += -fshort-enums`
-        In any case, we should trust the enum size returned by the compiler.
+        Test the enum size when compiler flag '-fshort-enums' is used.
+        Test the signedness of the enum, based on the sign of the values it contains.
         """
-        flags = ['-target', 'i386-linux', '-fshort-enums']
+        flags = ['-fshort-enums']
         self.convert(
             '''
         enum myEnum {
-            MIN=0,      /* UINT16_MIN */
-            MAX=0xFFFF  /* UINT16_MAX */
+            MIN = 0,      /* UINT16_MIN */
+            MAX = 0xFFFF  /* UINT16_MAX */
         };
         ''', flags)
 
-        # Expect enum stored as 1 byte
         self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 2)
+        self.assertEqual(self.namespace.myEnum, ctypes.c_uint16)
         self.assertEqual(self.namespace.MIN, 0)
         self.assertEqual(self.namespace.MAX, 0xFFFF)
 
     def test_enum_short_option_uint32(self):
         """
-        Enums can be forced to occupy less space than an int if possible:
-          1) Add the attribute `__attribute__((__packed__))` to the C variable declarations
-          2) Set the compiler flag ` CFLAGS += -fshort-enums`
-        In any case, we should trust the enum size returned by the compiler.
+        Test the enum size when compiler flag '-fshort-enums' is used.
+        Test the signedness of the enum, based on the sign of the values it contains.
         """
-        flags = ['-target', 'i386-linux', '-fshort-enums']
+        flags = ['-fshort-enums']
         self.convert(
             '''
         enum myEnum {
-            MIN=0,          /* UINT32_MIN */
-            MAX=0xFFFFFFFF  /* UINT32_MAX */
+            MIN = 0,          /* UINT32_MIN */
+            MAX = 0xFFFFFFFF  /* UINT32_MAX */
         };
         ''', flags)
 
-        # Expect enum stored as 1 byte
         self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 4)
+        self.assertEqual(self.namespace.myEnum, ctypes.c_uint32)
         self.assertEqual(self.namespace.MIN, 0)
         self.assertEqual(self.namespace.MAX, 0xFFFFFFFF)
 
-    def test_enum_short_option_int8(self):
+    def test_enum_short_option_uint64(self):
         """
-        Enums can be forced to occupy less space than an int if possible:
-          1) Add the attribute `__attribute__((__packed__))` to the C variable declarations
-          2) Set the compiler flag ` CFLAGS += -fshort-enums`
-        In any case, we should trust the enum size returned by the compiler.
+        Test the enum size when compiler flag '-fshort-enums' is used.
+        Test the signedness of the enum, based on the sign of the values it contains.
         """
-        flags = ['-target', 'i386-linux', '-fshort-enums']
+        flags = ['-fshort-enums']
         self.convert(
             '''
         enum myEnum {
-            MIN=-128, /* INT8_MIN */
-            MAX= 127  /* INT8_MAX */
+            MIN = 0,                  /* UINT64_MIN */
+            MAX = 0xFFFFFFFFFFFFFFFF  /* UINT64_MAX*/
         };
         ''', flags)
 
-        # Expect enum stored as 1 byte
+        self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 8)
+        self.assertEqual(self.namespace.myEnum, ctypes.c_uint64)
+        self.assertEqual(self.namespace.MIN, 0)
+        self.assertEqual(self.namespace.MAX, 0xFFFFFFFFFFFFFFFF)
+
+    def test_enum_short_option_int8(self):
+        """
+        Test the enum size when compiler flag '-fshort-enums' is used.
+        Test the signedness of the enum, based on the sign of the values it contains.
+        """
+        flags = ['-fshort-enums']
+        self.convert(
+            '''
+        enum myEnum {
+            MIN = (-0x7F - 1), /* INT8_MIN */
+            MAX =   0x7F       /* INT8_MAX */
+        };
+        ''', flags)
+
         self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 1)
-        self.assertEqual(self.namespace.MIN, -128)
-        self.assertEqual(self.namespace.MAX, 127)
+        self.assertEqual(self.namespace.myEnum, ctypes.c_int8)
+        self.assertEqual(self.namespace.MIN, (-0x7F - 1))
+        self.assertEqual(self.namespace.MAX,   0x7F)
 
     def test_enum_short_option_int16(self):
         """
-        Enums can be forced to occupy less space than an int if possible:
-          1) Add the attribute `__attribute__((__packed__))` to the C variable declarations
-          2) Set the compiler flag ` CFLAGS += -fshort-enums`
-        In any case, we should trust the enum size returned by the compiler.
+        Test the enum size when compiler flag '-fshort-enums' is used.
+        Test the signedness of the enum, based on the sign of the values it contains.
         """
-        flags = ['-target', 'i386-linux', '-fshort-enums']
+        flags = ['-fshort-enums']
         self.convert(
             '''
         enum myEnum {
-            MIN=-32768, /* INT16_MIN */
-            MAX= 32767  /* INT16_MAX*/
+            MIN = (-0x7FFF - 1), /* INT16_MIN */
+            MAX =   0x7FFF       /* INT16_MAX*/
         };
         ''', flags)
 
-        # Expect enum stored as 1 byte
         self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 2)
-        self.assertEqual(self.namespace.MIN, -32768)
-        self.assertEqual(self.namespace.MAX, 32767)
+        self.assertEqual(self.namespace.myEnum, ctypes.c_int16)
+        self.assertEqual(self.namespace.MIN, (-0x7FFF - 1))
+        self.assertEqual(self.namespace.MAX,   0x7FFF)
 
     def test_enum_short_option_int32(self):
         """
-        Enums can be forced to occupy less space than an int if possible:
-          1) Add the attribute `__attribute__((__packed__))` to the C variable declarations
-          2) Set the compiler flag ` CFLAGS += -fshort-enums`
-        In any case, we should trust the enum size returned by the compiler.
+        Test the enum size when compiler flag '-fshort-enums' is used.
+        Test the signedness of the enum, based on the sign of the values it contains.
         """
-        flags = ['-target', 'i386-linux', '-fshort-enums']
+        flags = ['-fshort-enums']
         self.convert(
             '''
         enum myEnum {
-            MIN=-65536, /* INT32_MIN */
-            MAX= 65535  /* INT32_MAX*/
+            MIN = (-0x7FFFFFFF - 1), /* INT32_MIN */
+            MAX =   0x7FFFFFFF       /* INT32_MAX*/
         };
         ''', flags)
 
-        # Expect enum stored as 1 byte
         self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 4)
-        self.assertEqual(self.namespace.MIN, -65536)
-        self.assertEqual(self.namespace.MAX, 65535)
+        self.assertEqual(self.namespace.myEnum, ctypes.c_int32)
+        self.assertEqual(self.namespace.MIN, (-0x7FFFFFFF - 1))
+        self.assertEqual(self.namespace.MAX,   0x7FFFFFFF)
+
+    def test_enum_short_option_int64(self):
+        """
+        Test the enum size when compiler flag '-fshort-enums' is used.
+        Test the signedness of the enum, based on the sign of the values it contains.
+        """
+        flags = ['-fshort-enums']
+        self.convert(
+            '''
+        enum myEnum {
+            MIN =(-0x7FFFFFFFFFFFFFFF - 1), /* INT64_MIN */
+            MAX =  0x7FFFFFFFFFFFFFFF       /* INT64_MAX*/
+        };
+        ''', flags)
+
+        self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 8)
+        self.assertEqual(self.namespace.myEnum, ctypes.c_int64)
+        self.assertEqual(self.namespace.MIN, (-0x7FFFFFFFFFFFFFFF - 1))
+        self.assertEqual(self.namespace.MAX,   0x7FFFFFFFFFFFFFFF)
 
 
 if __name__ == "__main__":

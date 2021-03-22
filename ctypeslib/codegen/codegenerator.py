@@ -469,22 +469,37 @@ class Generator(object):
         for item in tp.values:
             self._generate(item)
         if tp.name:
-            # Enums can be forced to occupy less space than an int if possible:
-            #  1) Add the attribute `__attribute__((__packed__))` to the C variable declarations
-            #  2) Set the compiler flag ` CFLAGS += -fshort-enums`
+            # Enums can be forced to occupy less space than an int when the compiler flag '-fshort-enums' is set.
+            # The size adjustment is done when possible, depending on the values of the enum.
             # In any case, we should trust the enum size returned by the compiler.
-            # https://stackoverflow.com/a/54527229/1641819
-            # https://stackoverflow.com/a/56432050/1641819
-            if tp.size == 1:
-                enum_size = 'ctypes.c_byte'
-            elif tp.size == 2:
-                enum_size = 'ctypes.c_int16'
-            elif tp.size == 4:
-                enum_size = 'ctypes.c_int32'
-            else:
-                enum_size = 'ctypes.c_int'
+            #
+            # Furthermore, in order to obtain a correct (un)signed representation in Python,
+            # the signedness of the enum is deduced from the sign of enum values.
+            # If there is not any negative value in the enum, then the resulting ctype will be unsigned.
+            # Sources:
+            #   https://stackoverflow.com/a/54527229/1641819
+            #   https://stackoverflow.com/a/56432050/1641819
 
-            print("%s = %s # enum" % (tp.name, enum_size), file=self.stream)
+            # Look for any negative value in enum
+            has_negative = False
+            for item in tp.values:
+                if item.value < 0:
+                    has_negative = True
+                    break
+
+            # Determine enum type depending on its size and signedness
+            if tp.size == 1:
+                enum_ctype = 'ctypes.c_int8' if has_negative else 'ctypes.c_uint8'
+            elif tp.size == 2:
+                enum_ctype = 'ctypes.c_int16' if has_negative else 'ctypes.c_uint16'
+            elif tp.size == 4:
+                enum_ctype = 'ctypes.c_int32' if has_negative else 'ctypes.c_uint32'
+            elif tp.size == 8:
+                enum_ctype = 'ctypes.c_int64' if has_negative else 'ctypes.c_uint64'
+            else:
+                enum_ctype = 'ctypes.c_int' if has_negative else 'ctypes.c_uint'
+
+            print("%s = %s # enum" % (tp.name, enum_ctype), file=self.stream)
             self.names.append(tp.name)
         self._enumtypes += 1
         return
