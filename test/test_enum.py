@@ -171,6 +171,63 @@ class EnumTest(ClangTest):
         self.assertEqual(self.namespace.MIN, (-0x7FFFFFFFFFFFFFFF - 1))
         self.assertEqual(self.namespace.MAX,   0x7FFFFFFFFFFFFFFF)
 
+    def test_enum_default_size_unsigned(self):
+        """
+        Test the enum size when compiler flag '-fshort-enums' is NOT used.
+        Test the signedness of the enum, based on the sign of the values it contains.
+        """
+        self.convert(
+            '''
+        enum myEnum {
+            MIN = 0,
+            MAX =  0xFFFFFFFF  /* UINT32_MAX */
+        };
+        ''')
+
+        self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 4)
+        self.assertEqual(self.namespace.myEnum, ctypes.c_uint)
+        self.assertEqual(self.namespace.MIN, 0)
+        self.assertEqual(self.namespace.MAX, 0xFFFFFFFF)
+        self.assertTrue(self.namespace.MAX > 0)
+
+    def test_enum_signedness(self):
+        """
+        Test enum signedness, based on the size and sign of the values it contains.
+        Test with/without setting compiler flag '-fshort-enums'
+        """
+        flags = [None, ['-fshort-enums']]
+        enum_sizes = [1, 2, 4, 8]
+        enum_types = [ctypes.c_uint8, ctypes.c_uint16, ctypes.c_uint32, ctypes.c_uint64]
+        enum_values = [0xFF, 0xFFFF, 0xFFFFFFFF, 0xFFFFFFFFFFFFFFFF]
+
+        for flag in flags:
+            for (enum_size, enum_type, enum_value) in zip(enum_sizes, enum_types, enum_values):
+                with self.subTest(flags=flag, enum_size=enum_size, enum_value=enum_value):
+
+                    # Declare an enum, holding one entry of value arbitrary set to enum_value//2.
+                    self.convert(f'enum myEnum {{ FOO = {enum_value//2:#x}U}};', flag)
+
+                    if flag is None:
+                        # Without compiler flag '-fshort-enums'
+                        self.assertEqual(ctypes.sizeof(self.namespace.myEnum), max(4, enum_size))
+                        self.assertEqual(self.namespace.myEnum, ctypes.c_uint32 if enum_size <= 4 else enum_type)
+                    else:
+                        # With compiler flag '-fshort-enums'
+                        self.assertEqual(ctypes.sizeof(self.namespace.myEnum), enum_size)
+                        self.assertEqual(self.namespace.myEnum, enum_type)
+
+                    self.assertEqual(self.namespace.FOO, enum_value//2, msg=
+                                     'Test value used to define the enum size (arbitrary set to enum_value//2).')
+
+                    my_enum = self.namespace.myEnum()
+                    # Set a 1-byte value with the most significant bit set (MSb).
+                    my_enum.value = enum_value
+                    # We expect that enum is interpreted as an positive unsigned byte
+                    # and NOT as a negative signed byte.
+                    self.assertTrue(my_enum.value > 0, msg=
+                                    'We expect that the enum is interpreted as an positive unsigned integer '
+                                    'and NOT as a negative signed integer.')
+
 
 if __name__ == "__main__":
     # logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
