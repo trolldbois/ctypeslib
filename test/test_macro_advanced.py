@@ -16,8 +16,12 @@ class Macro(ClangTest):
     # @unittest.skip('')
 
     def setUp(self):
-        # we need to generate macro. Which is very long for some reasons.
+        # We need to generate macro (including function-like macro)
+        # This used to take a long time to process but some performance
+        # improvements have been implemented and I am not sure if it's
+        # still the case for common workloads. (See: codegen.cache).
         self.full_parsing_options = True
+        self.advanced_macro = True
 
     def test_bitwise(self):
         self.convert(textwrap.dedent("""

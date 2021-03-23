@@ -87,13 +87,14 @@ class Macro(T):
 
     """a C preprocessor definition with arguments"""
 
-    def __init__(self, name, args, body):
+    def __init__(self, name, args, body, func):
         """all arguments are strings, args is the literal argument list
         *with* the parens around it:
         Example: Macro("CD_INDRIVE", "(status)", "((int)status > 0)")"""
         self.name = name
         self.args = args
         self.body = body
+        self.func = func
 
 
 class File(T):

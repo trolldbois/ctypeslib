@@ -11,12 +11,15 @@ from ctypeslib.codegen.handler import CursorKindException
 from ctypeslib.codegen.handler import DuplicateDefinitionException
 from ctypeslib.codegen.handler import InvalidDefinitionError
 from ctypeslib.codegen.cache import cached_pure_method
+from ctypeslib.codegen.preprocess import (
+    is_identifier,
+    process_macro_function,
+    remove_outermost_parentheses,
+)
 from ctypeslib.codegen.util import (
     contains_invalid_code,
     expand_macro_function,
-    is_identifier,
     log_entity,
-    remove_outermost_parentheses,
 )
 
 
@@ -661,7 +664,11 @@ class CursorHandler(ClangHandler):
                                     tokens.consume()
                                     token = tokens.current
                                     call_args = self._macro_args_handling(tokens, call_args=True)
-                                    value = expand_macro_function(macro, call_args)
+                                    expansion_limit = None
+                                    if self.parser.advanced_macro:
+                                        expansion_limit = 1
+                                    value = expand_macro_function(
+                                        macro, call_args, namespace=self.parser.interpreter_namespace, limit=expansion_limit)
                                     token = tokens.current
                                 else:
                                     value = macro.body
@@ -1251,7 +1258,6 @@ class CursorHandler(ClangHandler):
             elif len(tokens) == 3 and tokens[1] == '-':
                 value = ''.join(tokens[1:])
             elif tokens[1] == '(':
-                # TODO, differentiate between function-like macro and expression in ()
                 # function macro or an expression.
                 tokens = remove_outermost_parentheses(tokens[1:])
                 if tokens and tokens[0] == "(":
@@ -1268,7 +1274,8 @@ class CursorHandler(ClangHandler):
                         value = str_tokens
 
                 elif all(map(lambda a: a == "," or is_identifier(str(a)), tokens)):
-                    # no-op function
+                    # TODO FIX differentiation between function-like macro and expression in ()
+                    # no-op function ?
                     args = list(map(
                         lambda a: str(a).strip(), tokens
                     ))
@@ -1305,7 +1312,12 @@ class CursorHandler(ClangHandler):
         if name in ['NULL', '__thread'] or value in ['__null', '__thread']:
             value = None
         log.debug('MACRO: #define %s%s %s', name, args or '', value)
-        obj = typedesc.Macro(name, args, value)
+        func = None
+        if args:
+            func = process_macro_function(name, args, value)
+            if func is not None:
+                self.parser.interprete(func)
+        obj = typedesc.Macro(name, args, value, func)
         self.set_location(obj, cursor)
         # set the comment in the obj
         obj.comment = comment

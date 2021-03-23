@@ -4,14 +4,15 @@ import collections
 import logging
 import os
 
-from ctypeslib.codegen.cindex import Index, TranslationUnit
+from ctypeslib.codegen.cindex import Index, TranslationUnit, TargetInfo
 from ctypeslib.codegen.cindex import TypeKind
 from ctypeslib.codegen.hash import hash_combine
 
+from ctypeslib.codegen import cache
 from ctypeslib.codegen import cursorhandler
+from ctypeslib.codegen import preprocess
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen import typehandler
-from ctypeslib.codegen import cache
 from ctypeslib.codegen import util
 from ctypeslib.codegen.handler import DuplicateDefinitionException
 from ctypeslib.codegen.handler import InvalidDefinitionError
@@ -79,15 +80,22 @@ class Clang_Parser(object):
         self.typekind_handler = typehandler.TypeHandler(self)
         self.__filter_location = None
         self.__processed_location = set()
+        self._advanced_macro = False
+        self.interpreter_namespace = {}
 
     def init_parsing_options(self):
         """Set the Translation Unit to skip functions bodies per default."""
         self.tu_options = TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
 
-    def activate_macros_parsing(self):
+    def activate_macros_parsing(self, advanced_macro=False):
         """Activates the detailled code parsing options in the Translation
         Unit."""
         self.tu_options |= TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD
+        self._advanced_macro = advanced_macro
+
+    @property
+    def advanced_macro(self):
+        return self._advanced_macro
 
     def activate_comment_parsing(self):
         """Activates the comment parsing options in the Translation Unit."""
@@ -103,12 +111,12 @@ class Clang_Parser(object):
     @cache.cached_pure_method()
     def _do_parse(self, filename):
         if os.path.abspath(filename) in self.__processed_location:
-            return
+            return None
         index = Index.create()
         tu = index.parse(filename, self.flags, options=self.tu_options)
         if not tu:
             log.warning("unable to load input")
-            return
+            return None
         return tu
 
     def parse(self, filename):
@@ -124,6 +132,9 @@ class Clang_Parser(object):
         . for each TYPEREF ??
         """
         self.tu = self._do_parse(filename)
+        if self.tu is None:
+            return
+        self.ti = TargetInfo.from_translation_unit(self.tu)
         self._parse_tu_diagnostics(self.tu, filename)
         root = self.tu.cursor
         for node in root.get_children():
@@ -331,6 +342,12 @@ typedef void* pointer_t;''', flags=_flags)
     def get_ctypes_size(self, typekind):
         return self.ctypes_sizes[typekind]
 
+    def get_pointer_width(self):
+        return self.ti.pointer_width
+
+    def get_platform_triple(self):
+        return self.ti.triple
+
     def parse_cursor(self, cursor):
         """Forward parsing calls to dedicated CursorKind Handlder"""
         return self.cursorkind_handler.parse_cursor(cursor)
@@ -425,3 +442,6 @@ typedef void* pointer_t;''', flags=_flags)
 
         log.debug("parsed items order: %s", result)
         return tuple(result)
+
+    def interprete(self, expr):
+        preprocess.exec_processed_macro(expr, self.interpreter_namespace)

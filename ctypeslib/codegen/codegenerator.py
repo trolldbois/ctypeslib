@@ -154,6 +154,8 @@ class Generator(object):
         If a structure type is used, declare our ctypes.Structure extension type
         """
         self.enable_macro_processing = lambda: True
+        if not self.parser.advanced_macro:
+            return
         import pkgutil
         shared = pkgutil.get_data('ctypeslib', 'codegen/preprocess.py').decode()
         print(shared, file=self.imports)
@@ -272,11 +274,14 @@ class Generator(object):
                 macro_body = " ".join(str(_) for _ in macro.body)
                 ret.write("stream", f"# {macro.name} = {macro_body} # macro")
         elif macro_args:
-            macro_func = process_macro_function(macro.name, macro.args, macro.body)
-            if macro_func is not None:
-                ret.write("stream", f"\n# macro function {macro.name}{macro_func}")
+            if self.parser.advanced_macro:
+                macro_func = process_macro_function(macro.name, macro.args, macro.body)
+                if macro_func is not None:
+                    ret.write("stream", f"\n# macro function {macro.name}{macro_func}")
+                else:
+                    ret.write("stream", f"\n# invalid macro function {macro.name}{macro.body}")
             else:
-                ret.write("stream", f"\n# invalid macro function {macro.name}{macro.body}")
+                ret.write("stream", f"\n# macro function {macro.name}")
 
         elif isinstance(macro_body, bool):
             ret.write("stream", f"{macro.name} = {macro_body} # macro")
@@ -1184,13 +1189,14 @@ def generate_code(
     generate_locations=False,
     filter_location=False,
     flags=None,
+    advanced_macro=False,
 ):
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
     parser = clangparser.Clang_Parser(flags or [])
     # if macros are not needed, use a faster TranslationUnit
     if typedesc.Macro in types:
-        parser.activate_macros_parsing()
+        parser.activate_macros_parsing(advanced_macro)
     if generate_comments is True:
         parser.activate_comment_parsing()
 
