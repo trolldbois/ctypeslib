@@ -150,6 +150,7 @@ class Clang_Parser(object):
     def parse_string(self, input_data, lang='c', all_warnings=False, flags=None):
         """Use this parser on a memory string/file, instead of a file on disk"""
         self.tu = self._do_parse_string(input_data, lang, all_warnings, flags)
+        self.ti = TargetInfo.from_translation_unit(self.tu)
         self._parse_tu_diagnostics(self.tu, "memory_input.c")
         root = self.tu.cursor
         for node in root.get_children():

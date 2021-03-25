@@ -64,7 +64,6 @@ class SourceRange(cindex.SourceRange):
         """
         if getattr(self, "_cached_start", None) is None:
             self._cached_start = self._super_start
-            self._cached_start.__class__ = SourceLocation
         return self._cached_start
 
     # end is non-cachable since it is used in __hash__
@@ -78,7 +77,6 @@ class SourceRange(cindex.SourceRange):
         """
         if getattr(self, "_cached_end", None) is None:
             self._cached_end = self._super_end
-            self._cached_end.__class__ = SourceLocation
         return self._cached_end
 
 
@@ -211,7 +209,7 @@ class Token(cindex.Token):
         self._cached_spelling = None
 
     def __hash__(self):
-        return hash_value(self.spelling)
+        return hash_combine((self._tu, self.spelling))
 
     _super_spelling = cindex.Token.spelling
 
@@ -229,11 +227,7 @@ class Token(cindex.Token):
     @cached_property()
     def cursor(self):
         """The Cursor this Token corresponds to."""
-        cursor = self._super_cursor
-        cursor.__class__ = Cursor
-        cursor.location.__class__ = SourceLocation
-        cursor.extent.__class__ = SourceRange
-        return cursor
+        return self._super_cursor
 
 
 cindex.Token = Token

@@ -38,12 +38,26 @@ def _from_c_literal(literal_regex, value):
     return match.group(1)
 
 
-def from_c_int_literal(value):
-    return _from_c_literal(_c_int_literal_regex, value)
+def from_c_int_literal(value, pointer_width):
+    for (base, m) in zip(
+        (16, 8, 10),
+        map(
+            lambda r: r.match(value),
+            (
+                _c_hexint_literal_regex,
+                _c_octint_literal_regex,
+                _c_decint_literal_regex,
+            ),
+        ),
+    ):
+        if m:
+            return _process_c_int_matched_literal(m, pointer_width, base)
+
+    raise ValueError(f"{value} not is not a valid integer")
 
 
 def from_c_float_literal(value):
-    return _from_c_literal(_c_decimal_literal_regex, value)
+    return float(_from_c_literal(_c_decimal_literal_regex, value))
 
 
 def _process_c_literal(literal_regex, value, repl=r"\1"):
@@ -83,9 +97,7 @@ def _get_c_int_type(suffix, unsigned, _long):
 _c_int_type_map = {
     k: _get_c_int_type(*k)
     for k in itertools.product(
-        [False, True],  # suffix
-        [False, True],  # unsigned
-        [False, True],  # long
+        [False, True], [False, True], [False, True],  # suffix  # unsigned  # long
     )
 }
 
@@ -109,24 +121,24 @@ def _process_c_int_matched_literal(match, pointer_width, base):
             _type = ctypes.c_uint64
         else:
             _type = ctypes.c_int64
-    return str(_type(value).value)
+    return _type(value).value
 
 
 def process_c_int_literal(value, pointer_width=64):
     value = _process_c_literal(
         _c_hexint_literal_regex,
         value,
-        repl=lambda m: _process_c_int_matched_literal(m, pointer_width, 16),
+        repl=lambda m: str(_process_c_int_matched_literal(m, pointer_width, 16)),
     )
     value = _process_c_literal(
         _c_octint_literal_regex,
         value,
-        repl=lambda m: _process_c_int_matched_literal(m, pointer_width, 8),
+        repl=lambda m: str(_process_c_int_matched_literal(m, pointer_width, 8)),
     )
     value = _process_c_literal(
         _c_decint_literal_regex,
         value,
-        repl=lambda m: _process_c_int_matched_literal(m, pointer_width, 10),
+        repl=lambda m: str(_process_c_int_matched_literal(m, pointer_width, 10)),
     )
     return value
 
@@ -145,9 +157,37 @@ def from_c_literal(value):
     return value
 
 
+_c_string_literal = r"(?:L|u8|u|U)?(R)?(\"|')((?:(?!\2).)*)\2"
+_c_string_literal_regex = re.compile(_c_string_literal)
+_c_raw_string_literal = r"([^()\\s]{0,16})\(((?:(?!\1).)*)\)\1?"
+_c_raw_string_literal_regex = re.compile(_c_raw_string_literal)
+
+
+def _process_c_string_literal(match, quote=False):
+    raw_string = match.group(1) is not None
+    value = match.group(3)
+    if raw_string:
+        value = _c_raw_string_literal_regex.sub(r"\2", value)
+    if not quote:
+        return value
+    else:
+        return f'"{value}"'
+
+
+def from_c_string_literal(value):
+    return _c_string_literal_regex.sub(_process_c_string_literal, value)
+
+
+def process_c_string_literals(value):
+    return _c_string_literal_regex.sub(
+        lambda m: _process_c_string_literal(m, quote=True), value
+    )
+
+
 def process_c_literals(value, pointer_width=64):
     value = process_c_int_literal(value, pointer_width=64)
     value = process_c_float_literal(value)
+    value = process_c_string_literals(value)
     return value
 
 

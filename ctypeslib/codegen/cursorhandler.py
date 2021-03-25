@@ -13,6 +13,10 @@ from ctypeslib.codegen.handler import InvalidDefinitionError
 from ctypeslib.codegen.cache import cached_pure_method
 from ctypeslib.codegen.preprocess import (
     is_identifier,
+    from_c_int_literal,
+    from_c_float_literal,
+    from_c_string_literal,
+    process_c_literals,
     process_macro_function,
     remove_outermost_parentheses,
 )
@@ -64,6 +68,36 @@ class CursorTokens:
             self.consume()
             return True
         return False
+
+
+CharTypes = [
+    TypeKind.CHAR_U,
+    TypeKind.UCHAR,
+    TypeKind.CHAR16,
+    TypeKind.CHAR32,
+    TypeKind.CHAR_S,
+    TypeKind.SCHAR,
+    TypeKind.WCHAR,
+]
+
+IntegerTypes = [
+    TypeKind.USHORT,
+    TypeKind.UINT,
+    TypeKind.ULONG,
+    TypeKind.ULONGLONG,
+    TypeKind.UINT128,
+    TypeKind.SHORT,
+    TypeKind.INT,
+    TypeKind.LONG,
+    TypeKind.LONGLONG,
+    TypeKind.INT128,
+]
+
+FloatTypes = [
+    TypeKind.FLOAT,
+    TypeKind.DOUBLE,
+    TypeKind.LONGDOUBLE,
+]
 
 
 class CursorHandler(ClangHandler):
@@ -135,11 +169,26 @@ class CursorHandler(ClangHandler):
     def DECL_REF_EXPR(self, cursor):
         return cursor.displayname
 
+    def _cast_list_expr(self, type_kind, value):
+        if not isinstance(value, str):
+            return value
+        try:
+            if type_kind in IntegerTypes:
+                return from_c_int_literal(value, self.parser.get_pointer_width())
+            elif type_kind in FloatTypes:
+                return from_c_float_literal(value)
+            elif type_kind in CharTypes:
+                return value
+        except ValueError:
+            return value
+
     @log_entity
     def INIT_LIST_EXPR(self, cursor):
         """Returns a list of literal values."""
         values = [self.parse_cursor(child)
                   for child in list(cursor.get_children())]
+        element_type = cursor.type.get_array_element_type().kind
+        values = list(map(lambda v: self._cast_list_expr(element_type, v), values))
         return values
 
     ################################
@@ -390,8 +439,18 @@ class CursorHandler(ClangHandler):
             init_value = None
         else:
             log.debug('VAR_DECL: default init_value: %s', init_value)
+
+            def cast_value(cursor_kind, value):
+                if cursor_kind == CursorKind.INTEGER_LITERAL:
+                    return int(value)
+                elif cursor_kind == CursorKind.FLOATING_LITERAL:
+                    return float(value)
+                else:
+                    return value
             if len(init_value) > 0:
-                init_value = init_value[0][1]
+                init_value = list(map(lambda i: cast_value(*i), init_value))
+            if len(init_value) == 1:
+                init_value = init_value[0]
         return init_value
 
     def _get_var_decl_init_value(self, _ctype, children):
@@ -470,35 +529,11 @@ class CursorHandler(ClangHandler):
         # string prefixes https://en.cppreference.com/w/cpp/language/string_literal
         # integer suffixes https://en.cppreference.com/w/cpp/language/integer_literal
         if cursor.kind in [CursorKind.CHARACTER_LITERAL, CursorKind.STRING_LITERAL]:
-            # clean prefix
-            value = re.sub(r'''^(L|u8|u|U)(R|"|')''', r'\2', value)
-            # R for raw strings
-            # we need to remove the raw-char-sequence prefix,suffix
-            if value[0] == 'R':
-                s = value[1:]
-                # if there is no '(' in the 17 first char, its not valid
-                offset = s[:17].index('(')
-                delimiter = s[1:offset] # we skip the "
-                value = s[offset + 1:-offset - 1]
-                return value
-            # we strip string delimiters
-            return value[1:-1]
-        elif cursor.kind == CursorKind.MACRO_INSTANTIATION:
-            # prefix = value[:3].split('"')[0]
-            return value
+            return from_c_string_literal(value)
         elif cursor.kind == CursorKind.MACRO_DEFINITION:
-            c = value[-1]
-            if c in ['"', "'"]:
-                value = re.sub('''^L%s''' % c , c, value)
-            else:
-                # unsigned int / long int / unsigned long int / long long int / unsigned long long int
-                # this works and doesn't eat STRING values because no '"' is before $ in the regexp.
-                # FIXME combinaisons of u/U, l/L, ll/LL, and combined, plus z/Z combined with u/U
-                value = re.sub("(u|U|l|L|ul|UL|ll|LL|ull|ULL|z|Z|zu|ZU)$", "", value)
-            return value
+            return process_c_literals(value)
         else:
-            pass
-        return value
+            return value
 
     @cached_pure_method()
     def _macro_args_handling(self, tokens, call_args=False):
@@ -545,6 +580,7 @@ class CursorHandler(ClangHandler):
         # tokens == [] , because ??? clang problem ? so there is no spelling available.
         tokens = self._get_cursor_tokens(cursor)
         log.debug('literal has %d tokens.[ %s ]', len(tokens), ' '.join([str(t.spelling) for t in tokens]))
+
         if cursor.kind == CursorKind.STRING_LITERAL:
             if len(tokens) == 1:
                 # use a shortcut that works for unicode
@@ -602,24 +638,22 @@ class CursorHandler(ClangHandler):
             # Cleanup specific c-lang or c++ prefix/suffix for POD types.
             if token.cursor.kind == CursorKind.INTEGER_LITERAL:
                 # strip type suffix for constants
-                value = value.replace('L', '').replace('U', '')
-                value = value.replace('l', '').replace('u', '')
-                if value[:2] == '0x' or value[:2] == '0X':
-                    value = '0x%s' % value[2:]  # "int(%s,16)"%(value)
-                else:
-                    value = int(value)
+                value = str(from_c_int_literal(value, self.parser.get_pointer_width()))
                 # consume token
                 tokens.consume()
                 token = tokens.current
             elif token.cursor.kind == CursorKind.FLOATING_LITERAL:
                 # strip type suffix for constants
-                value = value.replace('f', '').replace('F', '')
-                value = float(value)
+                value = str(from_c_float_literal(value))
                 # consume token
                 tokens.consume()
                 token = tokens.current
-            elif (token.cursor.kind == CursorKind.CHARACTER_LITERAL or
-                          token.cursor.kind == CursorKind.STRING_LITERAL):
+            elif token.cursor.kind == CursorKind.CHARACTER_LITERAL:
+                value = self._clean_string_literal(token.cursor, value)
+                # consume token
+                tokens.consume()
+                token = tokens.current
+            elif token.cursor.kind == CursorKind.STRING_LITERAL:
                 value = self._clean_string_literal(token.cursor, value)
                 # consume token
                 tokens.consume()
@@ -1317,6 +1351,7 @@ class CursorHandler(ClangHandler):
             func = process_macro_function(name, args, value)
             if func is not None:
                 self.parser.interprete(func)
+
         obj = typedesc.Macro(name, args, value, func)
         self.set_location(obj, cursor)
         # set the comment in the obj
