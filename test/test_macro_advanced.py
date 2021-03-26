@@ -2,7 +2,7 @@ import unittest
 import datetime
 import textwrap
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 """Test if macro are correctly generated.
 """
@@ -39,8 +39,10 @@ class Macro(ClangTest):
         self.assertEqual(self.namespace.BAR(1, 2, 3), ("foo", 3, 2, 1, "bar"))
 
     def test_stdint(self):
-        self.gen("test/data/stdint.h")
-        # print(self.text_output)
+        self.convert(textwrap.dedent("""
+            #include <stdint.h>
+        """))
+        print(self.text_output)
         self.assertEqual(self.namespace.INT8_MIN, -128)
         self.assertEqual(self.namespace.INT16_MIN, -32767 - 1)
         self.assertEqual(self.namespace.INT32_MIN, -2147483647 - 1)
@@ -59,4 +61,4 @@ class Macro(ClangTest):
 
 if __name__ == "__main__":
     # logging.basicConfig(level=logging.INFO)
-    unittest.main(verbosity=2)
+    main(verbosity=2)

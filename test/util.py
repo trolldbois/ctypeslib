@@ -2,13 +2,16 @@
 # This file provides common utility functions for the test suite.
 #
 
+import argparse
 import ctypes
 import os
+import sys
 from io import StringIO
 from ctypes import RTLD_GLOBAL
 
-from clang.cindex import Cursor
-from clang.cindex import TranslationUnit
+from ctypeslib.codegen.cindex import Config
+from ctypeslib.codegen.cindex import Cursor
+from ctypeslib.codegen.cindex import TranslationUnit
 import unittest
 from ctypeslib.codegen import clangparser, codegenerator
 from ctypeslib.codegen import util as codegen_util
@@ -159,6 +162,19 @@ class ClangTest(unittest.TestCase):
                              'Offsets for target: %s.%s Clang:%d Python:%d flags:%s' % (
                                  name, membername, _c_offset, _p_offset, self.parser.flags))
         return
+
+
+def main(*args, **kwds):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--libclang-library', default=None)
+    parser.add_argument('--libclang-include-dir', default=None)
+    ns, unittest_args = parser.parse_known_args()
+    if ns.libclang_library:
+        Config.set_library_file(ns.libclang_library)
+    if ns.libclang_include_dir:
+        Config.set_include_dir(ns.libclang_include_dir)
+    sys.argv[1:] = unittest_args
+    return unittest.main(*args, **kwds)
 
 
 __all__ = [

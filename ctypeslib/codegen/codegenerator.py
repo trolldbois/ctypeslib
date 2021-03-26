@@ -172,7 +172,7 @@ class Generator(object):
         pointer_size = self.parser.get_ctypes_size(TypeKind.POINTER) // 8
         longdouble_size = self.parser.get_ctypes_size(TypeKind.LONGDOUBLE) // 8
         # replacing template values
-        headers = headers.replace("__FLAGS__", str(self.parser.flags))
+        headers = headers.replace("__FLAGS__", str(self.parser.target_triple))
         headers = headers.replace("__WORD_SIZE__", str(word_size))
         headers = headers.replace("__POINTER_SIZE__", str(pointer_size))
         headers = headers.replace("__LONGDOUBLE_SIZE__", str(longdouble_size))
@@ -990,7 +990,7 @@ class Generator(object):
 
             libname = self.get_sharedlib(ret, LibraryStub(), cc, stub=True)
 
-        argnames = tuple(a or f"p{i}" % (i + 1) for i, a in enumerate(func.iterArgNames()))
+        argnames = tuple(a or f"p{i + 1}"for i, a in enumerate(func.iterArgNames()))
 
         if self.generate_locations and func.location:
             ret.write("stream", f"# {func.name} {func.location}")
@@ -1144,17 +1144,11 @@ class Generator(object):
             print(line, file=self.output)
 
     def print_stats(self, stream):
-        total = (
-            self._structures
-            + self._functiontypes
-            + self._enumtypes
-            + self._typedefs
-            + self._pointertypes
-            + self._arraytypes
-        )
+        total = self._structures + self._functiontypes + self._enumtypes + self._typedefs + \
+                self._pointertypes + self._arraytypes
         print("###########################", file=stream)
-        print("# Symbols defined:", file=stream)
-        print("#", file=stream)
+        print("# Symbols defined:")
+        print("#")
         print("# Variables:          %5d" % self._variables, file=stream)
         print("# Struct/Unions:      %5d" % self._structures, file=stream)
         print("# Functions:          %5d" % self._functiontypes, file=stream)
@@ -1168,7 +1162,6 @@ class Generator(object):
         print("#", file=stream)
         print("# Total symbols: %5d" % total, file=stream)
         print("###########################", file=stream)
-        return
 
 
 ################################################################

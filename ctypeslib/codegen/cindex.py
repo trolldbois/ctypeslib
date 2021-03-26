@@ -1,6 +1,9 @@
 """Augmented python-clang API: cache-friendly types and missing libclang bindings"""
 
+
+import packaging.version
 import collections.abc as collections_abc
+import os
 from clang import cindex
 from ctypes import byref, c_int
 import ctypes
@@ -166,6 +169,16 @@ class TranslationUnit(cindex.TranslationUnit):
             self._cached_spelling = self._super_spelling
         return self._cached_spelling
 
+    _super_from_source = cindex.TranslationUnit.__dict__["from_source"]
+
+    @classmethod
+    def from_source(cls, filename, cli_args=None, *args, **kwds):
+        if cli_args is None:
+            cli_args = []
+        if cindex.conf.include_path is not None:
+            cli_args.append(f"-isystem{cindex.conf.include_path}")
+        return cls._super_from_source(filename, cli_args, *args, **kwds)
+
 
 cindex.TranslationUnit = TranslationUnit
 
@@ -252,12 +265,38 @@ class TargetInfo(cindex.ClangObject):
 
 
 class Config(cindex.Config):
+
+    library_include_dir = None
+
     @cindex.CachedProperty
     def lib(self):
         lib = self.get_cindex_library()
         register_functions(lib, not Config.compatibility_check)
         Config.loaded = True
         return lib
+
+    @staticmethod
+    def set_include_dir(library_include_dir):
+        Config.library_include_dir = library_include_dir
+
+    @cindex.CachedProperty
+    def clang_version(self):
+        lib = self.lib
+        version = lib.clang_getClangVersion()
+        version_start = [c.isdigit() for c in version].index(True)
+        version = version[version_start:]
+        version = packaging.version.parse(version)
+        return version
+
+    @cindex.CachedProperty
+    def include_path(self):
+        if Config.library_include_dir is not None:
+            return Config.library_include_dir
+        version = ".".join(map(str, self.clang_version.release[2:]))
+        path = f"/usr/include/clang/{version}"
+        if not os.path.exists(path):
+            return None
+        return path
 
 
 # monkey_patch cindex.conf object Class
@@ -274,6 +313,7 @@ _functionList = cindex.functionList + [
         cindex._CXString.from_result,
     ),
     ("clang_TargetInfo_getPointerWidth", [TranslationUnit], ctypes.c_int),
+    ("clang_getClangVersion", [], cindex._CXString, cindex._CXString.from_result),
 ]
 
 
@@ -317,6 +357,8 @@ def _monkey_patch_funcptr(funcptr):
 def _monkey_patch_func(func):
     if isinstance(func, type) and issubclass(func, ctypes._CFuncPtr):
         return _monkey_patch_funcptr(func)
+    if not hasattr(func, "restype"):
+        return func
     func.restype = _monkey_patch_type(func.restype)
     if func.argtypes:
         func.argtypes = tuple(map(_monkey_patch_type, func.argtypes))
@@ -333,6 +375,9 @@ def register_functions(lib, ignore_errors):
     )
 
     def register(item):
+        if len(item) == 4:
+            errcheck_func = item[3]
+            item = item[:3] + (_monkey_patch_func(errcheck_func),)
         cindex.register_function(lib, item, ignore_errors)
         func = getattr(lib, item[0])
         _monkey_patch_func(func)

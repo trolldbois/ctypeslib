@@ -45,6 +45,10 @@ define pybinding-macro
 
 
 PRIVATE_SO_FILES = $(shell echo "$4" | sed "s#:# #g")
+PRIVATE_PYBINDING_BUNDLE = $$(shell echo $5)
+PRIVATE_C_INCLUDES := $$(call module-get-listed-export,host.libclang,C_INCLUDES)
+PRIVATE_C_INCLUDES := $$(PRIVATE_C_INCLUDES:%=-I%)
+$(call local-get-build-dir)/$1.py: PRIVATE_C_INCLUDES := $$(PRIVATE_C_INCLUDES)
 $(call local-get-build-dir)/$1.py: PRIVATE_SO_FILES := $$(PRIVATE_SO_FILES)
 $(call local-get-build-dir)/$1.py: PRIVATE_SRC_FILES = \
 	$$(foreach header, $$(shell echo "$3" | sed "s#:# #g"), \
@@ -56,6 +60,7 @@ $(call local-get-build-dir)/$1.py: PRIVATE_OBJECT_FLAGS := $$(foreach lib, $$(sh
 $(call local-get-build-dir)/$1.py: $(shell echo "$4" | sed "s#:# #g")
 	@echo "$$(PRIVATE_MODULE): Generating $1 python binding"
 	@echo "Private object flags: $$(PRIVATE_OBJECT_FLAGS)"
+	@echo "Private includes: $$(PRIVATE_C_INCLUDES)"
 	@echo "Private so files: $$(PRIVATE_SO_FILES)"
 
 	$(Q) PYTHONPATH=$(HOST_OUT_STAGING)/usr/lib/python/site-packages \
@@ -72,12 +77,16 @@ $(call local-get-build-dir)/$1.py: $(shell echo "$4" | sed "s#:# #g")
 			$$$$(sed -n -e 's/TARGET_GLOBAL_C_INCLUDES :=//p' $$(PRIVATE_OBJECT_FLAGS) | tr ' ' '\n' | sed -E 's/^(.+)/-I\1/') \
 			$$$$(sed -n -e 's/PRIVATE_GLOBAL_CFLAGS :=//p' $$(PRIVATE_OBJECT_FLAGS)) \
 			$$$$(sed -n -e 's/PRIVATE_CFLAGS :=//p' $$(PRIVATE_OBJECT_FLAGS)) \
+			$$(PRIVATE_C_INCLUDES) \
+			-D__PYBINDING_MACRO__=1 \
 			-fno-unsigned-char \
 		"
 
 LOCAL_CLEAN_FILES += $(call local-get-build-dir)/$1.py
-LOCAL_COPY_FILES += $(call local-get-build-dir)/$1.py:usr/lib/python/site-packages/
-LOCAL_DEPENDS_HOST_MODULES += host.pybinding
+
+LOCAL_COPY_FILES += $(call local-get-build-dir)/$1.py:usr/lib/python/site-packages/$1/__init__.py
+
+LOCAL_DEPENDS_HOST_MODULES += host.pybinding host.libclang
 LOCAL_DEPENDS_MODULES := python
 LOCAL_LIBRARIES += $(shell echo "$2" | sed "s#:# #g")
 
@@ -85,3 +94,16 @@ endef
 
 # Register the macro in alchemy
 $(call local-register-custom-macro,pybinding-macro)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := tst-ctypeslib-basic-types
+
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/tests $(LOCAL_PATH)/src
+LOCAL_CFLAGS := -Wall -Wextra -Werror -std=c99 -pedantic -fpic
+
+LOCAL_SRC_FILES := test/data/test-basic-types.c
+
+LOCAL_LIBRARIES := host.pybinding
+
+include $(BUILD_LIBRARY)

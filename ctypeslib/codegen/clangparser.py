@@ -1,8 +1,11 @@
 """clangparser - use clang to get preprocess a source code."""
 
 import collections
+import functools
+import itertools
 import logging
 import os
+import platform
 
 from ctypeslib.codegen.cindex import Index, TranslationUnit, TargetInfo
 from ctypeslib.codegen.cindex import TypeKind
@@ -72,6 +75,18 @@ class Clang_Parser(object):
         self._unhandled = []
         self.fields = {}
         self.tu = None
+        local_triple = f"{platform.machine()}-{platform.system()}".lower()
+        self.target_triple = local_triple
+        flag_iterator = iter(flags)
+        flags = []
+        for (flag, argument) in itertools.zip_longest(flag_iterator, flag_iterator):
+            if flag == "-target":
+                self.target_triple = argument
+                if self.target_triple == local_triple:
+                    continue
+            flags.append(flag)
+            if argument is not None:
+                flags.append(argument)
         self.flags = flags
         self.ctypes_sizes = {}
         self.init_parsing_options()
