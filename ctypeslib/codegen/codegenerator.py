@@ -532,6 +532,8 @@ class Generator:
                 r.add(m.type.typ)
             elif typedesc.is_record(m.type):
                 r.add(m.type)
+            elif m.type not in self.done:
+                r.add(m.type)
         # remove all already defined bodies
         r = [_ for _ in r if _.name not in self.body_generated]
         return r

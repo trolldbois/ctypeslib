@@ -291,7 +291,7 @@ class OrderingTest(ClangTest):
     def test_enum_struct(self):
         """run clang2py on a ordering issue involving enum and struct"""
         p, output, stderr = clang2py(['./test/data/test-enum.c'])
-        decl = output.index("class struct_S(Structure)")
+        decl = output.index("('e', c__EA_E),")
         enum = output.index("c__EA_E = ctypes.c_uint32")
         print(output)
         self.assertGreater(decl, enum, "Generated incorrect ordering")
