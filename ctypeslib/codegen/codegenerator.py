@@ -24,36 +24,27 @@ log = logging.getLogger("codegen")
 
 
 class Generator:
-    def __init__(
-        self,
-        output,
-        generate_comments=False,
-        known_symbols=None,
-        searched_dlls=None,
-        preloaded_dlls=None,
-        generate_docstrings=False,
-        generate_locations=False,
-        cross_arch=False,
-    ):
+    def __init__(self, output, cfg):
         self.output = output
         self.stream = StringIO()
         self.imports = StringIO()
-        self.generate_locations = generate_locations
-        self.generate_comments = generate_comments
-        self.generate_docstrings = generate_docstrings
-        self.known_symbols = known_symbols or {}
-        self.preloaded_dlls = preloaded_dlls or []
-        if searched_dlls is None:
+        self.cfg = cfg
+        self.generate_locations = cfg.generate_locations
+        self.generate_comments = cfg.generate_comments
+        self.generate_docstrings = cfg.generate_docstrings
+        self.known_symbols = cfg.known_symbols or {}
+        self.preloaded_dlls = cfg.preloaded_dlls or []
+        if cfg.searched_dlls is None:
             self.searched_dlls = []
         else:
-            self.searched_dlls = searched_dlls
+            self.searched_dlls = cfg.searched_dlls
 
         # we use collections.OrderedDict() to keep ordering
         self.done = collections.OrderedDict()  # type descriptions that have been generated
         self.names = list()  # names that have been generated
         self.more = collections.OrderedDict()
         self.macros = 0
-        self.cross_arch_code_generation = cross_arch
+        self.cross_arch_code_generation = cfg.cross_arch
         # what record dependency were generated
         self.head_generated = set()
         self.body_generated = set()
@@ -1008,32 +999,16 @@ class Generator:
 ################################################################
 
 
-def generate_code(
-    srcfiles,
-    outfile,
-    expressions=None,
-    symbols=None,
-    verbose=False,
-    generate_comments=False,
-    known_symbols=None,
-    searched_dlls=None,
-    types=None,
-    preloaded_dlls=None,
-    generate_docstrings=False,
-    generate_locations=False,
-    filter_location=False,
-    flags=None,
-):
+def generate_code(srcfiles, outfile, cfg):
     # expressions is a sequence of compiled regular expressions,
     # symbols is a sequence of names
-    parser = clangparser.Clang_Parser(flags or [])
+    parser = clangparser.Clang_Parser(cfg.clang_opts or [])
     # if macros are not needed, use a faster TranslationUnit
-    if typedesc.Macro in types:
+    if typedesc.Macro in cfg.types:
         parser.activate_macros_parsing()
-    if generate_comments is True:
+    if cfg.generate_comments is True:
         parser.activate_comment_parsing()
-
-    if filter_location is True:
+    if cfg.filter_location is True:
         parser.filter_location(srcfiles)
 
     #
@@ -1049,11 +1024,11 @@ def generate_code(
     # filter symbols to generate
     todo = []
 
-    if types:
-        items = [i for i in items if isinstance(i, types)]
+    if cfg.types:
+        items = [i for i in items if isinstance(i, cfg.types)]
 
-    if symbols:
-        syms = set(symbols)
+    if cfg.symbols:
+        syms = set(cfg.symbols)
         for i in items:
             if i.name in syms:
                 todo.append(i)
@@ -1064,8 +1039,8 @@ def generate_code(
         if syms:
             log.warning("symbols not found %s", [str(x) for x in list(syms)])
 
-    if expressions:
-        for s in expressions:
+    if cfg.expressions:
+        for s in cfg.expressions:
             log.debug("regexp: looking for %s", s.pattern)
             for i in items:
                 log.debug("regexp: i.name is %s", i.name)
@@ -1082,27 +1057,18 @@ def generate_code(
                 if match:
                     todo.append(i)
                     continue
-    if symbols or expressions:
+    if cfg.symbols or cfg.expressions:
         items = todo
 
     ################
     # TODO FIX this
-    cross_arch = "-target" in " ".join(flags)
-    gen = Generator(
-        outfile,
-        generate_locations=generate_locations,
-        generate_comments=generate_comments,
-        generate_docstrings=generate_docstrings,
-        known_symbols=known_symbols,
-        searched_dlls=searched_dlls,
-        preloaded_dlls=preloaded_dlls,
-        cross_arch=cross_arch,
-    )
+    cfg.cross_arch = "-target" in " ".join(cfg.clang_opts)
+    gen = Generator(outfile, cfg)
 
     # add some headers and ctypes import
     gen.generate_headers(parser)
     # make the structures
     loops = gen.generate_code(items)
-    if verbose:
+    if cfg.verbose:
         gen.print_stats(sys.stderr)
         log.info("needed %d loop(s)", loops)

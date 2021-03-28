@@ -10,7 +10,7 @@ from ctypes import RTLD_GLOBAL
 from clang.cindex import Cursor
 from clang.cindex import TranslationUnit
 import unittest
-from ctypeslib.codegen import clangparser, codegenerator
+from ctypeslib.codegen import clangparser, codegenerator, config
 from ctypeslib.codegen import util as codegen_util
 from ctypeslib.library import Library
 
@@ -31,6 +31,7 @@ class ClangTest(unittest.TestCase):
     def _gen(self, ofi, fname, flags=None, dlls=None):
         """Take a file input and generate the code.
         """
+        cfg = config.CodegenConfig()
         flags = flags or []
         dlls = [Library(name, nm="nm") for name in dlls]
         # leave the new parser accessible for tests
@@ -43,7 +44,9 @@ class ClangTest(unittest.TestCase):
         self.parser.parse(fname)
         items = self.parser.get_result()
         # gen code
-        cross_arch = '-target' in ' '.join(flags)
+        cfg.searched_dlls = dlls
+        cfg.clang_opts = flags
+        cfg.cross_arch = '-target' in ' '.join(flags)
         gen = codegenerator.Generator(ofi, searched_dlls=dlls, cross_arch=cross_arch)
         gen.generate_headers(self.parser)
         gen.generate_code(items)
