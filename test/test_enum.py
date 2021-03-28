@@ -11,9 +11,9 @@ class EnumTest(ClangTest):
 
     def test_enum(self):
         """
+        Test simple values
         """
-        flags = ['-target', 'i386-linux']
-        self.gen('test/data/test-enum.c', flags)
+        self.gen('test/data/test-enum.c')
         self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 4)
         self.assertEqual(self.namespace.ZERO, 0)
         self.assertEqual(self.namespace.ONE, 1)
