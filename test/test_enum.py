@@ -14,6 +14,7 @@ class EnumTest(ClangTest):
         Test simple values
         """
         self.gen('test/data/test-enum.c')
+        print(self.text_output)
         self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 4)
         self.assertEqual(self.namespace.ZERO, 0)
         self.assertEqual(self.namespace.ONE, 1)
@@ -287,6 +288,20 @@ class EnumTest(ClangTest):
 
                     self.assertTrue(my_enum.value < 0, msg=
                                     'We expect that the enum is interpreted as an negative unsigned integer.')
+
+    def test_enum_struct_ordering(self):
+        self.convert("""
+typedef enum {
+        ENUM
+} E;
+
+typedef struct S {
+        E e;
+} SS;""")
+        print(self.text_output)
+        self.assertIn("struct_S", self.namespace)
+        self.assertIn("SS", self.namespace)
+        self.assertIn("E", self.namespace)
 
 
 if __name__ == "__main__":

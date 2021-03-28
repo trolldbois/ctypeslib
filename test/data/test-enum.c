@@ -1,3 +1,7 @@
+#include "test-enum.h"
+
+SS s;
+
 enum myEnum {
 ZERO,
 ONE,
