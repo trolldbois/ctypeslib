@@ -1,7 +1,7 @@
 import unittest
 import ctypes
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 
 class CompareSizes(ClangTest):
@@ -75,4 +75,4 @@ import logging
 import sys
 if __name__ == "__main__":
     #logging.basicConfig( stream=sys.stderr, level=logging.DEBUG )
-    unittest.main()
+    main()

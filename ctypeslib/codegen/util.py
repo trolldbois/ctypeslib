@@ -2,19 +2,22 @@
 # This file provides common utility functions for the test suite.
 #
 
-from clang.cindex import Cursor
-from clang.cindex import TranslationUnit
+from ctypeslib.codegen.cindex import Cursor
+from ctypeslib.codegen.cindex import TranslationUnit
+from ctypeslib.codegen.cindex import Type
 from collections.abc import Iterable
 
 import logging
-import re
+import sys
+import textwrap
 
 from ctypeslib.codegen import typedesc
+from ctypeslib.codegen.preprocess import eval_processed_macro
 
-log = logging.getLogger('utils')
+log = logging.getLogger("utils")
 
 
-def get_tu(source, lang='c', all_warnings=False, flags=None):
+def get_tu(source, lang="c", all_warnings=False, flags=None):
     """Obtain a translation unit from source and language.
 
     By default, the translation unit is created from source file "t.<ext>"
@@ -26,17 +29,17 @@ def get_tu(source, lang='c', all_warnings=False, flags=None):
     all_warnings is a convenience argument to enable all compiler warnings.
     """
     args = list(flags or [])
-    name = 'memory_input.c'
-    if lang == 'cpp':
-        name = 'memory_input.cpp'
-        args.append('-std=c++11')
-    elif lang == 'objc':
-        name = 'memory_input.m'
-    elif lang != 'c':
-        raise Exception('Unknown language: %s' % lang)
+    name = "memory_input.c"
+    if lang == "cpp":
+        name = "memory_input.cpp"
+        args.append("-std=c++11")
+    elif lang == "objc":
+        name = "memory_input.m"
+    elif lang != "c":
+        raise Exception("Unknown language: %s" % lang)
 
     if all_warnings:
-        args += ['-Wall', '-Wextra']
+        args += ["-Wall", "-Wextra"]
 
     return TranslationUnit.from_source(name, args, unsaved_files=[(name, source)])
 
@@ -65,7 +68,6 @@ def get_cursor(source, spelling):
         result = get_cursor(cursor, spelling)
         if result is not None:
             return result
-
     return None
 
 
@@ -103,6 +105,7 @@ def decorator(dec):
         g.__doc__ = f.__doc__
         g.__dict__.update(f.__dict__)
         return g
+
     new_decorator.__name__ = dec.__name__
     new_decorator.__doc__ = dec.__doc__
     new_decorator.__dict__.update(dec.__dict__)
@@ -112,19 +115,20 @@ def decorator(dec):
 @decorator
 def log_entity(func):
     def fn(*args, **kwargs):
-        name = args[0].get_unique_name(args[1])
-        if name == '':
-            parent = args[1].semantic_parent
+        cursor = next(arg for arg in args if isinstance(arg, (Type, Cursor)))
+        name = args[0].get_unique_name(cursor)
+        if name == "":
+            parent = cursor.semantic_parent
             if parent:
-                name = 'child of %s' % parent.displayname
-        log.debug("%s: displayname:'%s'",func.__name__, name)
+                name = "child of %s" % parent.displayname
+        log.debug("%s: displayname:'%s'", func.__name__, name)
         # print 'calling {}'.format(func.__name__)
         return func(*args, **kwargs)
+
     return fn
 
 
 class ADict(dict):
-
     def __getattr__(self, name):
         try:
             return self[name]
@@ -132,40 +136,44 @@ class ADict(dict):
             raise AttributeError(name)
 
 
-_c_literal_regex = re.compile(
-    r"^([+-]?((\d+(e|E)[+-]?\d+)|(\d+(\.\d*)?((e|E)[+-]?\d+)?)|(\.\d+((e|E)[+-]?\d+)?)))(f|F|l|L)?$"
-)
+def expand_macro_function(macro, args, namespace=None, limit=None, max_recursion=None):
+    args = ", ".join(args)
+    code = f"{macro.name}({args})"
+    if max_recursion is None:
+        max_recursion = sys.getrecursionlimit()
+    max_eval = limit or max_recursion
+    try:
+        prev = eval_processed_macro(code, namespace=namespace)
+        for i in range(1, max_eval + 1):
+            if limit is not None and limit == i:
+                return prev
+            value = eval_processed_macro(str(prev), namespace=namespace)
+            if prev == value:
+                return value
+            prev = value
+        raise RecursionError(
+            f"maximum recursion depth exceeded in {macro.name} expansion"
+        )
+    except (SyntaxError, NameError):
+        return typedesc.InvalidGeneratedMacro(code)
 
 
-def from_c_float_literal(value):
-    if (not isinstance(value, str) and
-            isinstance(value, Iterable) and
-            all(map(lambda v: isinstance(v, str), value))):
-        value = "".join(value)
-    if not isinstance(value, str):
-        return None
-    match = _c_literal_regex.match(value)
-    if not match:
-        return None
-    return match.group(1)
-
-
-def contains_undefined_identifier(macro):
+def contains_invalid_code(macro):
     # body is undefined
-    if isinstance(macro.body, typedesc.UndefinedIdentifier):
+    if isinstance(macro.body, typedesc.InvalidGeneratedCode):
         return True
 
-    def _list_contains_undefined_identifier(l):
+    def _list_contains_invalid_code(l):
         for b in l:
-            if isinstance(b, typedesc.UndefinedIdentifier):
+            if isinstance(b, typedesc.InvalidGeneratedCode):
                 return True
-            if isinstance(b, list) and _list_contains_undefined_identifier(b):
+            if isinstance(b, list) and _list_contains_invalid_code(b):
                 return True
         return False
 
     # or one item is undefined
     if isinstance(macro.body, list):
-        if _list_contains_undefined_identifier(macro.body):
+        if _list_contains_invalid_code(macro.body):
             return True
 
     return False
@@ -191,8 +199,10 @@ def body_is_all_string_tokens(macro_body):
 
 
 __all__ = [
-    'get_cursor',
-    'get_cursors',
-    'get_tu',
-    'from_c_float_literal',
+    "get_cursor",
+    "get_cursors",
+    "get_tu",
+    "from_c_float_literal",
+    "remove_outermost_parentheses",
+    "replace_builtins",
 ]

@@ -1,7 +1,7 @@
 import ctypes
 import unittest
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 import logging
 
@@ -245,4 +245,4 @@ struct A {
 if __name__ == "__main__":
     # logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     # logging.getLogger('codegen').setLevel(logging.INFO)
-    unittest.main()
+    main()

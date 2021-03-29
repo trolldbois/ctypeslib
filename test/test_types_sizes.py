@@ -1,6 +1,6 @@
 import unittest
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 
 class BasicTypes(ClangTest):
@@ -110,4 +110,4 @@ class CompareTypes(ClangTest):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    main()

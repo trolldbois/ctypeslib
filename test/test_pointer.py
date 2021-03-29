@@ -1,7 +1,7 @@
 import unittest
 import ctypes
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 '''Test if pointers are correctly generated in structures for different target
 archictecture.
@@ -46,4 +46,4 @@ class Pointer(ClangTest):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    main()

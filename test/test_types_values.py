@@ -4,7 +4,7 @@ import sys
 import logging
 import unittest
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 
 class ConstantsTest(ClangTest):
@@ -372,4 +372,4 @@ typedef union MY_ROOT_UNION {
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    unittest.main()
+    main()

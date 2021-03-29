@@ -64,6 +64,11 @@ def main(argv=None):
 
     parser = argparse.ArgumentParser(prog='clang2py',
                                      description='Version %s. Generate python code from C headers' % (version))
+    parser.add_argument("--advanced-macro",
+                        dest="advanced_macro",
+                        action="store_true",
+                        help="enable function-like macro generation for those which are 'translapilable' to Python",
+                        default=False)
     parser.add_argument("-c", "--comments",
                         dest="generate_comments",
                         action="store_true",
@@ -305,8 +310,9 @@ def main(argv=None):
                       searched_dlls=dlls,
                       preloaded_dlls=options.preload,
                       types=options.kind,
-                      flags=clang_opts)
-    finally:
+                      flags=clang_opts,
+                      advanced_macro=options.advanced_macro)
+    except:
         if output_file is not None:
             output_file.close()
             os.remove(options.output)

@@ -11,6 +11,7 @@ import unittest
 from io import StringIO
 
 from ctypeslib.codegen import clangparser, codegenerator
+from test.util import main
 
 class ExampleTest(unittest.TestCase):
     def setUp(self):
@@ -90,5 +91,6 @@ struct example {
         #print("\tone.details[0].first == %d" % one.details[0].first)
         return
 
+
 if __name__ == "__main__":
-    unittest.main()
+    main()

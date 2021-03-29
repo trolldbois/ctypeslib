@@ -1,7 +1,7 @@
 import unittest
 import datetime
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 '''Test if macro are correctly generated.
 '''
@@ -480,6 +480,7 @@ char d[] = APREPOST;''')
 #define fn_name(a,b) real_name(a,b)
 fn_type fn_name(int a, int b);
 ''')
+        # print(self.text_output)
         self.assertIn("real_name", self.namespace)
 
     def test_simple_macro_function(self):
@@ -508,7 +509,7 @@ int tab1[] = MACRO_EXAMPLE(1,2);
         self.assertEqual(self.namespace.tab1, [1, 2])
         self.assertEqual(self.namespace.DEBUG, True)
         self.assertEqual(self.namespace.PROD, 1)
-        # we don't gen macro functions
+        # we DO NOT gen macro functions by default
         self.assertNotIn('MACRO_EXAMPLE', self.namespace)
         # self.assertEqual(self.namespace.MY, 123456)
         # that is not a thing that compiles
@@ -524,7 +525,7 @@ int tab1[] = MACRO_EXAMPLE(1,2);
         #define NO_SPAM NO SPACE SPAM
         #define NO_SPAM_FOO NO SPACE SPAM SPACE FOO
         ''')
-        # print(self.text_output)
+        # print(self.text_output)
         self.assertIn('SPAM', self.namespace)
         self.assertEqual('spam', self.namespace.SPAM)
         self.assertIn('NO', self.namespace)
@@ -603,7 +604,7 @@ int v = __STDC_VERSION__;
         # replace leading 0 in day by a whitespace.
         this_date = datetime.datetime.now().strftime("%b %d %Y").replace(" 0", "  ")
         self.assertIn("# DATE = __DATE__", self.text_output)
-        self.assertIn("# DATE2 = __DATE__", self.text_output)
+        self.assertIn("# DATE2 = DATE", self.text_output)
 
     @unittest.skip
     def test_internal_defines_recursive_with_operation(self):
@@ -645,8 +646,8 @@ int v = __STDC_VERSION__;
     };
     ''')
         # print(self.text_output)
-        self.assertIn("# PACK = __attribute__", self.text_output)
-        self.assertIn("# PACKTO = __attribute__", self.text_output)
+        self.assertIn("# PACK = ", self.text_output)
+        self.assertIn("# PACKTO = ", self.text_output)
         self.assertIn("struct_foo", self.namespace)
 
     def test_enum_macro(self):
@@ -668,5 +669,5 @@ int v = __STDC_VERSION__;
 
 if __name__ == "__main__":
     import logging
-    logging.basicConfig(level=logging.DEBUG)
-    unittest.main()
+    # logging.basicConfig(level=logging.DEBUG)
+    main()

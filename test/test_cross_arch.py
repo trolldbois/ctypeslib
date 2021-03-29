@@ -3,7 +3,7 @@ import subprocess
 import sys
 import unittest
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 
 class CrossArchSimplerCode(ClangTest):
@@ -26,7 +26,5 @@ class CrossArchSimplerCode(ClangTest):
         # print(self.text_output)
 
 
-
-
 if __name__ == "__main__":
-    unittest.main()
+    main()

@@ -36,6 +36,7 @@ setup(
         ]},
     test_suite="test.alltests",
     install_requires=[
-       'clang>=11',
+        'clang>=11',
+        'packaging',
     ]
 )
