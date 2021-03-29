@@ -4,6 +4,7 @@
 import packaging.version
 import collections.abc as collections_abc
 import os
+import re
 from clang import cindex
 from ctypes import byref, c_int
 import ctypes
@@ -281,10 +282,17 @@ class Config(cindex.Config):
 
     @cindex.CachedProperty
     def clang_version(self):
-        lib = self.lib
+        try:
+            lib = self.lib
+        except cindex.LibclangError:
+            return None
         version = lib.clang_getClangVersion()
-        version_start = [c.isdigit() for c in version].index(True)
-        version = version[version_start:]
+        match = re.search(r"((?:[^:\s]+:([^-\s]*)[^\s]*)|(([^-\s]+)-?(?:[^\s]*)))$", version)
+        if not match:
+            return None
+        version = match.group(2) or match.group(4)
+        if not version:
+            return None
         version = packaging.version.parse(version)
         return version
 
@@ -292,7 +300,10 @@ class Config(cindex.Config):
     def include_path(self):
         if Config.library_include_dir is not None:
             return Config.library_include_dir
-        version = ".".join(map(str, self.clang_version.release[2:]))
+        version = self.clang_version
+        if version is None or version.release is None:
+            return None
+        version = ".".join(map(str, version.release[:2]))
         path = f"/usr/include/clang/{version}"
         if not os.path.exists(path):
             return None
