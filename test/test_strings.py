@@ -1,7 +1,7 @@
 import logging
 import unittest
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -141,4 +141,4 @@ class StringConstantsTest(ClangTest):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    unittest.main()
+    main()

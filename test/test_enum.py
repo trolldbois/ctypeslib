@@ -1,7 +1,7 @@
 import unittest
 import ctypes
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 
 class EnumTest(ClangTest):
@@ -307,4 +307,4 @@ typedef struct S {
 if __name__ == "__main__":
     # logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
     # logging.getLogger('codegen').setLevel(logging.INFO)
-    unittest.main()
+    main()

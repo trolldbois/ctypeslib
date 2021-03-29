@@ -3,7 +3,7 @@ import ctypes
 
 from ctypeslib.codegen.util import get_cursor
 from ctypeslib.codegen.util import get_tu
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 """Test if functions are correctly generated.
 """
@@ -77,4 +77,4 @@ class TestFunction(ClangTest):
 if __name__ == "__main__":
     import logging
     logging.basicConfig(level=logging.DEBUG)
-    unittest.main()
+    main()

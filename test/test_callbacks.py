@@ -2,7 +2,7 @@ import unittest
 import ctypes
 import logging
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 
 class Callback(ClangTest):
@@ -47,4 +47,4 @@ class Callback(ClangTest):
 
 if __name__ == "__main__":
     # logging.basicConfig(level=logging.INFO)
-    unittest.main(verbosity=2)
+    main(verbosity=2)

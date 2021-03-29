@@ -1,7 +1,7 @@
 import unittest
 import datetime
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 '''Test if macro are correctly generated.
 '''
@@ -670,4 +670,4 @@ int v = __STDC_VERSION__;
 if __name__ == "__main__":
     import logging
     # logging.basicConfig(level=logging.DEBUG)
-    unittest.main()
+    main()

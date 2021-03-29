@@ -1,6 +1,6 @@
-import io
+import logging
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 from ctypeslib.codegen import clangparser
 
 
@@ -35,3 +35,8 @@ struct example {
         self.assertTrue(self.parser.is_registered('struct_example'))
         self.assertFalse(self.parser.is_registered('struct_whatever'))
         return
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    main(verbosity=2)

@@ -3,7 +3,7 @@ import ctypes
 import logging
 import sys
 
-from test.util import ClangTest
+from test.util import ClangTest, main
 
 
 class RecordTest(ClangTest):
@@ -88,4 +88,4 @@ def p(s):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     # logging.getLogger('codegen').setLevel(logging.INFO)
-    unittest.main(verbosity=2)
+    main(verbosity=2)

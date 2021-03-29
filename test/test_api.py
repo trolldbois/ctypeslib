@@ -3,6 +3,8 @@ import io
 
 import ctypeslib
 
+from test.util import main
+
 
 class ApiTest(unittest.TestCase):
     def test_basic_use_string(self):
@@ -56,4 +58,4 @@ struct example {
 
 
 if __name__ == '__main__':
-    unittest.main()
+    main()
