@@ -1,3 +1,8 @@
+import re
+
+from ctypeslib.library import Library
+from ctypeslib.codegen import typedesc
+
 
 class CodegenConfig:
     # symbol to include, if empty, everything will be included
@@ -33,13 +38,54 @@ class CodegenConfig:
     def parse_options(self, options):
         self.symbols = options.symbols
         self.expressions = options.expressions
+        if options.expressions:
+            self.expressions = map(re.compile, options.expressions)
         self.verbose = options.verbose
         self.generate_comments = options.generate_comments
         self.generate_docstrings = options.generate_docstrings
         self.generate_locations = options.generate_locations
         self.filter_location = not options.generate_includes
         self.preloaded_dlls = options.preload
-        self.types = options.kind
+        # List exported symbols from libraries
+        self.searched_dlls = [Library(name, nm=options.nm) for name in options.dll]
+        self._parse_options_clang_opts(options)
+        self._parse_options_modules(options)
+        self._parse_options_types(options)
+
+    def _parse_options_types(self, options):
+        """ Filter objects types """
+        type_table = {"a": [typedesc.Alias],
+                      "c": [typedesc.Structure],
+                      "d": [typedesc.Variable],
+                      "e": [typedesc.Enumeration],  # , typedesc.EnumValue],
+                      "f": [typedesc.Function],
+                      "m": [typedesc.Macro],
+                      "s": [typedesc.Structure],
+                      "t": [typedesc.Typedef],
+                      "u": [typedesc.Union],
+                      }
+        if options.kind:
+            types = []
+            for char in options.kind:
+                typ = type_table[char]
+                types.extend(typ)
+            self.kind = tuple(types)
+
+    def _parse_options_modules(self, options):
+        # preload python modules with these names
+        for name in options.modules:
+            mod = __import__(name)
+            for submodule in name.split(".")[1:]:
+                mod = getattr(mod, submodule)
+            for name, item in mod.__dict__.items():
+                if isinstance(item, type):
+                    self.known_symbols[name] = mod.__name__
+
+    def _parse_options_clang_opts(self, options):
+        if options.target is not None:
+            self.clang_opts = ["-target", options.target]
+        if options.clang_args is not None:
+            self.clang_opts.extend(re.split("\s+", options.clang_args))
 
     @property
     def cross_arch(self):

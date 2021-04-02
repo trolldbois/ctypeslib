@@ -46,8 +46,7 @@ class ClangTest(unittest.TestCase):
         # gen code
         cfg.searched_dlls = dlls
         cfg.clang_opts = flags
-        cfg.cross_arch = '-target' in ' '.join(flags)
-        gen = codegenerator.Generator(ofi, searched_dlls=dlls, cross_arch=cross_arch)
+        gen = codegenerator.Generator(ofi, cfg=cfg)
         gen.generate_headers(self.parser)
         gen.generate_code(items)
         return gen

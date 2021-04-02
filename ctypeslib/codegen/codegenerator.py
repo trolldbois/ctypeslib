@@ -1006,9 +1006,9 @@ def generate_code(srcfiles, outfile, cfg):
     # if macros are not needed, use a faster TranslationUnit
     if typedesc.Macro in cfg.types:
         parser.activate_macros_parsing()
-    if cfg.generate_comments is True:
+    if cfg.generate_comments:
         parser.activate_comment_parsing()
-    if cfg.filter_location is True:
+    if cfg.filter_location:
         parser.filter_location(srcfiles)
 
     #
@@ -1061,8 +1061,6 @@ def generate_code(srcfiles, outfile, cfg):
         items = todo
 
     ################
-    # TODO FIX this
-    cfg.cross_arch = "-target" in " ".join(cfg.clang_opts)
     gen = Generator(outfile, cfg)
 
     # add some headers and ctypes import

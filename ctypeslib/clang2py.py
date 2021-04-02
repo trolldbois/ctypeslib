@@ -5,12 +5,13 @@ import os
 import platform
 import re
 import sys
+import tempfile
 import traceback
 
 from ctypes import RTLD_GLOBAL
 
 import ctypeslib
-from ctypeslib.codegen import typedesc
+from ctypeslib.codegen import typedesc, config
 from ctypeslib.codegen.codegenerator import generate_code
 from ctypeslib.library import Library
 from ctypeslib import clang_version
@@ -48,22 +49,71 @@ rpcrt4""".split()
 # rpcndr
 # ntdll
 
+def _is_typedesc(item):
+    for c in item:
+        if c not in 'acdefmstu':
+            raise argparse.ArgumentTypeError("types choices are 'acdefmstu'")
+
+
+class Input:
+    def __init__(self, options):
+        self.files = []
+        self._stdin = None
+        for f in options.files:
+            # stdin case
+            if f == sys.stdin:
+                _stdin = tempfile.NamedTemporaryFile(mode="w", prefix="stdin", suffix=".c", delete=False)
+                _stdin.write(f.read())
+                f = _stdin
+            self.files.append(f.name)
+            f.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        if self._stdin:
+            os.remove(self._stdin.name)
+        return True
+
+
+class Output:
+    def __init__(self, options):
+        # handle output
+        if options.output == "-":
+            self.stream = sys.stdout
+            self.output_file = None
+        else:
+            self.stream = open(options.output, "w")
+            self.output_file = self.stream
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        if self.output_file is not None:
+            self.output_file.close()
+            os.remove(self.options.output)
+        return True
+
 
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
-
-    local_platform_triple = "%s-%s" % (platform.machine(), platform.system())
-    clang_opts = []
+    cfg = config.CodegenConfig()
+    cfg.local_platform_triple = "%s-%s" % (platform.machine(), platform.system())
+    cfg.known_symbols = {}
+    cfg.searched_dlls = []
+    cfg.clang_opts = []
     files = None
 
     def windows_dlls(option, opt, value, parser):
         parser.values.dlls.extend(windows_dll_names)
 
-    version = ctypeslib.__version__
+    cfg.version = ctypeslib.__version__
 
     parser = argparse.ArgumentParser(prog='clang2py',
-                                     description='Version %s. Generate python code from C headers' % (version))
+                                     description='Version %s. Generate python code from C headers' % cfg.version)
     parser.add_argument("-c", "--comments",
                         dest="generate_comments",
                         action="store_true",
@@ -96,7 +146,8 @@ def main(argv=None):
                                           "u = Union\n"
                                           "default = 'cdefstu'\n",
                         metavar="TYPEKIND",
-                        default="cdefstu")
+                        default="cdefstu",
+                        type=_is_typedesc)
 
     parser.add_argument("-i", "--includes",
                         dest="generate_includes",
@@ -131,7 +182,8 @@ def main(argv=None):
     parser.add_argument("-o", "--output",
                         dest="output",
                         help="output filename (if not specified, standard output will be used)",
-                        default="-")
+                        default="-",)
+                        # type=argparse.FileType('w'))
 
     parser.add_argument("-p", "--preload",
                         dest="preload",
@@ -166,7 +218,7 @@ def main(argv=None):
 
     parser.add_argument("-t", "--target",
                         dest="target",
-                        help="target architecture (default: %s)" % local_platform_triple,
+                        help="target architecture (default: %s)" % cfg.local_platform_triple,
                         default=None)  # actually let clang alone decide.
 
     parser.add_argument("-v", "--verbose",
@@ -176,7 +228,7 @@ def main(argv=None):
                         default=False)
     parser.add_argument('-V', '--version',
                         action='version',
-                        version="%(prog)s version " + version + " clang: " + clang_version())
+                        version="%(prog)s version " + cfg.version + " clang: " + clang_version())
 
     parser.add_argument("-w",
                         action="store",
@@ -198,7 +250,12 @@ def main(argv=None):
                         type=int,
                         default=None)
 
-    # recognize - as stdin
+    parser.add_argument("--validate", dest="validate",
+                        help="validate the python code is correct",
+                        type=bool,
+                        default=True)
+
+    # FIXME recognize - as stdin
     # we do NOT support stdin
     parser.add_argument("files", nargs="+",
                         help="source filenames. stdin is not supported",
@@ -216,23 +273,7 @@ def main(argv=None):
 
     options = parser.parse_args(argv)
 
-    # handle stdin
-    files = []
-    _stdin = None
-    for f in options.files:
-        if f == sys.stdin:
-            import tempfile
-            _stdin = tempfile.NamedTemporaryFile(mode="w", prefix="stdin", suffix=".c", delete=False)
-            _stdin.write(f.read())
-            f = _stdin
-        files.append(f.name)
-        f.close()
-    # files = [f.name for f in options.files]
-    if options.target is not None:
-        clang_opts = ["-target", options.target]
-    if options.clang_args is not None:
-        clang_opts.extend(re.split("\s+", options.clang_args))
-
+    # cfg is the CodegenConfig, not the runtime config.
     level = logging.INFO
     if options.debug:
         level = logging.DEBUG
@@ -240,78 +281,22 @@ def main(argv=None):
         level = logging.ERROR
     logging.basicConfig(level=level, stream=sys.stderr)
 
-    if options.output == "-":
-        stream = sys.stdout
-        output_file = None
-    else:
-        stream = open(options.output, "w")
-        output_file = stream
+    # capture codegen options in config
+    cfg.parse_options(options)
 
-    if options.expressions:
-        options.expressions = map(re.compile, options.expressions)
+    # handle input files, and outputs
+    with Input(options) as inputs:
+        with Output(options) as outputs:
+            # start codegen
+            if cfg.generate_comments:
+                outputs.stream.write("# generated by 'clang2py'\n")
+                outputs.stream.write("# flags '%s'\n" % " ".join(argv[1:]))
 
-    if options.generate_comments:
-        stream.write("# generated by 'clang2py'\n")
-        stream.write("# flags '%s'\n" % " ".join(argv[1:]))
+            # Preload libraries
+            [Library(name, mode=RTLD_GLOBAL) for name in options.preload]
 
-    known_symbols = {}
+            generate_code(inputs.files, outputs.stream, cfg)
 
-    # Preload libraries
-    [Library(
-        name,
-        mode=RTLD_GLOBAL) for name in options.preload]
-
-    # List exported symbols from libraries
-    dlls = [Library(name, nm=options.nm) for name in options.dll]
-
-    for name in options.modules:
-        mod = __import__(name)
-        for submodule in name.split(".")[1:]:
-            mod = getattr(mod, submodule)
-        for name, item in mod.__dict__.items():
-            if isinstance(item, type):
-                known_symbols[name] = mod.__name__
-
-    type_table = {"a": [typedesc.Alias],
-                  "c": [typedesc.Structure],
-                  "d": [typedesc.Variable],
-                  "e": [typedesc.Enumeration],  # , typedesc.EnumValue],
-                  "f": [typedesc.Function],
-                  "m": [typedesc.Macro],
-                  "s": [typedesc.Structure],
-                  "t": [typedesc.Typedef],
-                  "u": [typedesc.Union],
-                  }
-    if options.kind:
-        types = []
-        for char in options.kind:
-            try:
-                typ = type_table[char]
-                types.extend(typ)
-            except KeyError:
-                parser.error("%s is not a valid choice for a TYPEKIND" % char)
-        options.kind = tuple(types)
-
-    try:
-        generate_code(files, stream,
-                      symbols=options.symbols,
-                      expressions=options.expressions,
-                      verbose=options.verbose,
-                      generate_comments=options.generate_comments,
-                      generate_docstrings=options.generate_docstrings,
-                      generate_locations=options.generate_locations,
-                      filter_location=not options.generate_includes,
-                      known_symbols=known_symbols,
-                      searched_dlls=dlls,
-                      preloaded_dlls=options.preload,
-                      types=options.kind,
-                      flags=clang_opts)
-    finally:
-        if output_file is not None:
-            output_file.close()
-            os.remove(options.output)
-        if _stdin:
-            os.remove(_stdin.name)
     return 0
 
 
