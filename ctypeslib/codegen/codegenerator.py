@@ -1002,6 +1002,9 @@ class Generator:
 ################################################################
 
 class CodeTranslator:
+    """
+    Organiser class to take C files in input, and produce python code in a standard fashion
+    """
     def __init__(self, cfg: config.CodegenConfig):
         self.cfg = cfg
         self.parser = None
@@ -1114,9 +1117,11 @@ class CodeTranslator:
         self.filtered_items = todo
 
 
+# easy to use API.
+
 def translate(input_io, cfg=None):
     """
-        Take a readable C like input and translate it to python.
+        Take a readable C like input readable and translate it to python.
     """
     cfg = cfg or config.CodegenConfig()
     translator = CodeTranslator(cfg)
@@ -1135,24 +1140,19 @@ def translate(input_io, cfg=None):
     return util.ADict(namespace)
 
 
-def translate_file(srcfile, outfile, cfg):
+def translate_files(source_files, outfile, cfg: config.CodegenConfig):
     """
-    Translate the content of srcfiles in python code in outfile
+    Translate the content of source_files in python code in outfile
+
+    source_files: list of filenames or single filename
     """
     translator = CodeTranslator(cfg)
     translator.preload_dlls()
-    translator.parse_input_file(srcfile)
+    if isinstance(source_files, list):
+        translator.parse_input_files(source_files)
+    else:
+        translator.parse_input_file(source_files)
     log.debug("Input was parsed")
     translator.generate_code(outfile)
     return
 
-def translate_files(srcfiles: list, outfile, cfg):
-    """
-    Translate the content of srcfiles in python code in outfile
-    """
-    translator = CodeTranslator(cfg)
-    translator.preload_dlls()
-    translator.parse_input_files(srcfiles)
-    log.debug("Input was parsed")
-    translator.generate_code(outfile)
-    return

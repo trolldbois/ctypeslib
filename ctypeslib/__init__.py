@@ -45,7 +45,6 @@ except ImportError as e:
     print(e)
 
 
-from ctypeslib.codegen.codegenerator import translate as translate_gen
-translate = translate_gen
+from ctypeslib.codegen.codegenerator import translate, translate_files
 
-__all__ = ['translate']
+__all__ = ['translate', 'translate_files']
