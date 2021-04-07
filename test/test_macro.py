@@ -439,7 +439,7 @@ char d[] = APREPOST;''')
         #include <wchar.h>
         wchar_t * my_foo = FOO;
         """)
-        print(self.text_output)
+        # print(self.text_output)
         self.assertEqual(self.namespace.SPAM, "spam")
         self.assertEqual(self.namespace.STRING_NULL, "NULL")
         self.assertEqual(self.namespace.FOO, "foo")

@@ -237,7 +237,7 @@ struct B {
 struct A {
         struct B b;
 };        ''')
-        print(self.text_output)
+        # print(self.text_output)
         self.assertIn('struct_A', self.namespace)
         self.assertIn('struct_B', self.namespace)
 
