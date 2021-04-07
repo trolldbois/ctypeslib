@@ -40,17 +40,17 @@ jobs:
         echo $LD_LIBRARY_PATH
         echo $PWD
         echo $(pwd)
-        echo ${{runner.os == 'Linux' }}}
+        echo ${{runner.os == 'Linux' }}
     - name: Update Linux LD_LIBRARY_PATH
-      if: ${{runner.os == 'Linux' }}}
+      if: ${{runner.os == 'Linux' }}
       run: |
         echo "LD_LIBRARY_PATH=$(pwd)/test/data/:$LD_LIBRARY_PATH" >> $GITHUB_ENV
     - name: Update Windows PATH
-      if: ${{runner.os == 'Windows' }}}
+      if: ${{runner.os == 'Windows' }}
       run: |
         echo "PATH=$(pwd)/test/data/:$Env:PATH" >> $GITHUB_ENV
     - name: Update macOS PATH
-      if: ${{runner.os == 'macOS' }}}
+      if: ${{runner.os == 'macOS' }}
       run: |
         echo "DYLD_LIBRARY_PATH=$(pwd)/test/data/:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
     - name: Install clang2py
