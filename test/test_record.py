@@ -241,6 +241,23 @@ struct A {
         self.assertIn('struct_A', self.namespace)
         self.assertIn('struct_B', self.namespace)
 
+    def test_record_anonymous_union(self):
+        """use _anonymous_"""
+        self.convert('''
+struct s {
+    int i;
+    union {
+        long l;
+    };
+};
+
+// struct s _s;
+ //_s.i = 0;
+''')
+        print(self.text_output)
+        self.assertIn("struct_s._anonymous_", self.text_output)
+        self.assertIn('struct_s', self.namespace)
+
 
 if __name__ == "__main__":
     # logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)

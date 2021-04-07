@@ -688,13 +688,11 @@ class Generator:
         for f in fields:
             # _anonymous_ fields are fields of type Structure or Union,
             # that have no name.
-            if not f.name and isinstance(f.type, (typedesc.Structure, typedesc.Union)):
+            if f.is_anonymous and isinstance(f.type, (typedesc.Structure, typedesc.Union)):
                 unnamed_fields[f] = "_%d" % len(unnamed_fields)
         if unnamed_fields:
-            print(
-                "%s_anonymous_ = %r" % (prefix, unnamed_fields.values()),
-                file=self.stream,
-            )
+            unnamed_fields_str = ", ".join("'%s'" % _ for _ in unnamed_fields.values())
+            print("%s_anonymous_ = (%s,)" % (prefix, unnamed_fields_str), file=self.stream)
         if len(fields) > 0:
             print("%s_fields_ = [" % prefix, file=self.stream)
             if self.generate_locations and body.struct.location:
