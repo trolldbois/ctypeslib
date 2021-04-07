@@ -33,6 +33,7 @@ class CodegenConfig:
     clang_opts: list = []
 
     def __init__(self):
+        self._init_types()
         pass
 
     def parse_options(self, options):
@@ -52,24 +53,27 @@ class CodegenConfig:
         self._parse_options_modules(options)
         self._parse_options_types(options)
 
+    _type_table = {"a": typedesc.Alias,
+                   "c": typedesc.Structure,
+                   "d": typedesc.Variable,
+                   "e": typedesc.Enumeration,  # , typedesc.EnumValue],
+                   "f": typedesc.Function,
+                   "m": typedesc.Macro,
+                   "s": typedesc.Structure,
+                   "t": typedesc.Typedef,
+                   "u": typedesc.Union,
+                   }
+
+    def _init_types(self, _default="cdefstu"):
+        types = []
+        for char in _default:
+            typ = self._type_table[char]
+            types.append(typ)
+        self.types = types
+
     def _parse_options_types(self, options):
         """ Filter objects types """
-        type_table = {"a": [typedesc.Alias],
-                      "c": [typedesc.Structure],
-                      "d": [typedesc.Variable],
-                      "e": [typedesc.Enumeration],  # , typedesc.EnumValue],
-                      "f": [typedesc.Function],
-                      "m": [typedesc.Macro],
-                      "s": [typedesc.Structure],
-                      "t": [typedesc.Typedef],
-                      "u": [typedesc.Union],
-                      }
-        if options.kind:
-            types = []
-            for char in options.kind:
-                typ = type_table[char]
-                types.extend(typ)
-            self.kind = tuple(types)
+        self._init_types(options.kind)
 
     def _parse_options_modules(self, options):
         # preload python modules with these names
@@ -93,4 +97,3 @@ class CodegenConfig:
         Is there a cross architecture option in clang_opts
         """
         return '-target' in ' '.join(self.clang_opts)
-

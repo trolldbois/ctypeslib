@@ -12,7 +12,7 @@ from ctypes import RTLD_GLOBAL
 
 import ctypeslib
 from ctypeslib.codegen import typedesc, config
-from ctypeslib.codegen.codegenerator import generate_code
+from ctypeslib.codegen.codegenerator import translate_files
 from ctypeslib.library import Library
 from ctypeslib import clang_version
 
@@ -53,6 +53,7 @@ def _is_typedesc(item):
     for c in item:
         if c not in 'acdefmstu':
             raise argparse.ArgumentTypeError("types choices are 'acdefmstu'")
+    return item
 
 
 class Input:
@@ -205,7 +206,7 @@ def main(argv=None):
                         help="regular expression for symbols to include "
                              "(if neither symbols nor expressions are specified,"
                              "everything will be included)",
-                        default=None)
+                        default=[])
 
     parser.add_argument("-s", "--symbol",
                         dest="symbols",
@@ -214,7 +215,7 @@ def main(argv=None):
                         help="symbol to include "
                              "(if neither symbols nor expressions are specified,"
                              "everything will be included)",
-                        default=None)
+                        default=[])
 
     parser.add_argument("-t", "--target",
                         dest="target",
@@ -293,9 +294,9 @@ def main(argv=None):
                 outputs.stream.write("# flags '%s'\n" % " ".join(argv[1:]))
 
             # Preload libraries
-            [Library(name, mode=RTLD_GLOBAL) for name in options.preload]
+            # [Library(name, mode=RTLD_GLOBAL) for name in options.preload]
 
-            generate_code(inputs.files, outputs.stream, cfg)
+            translate_files(inputs.files, outputs.stream, cfg)
 
     return 0
 

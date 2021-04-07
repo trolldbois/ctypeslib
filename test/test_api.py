@@ -2,6 +2,8 @@ import unittest
 import io
 
 import ctypeslib
+from ctypeslib.codegen import config
+from ctypeslib.codegen import typedesc
 
 
 class ApiTest(unittest.TestCase):
@@ -53,6 +55,38 @@ struct example {
         self.assertIn("struct_example", py_namespace)
         self.assertEqual(py_namespace.i, 12)
         self.assertEqual(py_namespace.c2, ['a', 'b', 'c'])
+
+
+class ConfigTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.input_io = io.StringIO('''
+        struct example_1 {
+            int first;
+            int last;
+        };
+
+        union example_2 {
+            int a;
+            float f;
+        };''')
+
+    def test_no_config(self):
+        py_namespace = ctypeslib.translate(self.input_io)
+        self.assertIn("struct_example_1", py_namespace)
+        self.assertIn("union_example_2", py_namespace)
+
+    def test_config_default(self):
+        cfg = config.CodegenConfig()
+        py_namespace = ctypeslib.translate(self.input_io, cfg)
+        self.assertIn("struct_example_1", py_namespace)
+        self.assertIn("union_example_2", py_namespace)
+
+    def test_filter_types(self):
+        cfg = config.CodegenConfig()
+        cfg._init_types("u")
+        py_namespace = ctypeslib.translate(self.input_io, cfg=cfg)
+        self.assertNotIn("struct_example_1", py_namespace)
+        self.assertIn("union_example_2", py_namespace)
 
 
 if __name__ == '__main__':

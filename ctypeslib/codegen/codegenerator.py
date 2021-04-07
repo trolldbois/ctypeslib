@@ -12,13 +12,16 @@ import os
 import pkgutil
 import sys
 import textwrap
+import io
 from io import StringIO
 
 from clang.cindex import TypeKind
 
 from ctypeslib.codegen import clangparser
+from ctypeslib.codegen import config
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen import util
+from ctypeslib.library import Library
 
 log = logging.getLogger("codegen")
 
@@ -942,7 +945,7 @@ class Generator:
 
     def generate(self, parser, items):
         self.generate_headers(parser)
-        self.generate_code(items)
+        return self.generate_code(items)
 
     def generate_code(self, items):
         print(
@@ -998,51 +1001,102 @@ class Generator:
 
 ################################################################
 
+class CodeTranslator:
+    def __init__(self, cfg: config.CodegenConfig):
+        self.cfg = cfg
+        self.parser = None
+        self.generator = None
+        self.items = []
+        self.filtered_items = []
 
-def generate_code(srcfiles, outfile, cfg):
-    # expressions is a sequence of compiled regular expressions,
-    # symbols is a sequence of names
-    parser = clangparser.Clang_Parser(cfg.clang_opts or [])
-    # if macros are not needed, use a faster TranslationUnit
-    if typedesc.Macro in cfg.types:
-        parser.activate_macros_parsing()
-    if cfg.generate_comments:
-        parser.activate_comment_parsing()
-    if cfg.filter_location:
-        parser.filter_location(srcfiles)
+    def preload_dlls(self):
+        # FIXME
+        self.cfg.preloaded_dlls = [Library(name, nm="nm") for name in self.cfg.preloaded_dlls]
 
-    #
-    items = []
-    for srcfile in srcfiles:
-        # verifying that is really a file we can open
-        with open(srcfile):
-            pass
-        log.debug("Parsing input file %s", srcfile)
-        parser.parse(srcfile)
-    items += parser.get_result()
-    log.debug("Input was parsed")
-    # filter symbols to generate
-    todo = []
+    def make_clang_parser(self):
+        self.parser = clangparser.Clang_Parser(self.cfg.clang_opts)
+        if typedesc.Macro in self.cfg.types:
+            self.parser.activate_macros_parsing()
+        if self.cfg.generate_comments:
+            self.parser.activate_comment_parsing()
+        # FIXME
+        # if self.cfg.filter_location:
+        #     parser.filter_location(srcfiles)
+        return self.parser
 
-    if cfg.types:
-        items = [i for i in items if isinstance(i, cfg.types)]
+    def parse_input_string(self, input_io):
+        if self.parser is None:
+            self.make_clang_parser()
+        self.parser.parse_string(input_io)
+        # get the typedesc C types items
+        self.items.extend(self.parser.get_result())
 
-    if cfg.symbols:
-        syms = set(cfg.symbols)
-        for i in items:
+    def parse_input_file(self, src_file):
+        if self.parser is None:
+            self.make_clang_parser()
+        self.parser.parse(src_file)
+        # get the typedesc C types items
+        self.items.extend(self.parser.get_result())
+
+    def parse_input_files(self, src_files: list):
+        if self.parser is None:
+            self.make_clang_parser()
+        # filter location with clang.
+        if self.cfg.filter_location:
+            self.parser.filter_location(src_files)
+        #
+        for srcfile in src_files:
+            # verifying that is really a file we can open
+            with open(srcfile):
+                pass
+            log.debug("Parsing input file %s", srcfile)
+            self.parser.parse(srcfile)
+        # get the typedesc C types items
+        self.items.extend(self.parser.get_result())
+
+    def make_code_generator(self, output):
+        self.generator = Generator(output, cfg=self.cfg)
+        return self.generator
+
+    def generate_code(self, output):
+        if self.generator is None:
+            self.make_code_generator(output)
+        self.filtered_items = list(self.items)
+        log.debug("%d items before filtering", len(self.filtered_items))
+        self.filter_types()
+        self.filter_symbols()
+        self.filter_expressions()
+        log.debug("Left with %d items after filtering", len(self.filtered_items))
+        loops = self.generator.generate(self.parser, self.filtered_items)
+        if self.cfg.verbose:
+            self.generator.print_stats(sys.stderr)
+            log.info("needed %d loop(s)", loops)
+
+    def filter_types(self):
+        self.filtered_items = [i for i in self.filtered_items if i.__class__ in self.cfg.types]
+
+    def filter_symbols(self):
+        if len(self.cfg.symbols) == 0:
+            return
+        todo = []
+        syms = set(self.cfg.symbols)
+        for i in self.filtered_items:
             if i.name in syms:
                 todo.append(i)
                 syms.remove(i.name)
             else:
                 log.debug("not generating {}: not a symbol".format(i.name))
-
         if syms:
             log.warning("symbols not found %s", [str(x) for x in list(syms)])
+        self.filtered_items = todo
 
-    if cfg.expressions:
-        for s in cfg.expressions:
+    def filter_expressions(self):
+        if len(self.cfg.expressions) == 0:
+            return
+        todo = []
+        for s in self.cfg.expressions:
             log.debug("regexp: looking for %s", s.pattern)
-            for i in items:
+            for i in self.filtered_items:
                 log.debug("regexp: i.name is %s", i.name)
                 if i.name is None:
                     continue
@@ -1057,16 +1111,48 @@ def generate_code(srcfiles, outfile, cfg):
                 if match:
                     todo.append(i)
                     continue
-    if cfg.symbols or cfg.expressions:
-        items = todo
+        self.filtered_items = todo
 
-    ################
-    gen = Generator(outfile, cfg)
 
-    # add some headers and ctypes import
-    gen.generate_headers(parser)
-    # make the structures
-    loops = gen.generate_code(items)
-    if cfg.verbose:
-        gen.print_stats(sys.stderr)
-        log.info("needed %d loop(s)", loops)
+def translate(input_io, cfg=None):
+    """
+        Take a readable C like input and translate it to python.
+    """
+    cfg = cfg or config.CodegenConfig()
+    translator = CodeTranslator(cfg)
+    translator.preload_dlls()
+    translator.parse_input_string(input_io)
+    # gen python code
+    output = io.StringIO()
+    translator.generate_code(output)
+    output.seek(0)
+    # inject generated code in python namespace
+    ignore_coding = output.readline()
+    # exec ofi.getvalue() in namespace
+    output = ''.join(output.readlines())
+    namespace = {}
+    exec(output, namespace)
+    return util.ADict(namespace)
+
+
+def translate_file(srcfile, outfile, cfg):
+    """
+    Translate the content of srcfiles in python code in outfile
+    """
+    translator = CodeTranslator(cfg)
+    translator.preload_dlls()
+    translator.parse_input_file(srcfile)
+    log.debug("Input was parsed")
+    translator.generate_code(outfile)
+    return
+
+def translate_files(srcfiles: list, outfile, cfg):
+    """
+    Translate the content of srcfiles in python code in outfile
+    """
+    translator = CodeTranslator(cfg)
+    translator.preload_dlls()
+    translator.parse_input_files(srcfiles)
+    log.debug("Input was parsed")
+    translator.generate_code(outfile)
+    return

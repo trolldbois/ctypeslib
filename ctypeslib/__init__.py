@@ -45,38 +45,7 @@ except ImportError as e:
     print(e)
 
 
-def translate(input_io, cfg=None):
-    """
-        Take a readable C like input and translate it to python.
-    """
-    import io
-    from ctypeslib.codegen import clangparser, codegenerator, config
-    from ctypeslib.codegen import util
-    from ctypeslib.library import Library
-    from ctypeslib import codegen
-    cfg = cfg or config.CodegenConfig()
-    flags = cfg.clang_opts
-    cfg.preloaded_dlls = [Library(name, nm="nm") for name in cfg.preloaded_dlls]
-    parser = clangparser.Clang_Parser(flags)
-    if cfg.generate_comments:
-        parser.activate_comment_parsing()
-    # if cfg....:
-    #     parser.activate_macros_parsing()
-    # TODO need to handle open file / io ?
-    parser.parse_string(input_io, )
-    items = parser.get_result()
-    # gen code
-    ofi = io.StringIO()
-    gen = codegenerator.Generator(ofi, cfg=cfg)
-    gen.generate_headers(parser)
-    gen.generate_code(items)
-    ofi.seek(0)
-    ignore_coding = ofi.readline()
-    # exec ofi.getvalue() in namespace
-    output = ''.join(ofi.readlines())
-    namespace = {}
-    exec(output, namespace)
-    return util.ADict(namespace)
-
+from ctypeslib.codegen.codegenerator import translate as translate_gen
+translate = translate_gen
 
 __all__ = ['translate']
