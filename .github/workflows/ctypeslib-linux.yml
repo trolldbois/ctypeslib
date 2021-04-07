@@ -35,6 +35,12 @@ jobs:
         CFLAGS="-Wall -Wextra -Werror -std=c99 -pedantic -fpic"
         LDFLAGS="-shared"
         clang $CFLAGS $LDFLAGS -o test/data/test-callbacks.so test/data/test-callbacks.c
+    - name: Show  LD_LIBRARY_PATH
+      run: |
+        echo $LD_LIBRARY_PATH
+        echo $PWD
+        echo $(pwd)
+        echo ${{runner.os == 'Linux' }}}
     - name: Update Linux LD_LIBRARY_PATH
       if: ${{runner.os == 'Linux' }}}
       run: |
