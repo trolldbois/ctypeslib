@@ -69,11 +69,14 @@ class Structure(ctypes.Structure, AsDictMixin):
         for name, type_ in cls._fields_:
             if hasattr(type_, "restype"):
                 if name in bound_fields:
-                    # use a closure to capture the callback from the loop scope
-                    fields[name] = (
-                        type_((lambda callback: lambda *args: callback(*args))(
-                            bound_fields[name]))
-                    )
+                    if bound_fields[name] is None:
+                        fields[name] = type_()
+                    else:
+                        # use a closure to capture the callback from the loop scope
+                        fields[name] = (
+                            type_((lambda callback: lambda *args: callback(*args))(
+                                bound_fields[name]))
+                        )
                     del bound_fields[name]
                 else:
                     # default callback implementation (does nothing)
