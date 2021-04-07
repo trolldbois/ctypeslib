@@ -254,7 +254,7 @@ struct s {
 // struct s _s;
  //_s.i = 0;
 ''')
-        print(self.text_output)
+        # print(self.text_output)
         self.assertIn("struct_s._anonymous_", self.text_output)
         self.assertIn('struct_s', self.namespace)
 
