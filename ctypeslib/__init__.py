@@ -20,31 +20,28 @@ else:
     __version__ = _dist.version
 
 # configure python-clang to use the local clang library
-try:
-    from ctypes.util import find_library
-    from clang import cindex
-    # debug for python-haystack travis-ci
-    v1 = ["clang-%d" % _ for _ in range(14, 6, -1)]
-    v2 = ["clang-%.1f" % _ for _ in range(6, 3, -1)]
-    v_list = v1 + v2 + ["clang-3.9", "clang-3.8", "clang-3.7"]
-    for version in ["libclang", "clang"] + v_list:
-        if find_library(version) is not None:
-            cindex.Config.set_library_file(find_library(version))
-            break
-    else:
-        if os.name == "posix" and sys.platform == "darwin":
-            # On darwin, consider either Xcode or CommandLineTools.
-            for f in ['/Applications/Xcode.app/Contents/Frameworks/libclang.dylib',
-                      '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib']:
-                if os.path.exists(f):
-                    cindex.Config.set_library_file(f)
+from ctypes.util import find_library
+from clang import cindex
+# debug for python-haystack travis-ci
+v1 = ["clang-%d" % _ for _ in range(14, 6, -1)]
+v2 = ["clang-%.1f" % _ for _ in range(6, 3, -1)]
+v_list = v1 + v2 + ["clang-3.9", "clang-3.8", "clang-3.7"]
+for version in ["libclang", "clang"] + v_list:
+    if find_library(version) is not None:
+        cindex.Config.set_library_file(find_library(version))
+        break
+else:
+    if os.name == "posix" and sys.platform == "darwin":
+        # On darwin, consider either Xcode or CommandLineTools.
+        for f in ['/Applications/Xcode.app/Contents/Frameworks/libclang.dylib',
+                  '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib']:
+            if os.path.exists(f):
+                cindex.Config.set_library_file(f)
 
-    def clang_version():
-        return cindex.Config.library_file
-except ImportError as e:
-    print(e)
 
+def clang_version():
+    return cindex.Config.library_file
 
 from ctypeslib.codegen.codegenerator import translate, translate_files
 
-__all__ = ['translate', 'translate_files']
+__all__ = ['translate', 'translate_files', 'clang_version']
