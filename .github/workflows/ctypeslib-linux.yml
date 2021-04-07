@@ -35,6 +35,18 @@ jobs:
         CFLAGS="-Wall -Wextra -Werror -std=c99 -pedantic -fpic"
         LDFLAGS="-shared"
         clang $CFLAGS $LDFLAGS -o test/data/test-callbacks.so test/data/test-callbacks.c
+    - name: Update Linux LD_LIBRARY_PATH
+      if: ${{runner.os == 'Linux' }}}
+      run: |
+        echo "LD_LIBRARY_PATH=$(pwd)/test/data/:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+    - name: Update Windows PATH
+      if: ${{runner.os == 'Windows' }}}
+      run: |
+        echo "PATH=$(pwd)/test/data/:$Env:PATH" >> $GITHUB_ENV
+    - name: Update macOS PATH
+      if: ${{runner.os == 'macOS' }}}
+      run: |
+        echo "DYLD_LIBRARY_PATH=$(pwd)/test/data/:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
     - name: Install clang2py
       run: |
         python setup.py develop

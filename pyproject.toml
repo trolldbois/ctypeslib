@@ -26,3 +26,6 @@ exclude = '''
 
 [tool.pylint]
 max-line-length = 120
+
+[tool.coverage.run]
+relative_files = True
