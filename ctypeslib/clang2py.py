@@ -295,8 +295,12 @@ def main(argv=None):
 
             # Preload libraries
             # [Library(name, mode=RTLD_GLOBAL) for name in options.preload]
-
-            translate_files(inputs.files, outputs.stream, cfg)
+            try:
+                translate_files(inputs.files, outputs.stream, cfg)
+            except:
+                # return non-zero exit status in case of an unhandled exception
+                traceback.print_exc()
+                sys.exit(1)
 
     return 0
 
