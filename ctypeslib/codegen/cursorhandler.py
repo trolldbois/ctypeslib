@@ -632,7 +632,17 @@ class CursorHandler(ClangHandler):
         bases = []  # FIXME: support CXX
         for c in cursor.get_children():
             if c.kind == CursorKind.CXX_BASE_SPECIFIER:
-                bases.append(self.get_registered(self.get_unique_name(c)))
+                base_class_name = c.type.spelling
+                for n in ['struct_' + base_class_name, 'union_' + base_class_name]:
+                    if self.is_registered(n):
+                        bases.append(self.get_registered(n))
+                        break
+                else:
+                    typedef_typ: typedesc.Typedef = self.get_registered(base_class_name)
+                    while isinstance(typedef_typ, typedesc.Typedef):
+                        typedef_typ = typedef_typ.typ
+                    bases.append(typedef_typ)
+
                 log.debug("got base class %s", c.displayname)
         size = cursor.type.get_size()
         align = cursor.type.get_align()

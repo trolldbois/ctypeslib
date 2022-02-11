@@ -612,8 +612,12 @@ class Generator:
         log.debug("Head start for %s inline:%s", head.name, inline)
         for struct in head.struct.bases:
             self._generate(struct.get_head())
+            # we MUST generate the structure body before inheritance happens
+            # or ctypes will tell us _field_ is final, cannot be changed
+            self._generate(struct.get_body(), inline)
             # add dependencies
-            self.more[struct] = True
+            #self.more[struct] = True
+
         basenames = [self.type_name(b) for b in head.struct.bases]
         if basenames:
             # method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
