@@ -96,6 +96,11 @@ class CursorHandler(ClangHandler):
     # now fixed by TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     COMPOUND_STMT = ClangHandler._do_nothing
 
+    @log_entity
+    def NAMESPACE(self, cursor):
+        for child in cursor.get_children():
+            self.parse_cursor(child)  # FIXME, where is the starElement
+
     ################################
     # TYPE REFERENCES handlers
 
@@ -691,6 +696,9 @@ class CursorHandler(ClangHandler):
                 declared_instance = True
         else:
             obj = self.get_registered(name)
+            if cursor.is_definition():
+                self.set_location(obj, cursor)
+                self.set_comment(obj, cursor)
             declared_instance = False
         # capture members declaration
         members = []
