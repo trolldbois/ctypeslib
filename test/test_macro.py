@@ -481,6 +481,7 @@ char d[] = APREPOST;''')
 fn_type fn_name(int a, int b);
 ''')
         self.assertIn("real_name", self.namespace)
+        print(self.text_output)
 
     def test_simple_macro_function(self):
         self.convert('''
@@ -494,6 +495,16 @@ fn_type fn_name(int a, int b);
         # only comments for functions
         self.assertNotIn("HI", self.namespace)
 
+    def test_variadic_function_define(self):
+        self.convert('''
+void    log_print(const char * module, int options, int severity, const char * color, int output, const char * fmt, ...);
+#define log_print_def(fmt, ...)     log_print(NULL, 0, DEBUG_INFO, NULL, LOG_DEF_PRINT, fmt, ##__VA_ARGS__)
+''')
+        self.assertIn('log_print', self.namespace)
+        self.assertIn('log_print', self.text_output)
+        # self.assertIn('log_print_def', self.namespace) , # macro not in namespace
+        self.assertIn('log_print_def', self.text_output)
+
     def test_example(self):
         self.convert('''
 #define DEBUG
@@ -503,7 +514,6 @@ fn_type fn_name(int a, int b);
 
 int tab1[] = MACRO_EXAMPLE(1,2); 
 ''')
-        # print(self.text_output)
         self.assertIn("tab1", self.namespace)
         self.assertEqual(self.namespace.tab1, [1, 2])
         self.assertEqual(self.namespace.DEBUG, True)
