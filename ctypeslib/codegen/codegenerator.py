@@ -337,12 +337,25 @@ class Generator:
             self.print_comment(tp)
 
         # 2021-02 give me a test case for this. it breaks all extern variables otherwise.
-        if tp.extern and self.find_library_with_func(tp):
+        # if tp.extern and self.find_library_with_func(tp):
+        if tp.extern:
             dll_library = self.find_library_with_func(tp)
+            if not dll_library:
+                class LibraryStub:
+                    _filepath = "FIXME_STUB"
+                    _name = "FIXME_STUB"
+                dll_library = LibraryStub()
+
             self._generate(tp.typ)
             # calling convention does not matter for in_dll...
             libname = self.get_sharedlib(dll_library, "cdecl")
-            print("%s = (%s).in_dll(%s, '%s')" % (tp.name, self.type_name(tp.typ), libname, tp.name), file=self.stream)
+            #print("%s = (%s).in_dll(%s, '%s')" % (tp.name, self.type_name(tp.typ), libname, tp.name), file=self.stream)
+            decl = "{tp} = ({type_name}).in_dll({libname}, '{tp}') if getattr({libname}, '{tp}', None) else None".format(
+                tp=tp.name,
+                type_name=self.type_name(tp.typ),
+                libname=libname,
+            )
+            print(decl, file=self.stream)
             self.names.append(tp.name)
             # wtypes.h contains IID_IProcessInitControl, for example
             return
