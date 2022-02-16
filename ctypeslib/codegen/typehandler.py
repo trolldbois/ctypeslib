@@ -123,7 +123,8 @@ class TypeHandler(ClangHandler):
         #
         # we shortcut to canonical typedefs and to pointee canonical defs
         comment = None
-        _type = _cursor_type.get_pointee().get_canonical()
+        # _type = _cursor_type.get_pointee().get_canonical()
+        _type = _cursor_type.get_pointee()
         _p_type_name = self.get_unique_name(_type)
         # get pointer size
         size = _cursor_type.get_size()  # not size of pointee
