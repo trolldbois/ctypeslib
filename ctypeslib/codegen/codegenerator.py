@@ -340,15 +340,17 @@ class Generator:
         # if tp.extern and self.find_library_with_func(tp):
         if tp.extern:
             dll_library = self.find_library_with_func(tp)
+            is_stub = False
             if not dll_library:
                 class LibraryStub:
                     _filepath = "FIXME_STUB"
                     _name = "FIXME_STUB"
                 dll_library = LibraryStub()
+                is_stub = True
 
             self._generate(tp.typ)
             # calling convention does not matter for in_dll...
-            libname = self.get_sharedlib(dll_library, "cdecl")
+            libname = self.get_sharedlib(dll_library, "cdecl", stub=is_stub)
             #print("%s = (%s).in_dll(%s, '%s')" % (tp.name, self.type_name(tp.typ), libname, tp.name), file=self.stream)
             decl = "{tp} = ({type_name}).in_dll({libname}, '{tp}') if getattr({libname}, '{tp}', None) else None".format(
                 tp=tp.name,
