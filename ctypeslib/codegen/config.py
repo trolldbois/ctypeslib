@@ -17,6 +17,8 @@ class CodegenConfig:
     generate_docstrings: bool = False
     # include source file location in comments
     generate_locations: bool = False
+    # on-demand include definitions outside of source file, only used definitions will be included
+    exclude_location: bool = False
     # do not include declaration defined outside of the source files
     filter_location: bool = True
     # dll to be loaded before all others (to resolve symbols)
@@ -45,6 +47,7 @@ class CodegenConfig:
         self.generate_comments = options.generate_comments
         self.generate_docstrings = options.generate_docstrings
         self.generate_locations = options.generate_locations
+        self.exclude_location = options.exclude_includes
         self.filter_location = not options.generate_includes
         self.preloaded_dlls = options.preload
         # List exported symbols from libraries

@@ -32,7 +32,9 @@ class Generator:
         self.stream = StringIO()
         self.imports = StringIO()
         self.cfg = cfg
+
         self.generate_locations = cfg.generate_locations
+        self.exclude_location = cfg.exclude_location
         self.generate_comments = cfg.generate_comments
         self.generate_docstrings = cfg.generate_docstrings
         self.known_symbols = cfg.known_symbols or {}
@@ -914,6 +916,11 @@ class Generator:
         """ wraps execution of specific methods."""
         if item in self.done:
             return
+        if self.exclude_location:
+            if item not in self.more:
+                if item.location and not item.location[0].endswith(self.parser.tu.spelling):
+                    return
+
         # verbose output with location.
         if self.generate_locations and item.location:
             print("# %s:%d" % item.location, file=self.stream)
@@ -943,9 +950,10 @@ class Generator:
     def generate_items(self, items):
         # items = set(items)
         loops = 0
-        while items:
+        self.more = collections.OrderedDict()
+        while True:
             loops += 1
-            self.more = collections.OrderedDict()
+            #self.more = collections.OrderedDict()
             self.generate_all(items)
 
             # items |= self.more , but keeping ordering
@@ -953,10 +961,16 @@ class Generator:
             [items.append(k) for k in self.more.keys() if k not in _s]
 
             # items -= self.done, but keep ordering
+            # more -= self.done
             _done = self.done.keys()
             for i in list(items):
                 if i in _done:
                     items.remove(i)
+                if i in self.more:
+                    self.more.pop(i)
+
+            if not self.more:
+                break
 
         return loops
 
