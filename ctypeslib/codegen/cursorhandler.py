@@ -699,6 +699,11 @@ class CursorHandler(ClangHandler):
             if cursor.is_definition():
                 self.set_location(obj, cursor)
                 self.set_comment(obj, cursor)
+            else:
+                # Correctly handle multiple-time declaration in multiple header
+                # FIXME: test case like this: struct TypeA; struct TypeA; struct TypeA {int a;}
+                log.debug('cursor %s is not on a definition, and is declared multiple times', name)
+                return obj
             declared_instance = False
         # capture members declaration
         members = []
