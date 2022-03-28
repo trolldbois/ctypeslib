@@ -116,4 +116,10 @@ class Structure(ctypes.Structure, AsDictMixin):
 class Union(ctypes.Union, AsDictMixin):
     pass
 
+def ctypes_in_dll(typ, dll, name):
+    try:
+        return typ.in_dll(dll, name)
+    except (ValueError, TypeError):
+        return None
+
 

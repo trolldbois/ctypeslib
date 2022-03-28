@@ -354,7 +354,7 @@ class Generator:
             # calling convention does not matter for in_dll...
             libname = self.get_sharedlib(dll_library, "cdecl", stub=is_stub)
             #print("%s = (%s).in_dll(%s, '%s')" % (tp.name, self.type_name(tp.typ), libname, tp.name), file=self.stream)
-            decl = "{tp} = ({type_name}).in_dll({libname}, '{tp}') if getattr({libname}, '{tp}', None) else None".format(
+            decl = "{tp} = ctypes_in_dll({type_name}, {libname}, '{tp}')".format(
                 tp=tp.name,
                 type_name=self.type_name(tp.typ),
                 libname=libname,
