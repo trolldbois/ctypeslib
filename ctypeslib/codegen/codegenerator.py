@@ -916,11 +916,6 @@ class Generator:
         """ wraps execution of specific methods."""
         if item in self.done:
             return
-        if self.exclude_location:
-            if item not in self.more:
-                if item.location and not item.location[0].endswith(self.parser.tu.spelling):
-                    return
-
         # verbose output with location.
         if self.generate_locations and item.location:
             print("# %s:%d" % item.location, file=self.stream)
@@ -954,7 +949,14 @@ class Generator:
         while True:
             loops += 1
             #self.more = collections.OrderedDict()
-            self.generate_all(items)
+            items_to_gen = []
+            for item in items:
+                if self.exclude_location:
+                    if item not in self.more:
+                        if item.location and not item.location[0].endswith(self.parser.tu.spelling):
+                            continue
+                items_to_gen.append(item)
+            self.generate_all(items_to_gen)
 
             # items |= self.more , but keeping ordering
             _s = set(items)
