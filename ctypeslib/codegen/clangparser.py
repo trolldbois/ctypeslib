@@ -139,9 +139,9 @@ class Clang_Parser(object):
             return
         errors = []
         for x in tu.diagnostics:
-            msg = "{} ({}:{}:{})".format(
-                x.spelling, input_filename,
-                x.location.line, x.location.column)
+            msg = "{} ({}:{}:{}) during processing {}".format(
+                x.spelling, x.location.file,
+                x.location.line, x.location.column, input_filename)
             log.warning(msg)
             if x.severity > 2:
                 errors.append(msg)
