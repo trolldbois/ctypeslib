@@ -96,7 +96,7 @@ class ArgumentHelper(ClangTest):
         self.assertEqual(0, p.returncode)
         self.assertIn("Cross-architecture:", output)
         self.assertIn("usage:", output)
-        self.assertIn("optional arguments", output)
+        self.assertRegex(output, r"\noption.*:")
 
 
 class ArgumentTypeKind(ClangTest):
