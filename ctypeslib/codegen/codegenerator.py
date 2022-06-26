@@ -913,12 +913,25 @@ class Generator:
 
     ########
 
+    def _get_location(self, item):
+        location = item.location
+        if not location:
+            if isinstance(item, typedesc.StructureBody) or isinstance(item, typedesc.StructureHead):
+                location = item.struct.location
+            elif isinstance(item, typedesc.EnumValue):
+                location = item.enumeration.location
+            elif isinstance(item, typedesc.PointerType):
+                location = item.typ.location
+
+        return location
+
     def _generate(self, item, *args):
         """ wraps execution of specific methods."""
         if item in self.done:
             return
         if self.force_exclude_location:
-            if item.location and not item.location[0].endswith(self.parser.tu.spelling):
+            location = self._get_location(item)
+            if location and not location[0].endswith(self.parser.tu.spelling):
                 return
 
         # verbose output with location.
@@ -958,7 +971,8 @@ class Generator:
             for item in items:
                 if self.exclude_location:
                     if item not in self.more:
-                        if item.location and not item.location[0].endswith(self.parser.tu.spelling):
+                        location = self._get_location(item)
+                        if location and not location[0].endswith(self.parser.tu.spelling):
                             continue
                 items_to_gen.append(item)
             self.generate_all(items_to_gen)
