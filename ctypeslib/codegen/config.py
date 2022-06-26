@@ -19,6 +19,8 @@ class CodegenConfig:
     generate_locations: bool = False
     # on-demand include definitions outside of source file, only used definitions will be included
     exclude_location: bool = False
+    # Forcibly exclude ALL definitions that located outside of source file
+    force_exclude_location: bool = False
     # do not include declaration defined outside of the source files
     filter_location: bool = True
     # dll to be loaded before all others (to resolve symbols)
@@ -48,6 +50,7 @@ class CodegenConfig:
         self.generate_docstrings = options.generate_docstrings
         self.generate_locations = options.generate_locations
         self.exclude_location = options.exclude_includes
+        self.force_exclude_location = options.force_exclude_includes
         self.filter_location = not options.generate_includes
         self.preloaded_dlls = options.preload
         # List exported symbols from libraries

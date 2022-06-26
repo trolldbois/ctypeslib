@@ -241,6 +241,11 @@ def main(argv=None):
                         default=False,
                         help="Parse object in sources files only. Ignore includes")
 
+    parser.add_argument("-X", "--force-exclude-includes",
+                        action="store_true",
+                        default=False,
+                        help="Forcibly disable generation for all object outside sources files.")
+
     parser.add_argument("--show-ids", dest="showIDs",
                         help="Don't compute cursor IDs (very slow)",
                         default=False)

@@ -35,6 +35,7 @@ class Generator:
 
         self.generate_locations = cfg.generate_locations
         self.exclude_location = cfg.exclude_location
+        self.force_exclude_location = cfg.force_exclude_location
         self.generate_comments = cfg.generate_comments
         self.generate_docstrings = cfg.generate_docstrings
         self.known_symbols = cfg.known_symbols or {}
@@ -916,6 +917,10 @@ class Generator:
         """ wraps execution of specific methods."""
         if item in self.done:
             return
+        if self.force_exclude_location:
+            if item.location and not item.location[0].endswith(self.parser.tu.spelling):
+                return
+
         # verbose output with location.
         if self.generate_locations and item.location:
             print("# %s:%d" % item.location, file=self.stream)
