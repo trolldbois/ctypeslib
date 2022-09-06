@@ -40,7 +40,7 @@ class CodegenConfig:
         self.symbols = options.symbols
         self.expressions = options.expressions
         if options.expressions:
-            self.expressions = map(re.compile, options.expressions)
+            self.expressions = list(map(re.compile, options.expressions))
         self.verbose = options.verbose
         self.generate_comments = options.generate_comments
         self.generate_docstrings = options.generate_docstrings
