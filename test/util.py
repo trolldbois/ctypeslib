@@ -159,6 +159,25 @@ class ClangTest(unittest.TestCase):
                                  name, membername, _c_offset, _p_offset, self.parser.flags))
         return
 
+    def assertHasFieldNamed(self, name, py_record):
+        """ Check that a Py record has a field named name.
+        """
+        self.assertTrue(hasattr(py_record, '_fields_'))
+        for field_desc in py_record._fields_:
+            if name == field_desc[0]:
+                self.assertTrue(name, field_desc[0])
+                return
+        self.fail(f"no such field name {name}")
+
+    def assertNotHasFieldNamed(self, name, py_record):
+        """ Check that a Py record does not have a field named name.
+        """
+        self.assertTrue(hasattr(py_record, '_fields_'))
+        for field_desc in py_record._fields_:
+            if name == field_desc[0]:
+                self.fail(f"Field named {name} found in record")
+
+
 
 __all__ = [
 ]

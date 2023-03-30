@@ -259,32 +259,46 @@ struct s {
         self.assertIn('struct_s', self.namespace)
 
     def test_record_named_union(self):
-        """use _anonymous_"""
-        logger = logging.getLogger()
-        logger.level = logging.DEBUG
-        import sys
-        stream_handler = logging.StreamHandler(sys.stdout)
-        logger.addHandler(stream_handler)
+        """Anonymous types with a named field"""
         self.convert('''
 struct s {
     int i;
+    // anonymous type with no name
     union {
         long l1;
         float f1;
     };
+    // anonymous type with a name
     union {
         long l2;
         float f2;
     } u;
 };
 
+// we want the first union to be an anonymous field in struct_s (s_0)
 // we want u to be a field in struct_s
 
-''', debug=True)
+''')
         # print(self.text_output)
-        self.fail("todo")
-        # self.assertIn("struct_s._anonymous_", self.text_output)
-        # self.assertIn('struct_s', self.namespace)
+        self.assertIn('struct_s', self.namespace)
+        self.assertHasFieldNamed('i', self.namespace.struct_s)
+        # we named the unamed anonymous union. .. maybe not the best idea
+        self.assertHasFieldNamed('_0', self.namespace.struct_s)
+        self.assertIn('union_s_0', self.namespace)
+        # python ctypes properly merges anonymous union and exposes members
+        self.assertTrue(hasattr(self.namespace.struct_s, 'f1'))
+        self.assertTrue(hasattr(self.namespace.struct_s, 'l1'))
+        # but not as a field
+        self.assertNotHasFieldNamed('f1', self.namespace.struct_s)
+        self.assertNotHasFieldNamed('l1', self.namespace.struct_s)
+        # and not for unamed anonymous union
+        self.assertNotHasFieldNamed('l2', self.namespace.struct_s)
+        self.assertNotHasFieldNamed('f2', self.namespace.struct_s)
+        # and we have a named union
+        self.assertHasFieldNamed('u', self.namespace.struct_s)
+        self.assertIn('union_s_1', self.namespace)
+        self.assertHasFieldNamed('l2', self.namespace.union_s_1)
+        self.assertHasFieldNamed('f2', self.namespace.union_s_1)
 
 
 if __name__ == "__main__":
