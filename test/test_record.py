@@ -258,6 +258,34 @@ struct s {
         self.assertIn("struct_s._anonymous_", self.text_output)
         self.assertIn('struct_s', self.namespace)
 
+    def test_record_named_union(self):
+        """use _anonymous_"""
+        logger = logging.getLogger()
+        logger.level = logging.DEBUG
+        import sys
+        stream_handler = logging.StreamHandler(sys.stdout)
+        logger.addHandler(stream_handler)
+        self.convert('''
+struct s {
+    int i;
+    union {
+        long l1;
+        float f1;
+    };
+    union {
+        long l2;
+        float f2;
+    } u;
+};
+
+// we want u to be a field in struct_s
+
+''', debug=True)
+        # print(self.text_output)
+        self.fail("todo")
+        # self.assertIn("struct_s._anonymous_", self.text_output)
+        # self.assertIn('struct_s', self.namespace)
+
 
 if __name__ == "__main__":
     # logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)

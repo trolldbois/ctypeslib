@@ -91,7 +91,7 @@ class ClangHandler(object):
         return name
 
     def _make_unknown_name(self, cursor):
-        '''Creates a name for unname type'''
+        """Creates a name for unnamed type """
         parent = cursor.lexical_parent
         pname = self.get_unique_name(parent)
         log.debug('_make_unknown_name: Got parent get_unique_name %s',pname)

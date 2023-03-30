@@ -689,7 +689,11 @@ class Generator:
             # _anonymous_ fields are fields of type Structure or Union,
             # that have no name.
             if f.is_anonymous and isinstance(f.type, (typedesc.Structure, typedesc.Union)):
-                unnamed_fields[f] = "_%d" % len(unnamed_fields)
+                # anonymous types can have a member name
+                # un-named anonymous record come here with a name == ''
+                if f.name == '':
+                    unnamed_fields[f] = "_%d" % len(unnamed_fields)
+                # otherwise, we want to keep that field's name
         if unnamed_fields:
             unnamed_fields_str = ", ".join("'%s'" % _ for _ in unnamed_fields.values())
             print("%s_anonymous_ = (%s,)" % (prefix, unnamed_fields_str), file=self.stream)

@@ -969,11 +969,12 @@ class CursorHandler(ClangHandler):
         # cursor.spelling is empty
         name = cursor.spelling
         offset = parent.type.get_offset(name)
-        if not name and not cursor.is_bitfield():
-            # anonymous non-bitfield field case:
+        if not name and cursor.is_anonymous() and not cursor.is_bitfield():
+            # anonymous type, that is not a bitfield field case:
             offset = cursor.get_field_offsetof()
-            name = self.get_unique_name(cursor)
-        if not name:
+            # name = self.get_unique_name(cursor)
+            # we want to keep name empty if the field is unnamed.
+        elif not name:
             # anonymous bitfield case:
             # get offset by iterating all fields of parent
             # corner case for anonymous fields
