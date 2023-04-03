@@ -32,7 +32,10 @@ class Generator:
         self.stream = StringIO()
         self.imports = StringIO()
         self.cfg = cfg
+
         self.generate_locations = cfg.generate_locations
+        self.exclude_location = cfg.exclude_location
+        self.force_exclude_location = cfg.force_exclude_location
         self.generate_comments = cfg.generate_comments
         self.generate_docstrings = cfg.generate_docstrings
         self.known_symbols = cfg.known_symbols or {}
@@ -337,12 +340,27 @@ class Generator:
             self.print_comment(tp)
 
         # 2021-02 give me a test case for this. it breaks all extern variables otherwise.
-        if tp.extern and self.find_library_with_func(tp):
+        # if tp.extern and self.find_library_with_func(tp):
+        if tp.extern:
             dll_library = self.find_library_with_func(tp)
+            is_stub = False
+            if not dll_library:
+                class LibraryStub:
+                    _filepath = "FIXME_STUB"
+                    _name = "FIXME_STUB"
+                dll_library = LibraryStub()
+                is_stub = True
+
             self._generate(tp.typ)
             # calling convention does not matter for in_dll...
-            libname = self.get_sharedlib(dll_library, "cdecl")
-            print("%s = (%s).in_dll(%s, '%s')" % (tp.name, self.type_name(tp.typ), libname, tp.name), file=self.stream)
+            libname = self.get_sharedlib(dll_library, "cdecl", stub=is_stub)
+            #print("%s = (%s).in_dll(%s, '%s')" % (tp.name, self.type_name(tp.typ), libname, tp.name), file=self.stream)
+            decl = "{tp} = ctypes_in_dll({type_name}, {libname}, '{tp}')".format(
+                tp=tp.name,
+                type_name=self.type_name(tp.typ),
+                libname=libname,
+            )
+            print(decl, file=self.stream)
             self.names.append(tp.name)
             # wtypes.h contains IID_IProcessInitControl, for example
             return
@@ -612,8 +630,12 @@ class Generator:
         log.debug("Head start for %s inline:%s", head.name, inline)
         for struct in head.struct.bases:
             self._generate(struct.get_head())
+            # we MUST generate the structure body before inheritance happens
+            # or ctypes will tell us _field_ is final, cannot be changed
+            self._generate(struct.get_body(), inline)
             # add dependencies
-            self.more[struct] = True
+            #self.more[struct] = True
+
         basenames = [self.type_name(b) for b in head.struct.bases]
         if basenames:
             # method_names = [m.name for m in head.struct.members if type(m) is typedesc.Method]
@@ -895,10 +917,27 @@ class Generator:
 
     ########
 
+    def _get_location(self, item):
+        location = item.location
+        if not location:
+            if isinstance(item, typedesc.StructureBody) or isinstance(item, typedesc.StructureHead):
+                location = item.struct.location
+            elif isinstance(item, typedesc.EnumValue):
+                location = item.enumeration.location
+            elif isinstance(item, typedesc.PointerType):
+                location = item.typ.location
+
+        return location
+
     def _generate(self, item, *args):
         """ wraps execution of specific methods."""
         if item in self.done:
             return
+        if self.force_exclude_location:
+            location = self._get_location(item)
+            if location and not location[0].endswith(self.parser.tu.spelling):
+                return
+
         # verbose output with location.
         if self.generate_locations and item.location:
             print("# %s:%d" % item.location, file=self.stream)
@@ -928,20 +967,35 @@ class Generator:
     def generate_items(self, items):
         # items = set(items)
         loops = 0
-        while items:
+        self.more = collections.OrderedDict()
+        while True:
             loops += 1
-            self.more = collections.OrderedDict()
-            self.generate_all(items)
+            #self.more = collections.OrderedDict()
+            items_to_gen = []
+            for item in items:
+                if self.exclude_location:
+                    if item not in self.more:
+                        location = self._get_location(item)
+                        if location and not location[0].endswith(self.parser.tu.spelling):
+                            continue
+                items_to_gen.append(item)
+            self.generate_all(items_to_gen)
 
             # items |= self.more , but keeping ordering
             _s = set(items)
             [items.append(k) for k in self.more.keys() if k not in _s]
 
             # items -= self.done, but keep ordering
+            # more -= self.done
             _done = self.done.keys()
             for i in list(items):
                 if i in _done:
                     items.remove(i)
+                if i in self.more:
+                    self.more.pop(i)
+
+            if not self.more:
+                break
 
         return loops
 

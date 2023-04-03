@@ -96,6 +96,11 @@ class CursorHandler(ClangHandler):
     # now fixed by TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     COMPOUND_STMT = ClangHandler._do_nothing
 
+    @log_entity
+    def NAMESPACE(self, cursor):
+        for child in cursor.get_children():
+            self.parse_cursor(child)  # FIXME, where is the starElement
+
     ################################
     # TYPE REFERENCES handlers
 
@@ -630,6 +635,20 @@ class CursorHandler(ClangHandler):
         # FIXME: lets ignore bases for now.
         # bases = attrs.get("bases", "").split() # that for cpp ?
         bases = []  # FIXME: support CXX
+        for c in cursor.get_children():
+            if c.kind == CursorKind.CXX_BASE_SPECIFIER:
+                base_class_name = c.type.spelling
+                for n in ['struct_' + base_class_name, 'union_' + base_class_name]:
+                    if self.is_registered(n):
+                        bases.append(self.get_registered(n))
+                        break
+                else:
+                    typedef_typ: typedesc.Typedef = self.get_registered(base_class_name)
+                    while isinstance(typedef_typ, typedesc.Typedef):
+                        typedef_typ = typedef_typ.typ
+                    bases.append(typedef_typ)
+
+                log.debug("got base class %s", c.displayname)
         size = cursor.type.get_size()
         align = cursor.type.get_align()
         if size == -2: #
@@ -677,6 +696,14 @@ class CursorHandler(ClangHandler):
                 declared_instance = True
         else:
             obj = self.get_registered(name)
+            if cursor.is_definition():
+                self.set_location(obj, cursor)
+                self.set_comment(obj, cursor)
+            else:
+                # Correctly handle multiple-time declaration in multiple header
+                # FIXME: test case like this: struct TypeA; struct TypeA; struct TypeA {int a;}
+                log.debug('cursor %s is not on a definition, and is declared multiple times', name)
+                return obj
             declared_instance = False
         # capture members declaration
         members = []
@@ -830,9 +857,13 @@ class CursorHandler(ClangHandler):
             log.debug('FIXUP_STRUCT: no members')
             s.members = []
             return
-        if s.size == 0:
+        if s.size == 0 or (s.size == 1 and len(s.members) == 0):
             log.debug('FIXUP_STRUCT: struct has size %d', s.size)
             return
+        if len(s.members) == 0 and len(s.bases) > 0:
+            log.debug('FIXUP_STRUCT: derived struct without new member')
+            return
+
         # try to fix bitfields without padding first
         self._fixup_record_bitfields_type(s)
         # No need to lookup members in a global var.
@@ -840,6 +871,11 @@ class CursorHandler(ClangHandler):
         members = []
         member = None
         offset = 0
+        for b in s.bases:
+            offset += b.size * 8
+        if s.size * 8 == offset:
+            log.debug('FIXUP_STRUCT: struct has size %d equals to base size', s.size)
+            return
         padding_nb = 0
         member = None
         prev_member = None

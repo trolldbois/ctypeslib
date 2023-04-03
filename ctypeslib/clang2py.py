@@ -241,6 +241,11 @@ def main(argv=None):
                         default=False,
                         help="Parse object in sources files only. Ignore includes")
 
+    parser.add_argument("-X", "--force-exclude-includes",
+                        action="store_true",
+                        default=False,
+                        help="Forcibly disable generation for all object outside sources files.")
+
     parser.add_argument("--show-ids", dest="showIDs",
                         help="Don't compute cursor IDs (very slow)",
                         default=False)
@@ -295,8 +300,12 @@ def main(argv=None):
 
             # Preload libraries
             # [Library(name, mode=RTLD_GLOBAL) for name in options.preload]
-
-            translate_files(inputs.files, outputs.stream, cfg)
+            try:
+                translate_files(inputs.files, outputs.stream, cfg)
+            except:
+                # return non-zero exit status in case of an unhandled exception
+                traceback.print_exc()
+                sys.exit(1)
 
     return 0
 

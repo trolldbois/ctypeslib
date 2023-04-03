@@ -123,7 +123,13 @@ class TypeHandler(ClangHandler):
         #
         # we shortcut to canonical typedefs and to pointee canonical defs
         comment = None
-        _type = _cursor_type.get_pointee().get_canonical()
+        # _type = _cursor_type.get_pointee().get_canonical()
+        _type = _cursor_type.get_pointee()
+        if _type.get_canonical().kind == TypeKind.FUNCTIONPROTO:
+            # in python there's no pure function proto for ctypes,
+            #  in code generator, functionproto will emit CFUNCTYPE, which is func ptr
+            #  so pointer to function proto should actually be directly functionproto
+            return self.parse_cursor_type(_type)
         _p_type_name = self.get_unique_name(_type)
         # get pointer size
         size = _cursor_type.get_size()  # not size of pointee

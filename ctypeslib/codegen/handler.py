@@ -127,8 +127,10 @@ class ClangHandler(object):
             return ''
         # covers most cases
         name = cursor.spelling
+        if cursor.kind == CursorKind.CXX_BASE_SPECIFIER:
+            name = cursor.type.spelling
         # if its a record decl or field decl and its type is unnamed
-        if cursor.spelling == '':
+        if name == '':
             # a unnamed object at the root TU
             if (cursor.semantic_parent
                 and cursor.semantic_parent.kind == CursorKind.TRANSLATION_UNIT):
@@ -144,11 +146,13 @@ class ClangHandler(object):
                 #code.interact(local=locals())
                 return ''
         if cursor.kind in [CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,
-                                 CursorKind.CLASS_DECL]:
+                                 CursorKind.CLASS_DECL, CursorKind.CXX_BASE_SPECIFIER]:
             names= {CursorKind.STRUCT_DECL: 'struct',
                     CursorKind.UNION_DECL: 'union',
-                    CursorKind.CLASS_DECL: 'class',
-                    CursorKind.TYPE_REF: ''}
+                    CursorKind.CLASS_DECL: 'struct',
+                    CursorKind.TYPE_REF: '',
+                    CursorKind.CXX_BASE_SPECIFIER: 'struct'
+                    }
             name = '%s_%s'%(names[cursor.kind],name)
         log.debug('get_unique_name: name "%s"',name)
         return name

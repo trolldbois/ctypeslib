@@ -49,6 +49,18 @@ class Structure(ctypes.Structure, AsDictMixin):
         args.update(kwds)
         super(Structure, self).__init__(**args)
 
+    def get_cfield(self, field):
+        fieldType = None
+        for fn, ftype in self._fields_:
+            if fn == field:
+                fieldType = ftype
+                break
+        else:
+            raise AttributeError('Field %s not found' % field)
+
+        fieldAttr = getattr(self.__class__, field)
+        return fieldType.from_buffer(self, fieldAttr.offset)
+
     @classmethod
     def _field_names_(cls):
         if hasattr(cls, '_fields_'):
@@ -103,5 +115,11 @@ class Structure(ctypes.Structure, AsDictMixin):
 
 class Union(ctypes.Union, AsDictMixin):
     pass
+
+def ctypes_in_dll(typ, dll, name):
+    try:
+        return typ.in_dll(dll, name)
+    except (ValueError, TypeError):
+        return None
 
 
