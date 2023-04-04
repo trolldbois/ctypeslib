@@ -4,6 +4,8 @@
 
 import ctypes
 import os
+import subprocess
+import sys
 from io import StringIO
 from ctypes import RTLD_GLOBAL
 
@@ -178,6 +180,26 @@ class ClangTest(unittest.TestCase):
                 self.fail(f"Field named {name} found in record")
 
 
+def clang2py(args):
+    return run([sys.executable, clang2py_path] + args)
+
+
+def run(args):
+    if hasattr(subprocess, 'run'):
+        p = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, stderr = p.stdout.decode(), p.stderr.decode()
+        return p, output, stderr
+    else:
+        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=-1)
+        output, stderr = p.communicate()
+        return p, output, stderr
+
+
+__, clang2py_path, __ = run(['which', 'clang2py'])
+clang2py_path = clang2py_path.strip()
 
 __all__ = [
+    'clang2py',
+    'ClangTest'
 ]
+

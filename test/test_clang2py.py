@@ -1,28 +1,8 @@
-import subprocess
 import sys
 import unittest
 
-from test.util import ClangTest
+from test.util import ClangTest, clang2py, run
 import ctypeslib
-
-
-def run(args):
-    if hasattr(subprocess, 'run'):
-        p = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, stderr = p.stdout.decode(), p.stderr.decode()
-        return p, output, stderr
-    else:
-        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=-1)
-        output, stderr = p.communicate()
-        return p, output, stderr
-
-
-__, clang2py_path, __ = run(['which', 'clang2py'])
-clang2py_path = clang2py_path.strip()
-
-
-def clang2py(args):
-    return run([sys.executable, clang2py_path] + args)
 
 
 class InputOutput(ClangTest):
@@ -311,6 +291,18 @@ class OrderingTest(ClangTest):
         enum = output.index("c__EA_E = ctypes.c_uint32")
         print(output)
         self.assertGreater(decl, enum, "Generated incorrect ordering")
+
+
+class TestLocation(ClangTest):
+
+    def test_location(self):
+        """check the location comment"""
+        p, output, stderr = clang2py(['--show-definition-location', 'test/data/test-includes.h'])
+        self.assertEqual(0, p.returncode)
+        self.assertIn("# test/data/test-includes.h:3\nclass struct_Name3(", output)
+        self.assertIn("# test/data/test-records.c:3\nclass struct_Name(", output)
+
+
 
 
 if __name__ == "__main__":
