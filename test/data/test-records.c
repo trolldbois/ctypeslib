@@ -82,3 +82,7 @@ typedef struct __attribute__((packed)) {
 struct Anon;
 struct Anon2;
 
+struct f {
+    int x;
+    float * fx[] ;
+};
