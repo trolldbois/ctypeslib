@@ -63,6 +63,12 @@ class TestFunction(ClangTest):
         self.assertIn('FIXME_STUB', self.text_output)
         # print(self.text_output)
 
+    def test_variadic_function_decl(self):
+        self.convert('''
+void    log_print(const char * module, int options, int severity, const char * color, int output, const char * fmt, ...);
+''')
+        self.assertIn('log_print', self.namespace)
+        self.assertIn('log_print', self.text_output)
 
 #     def test_function_return_enum(self):
 #         flags = ['-target', 'i386-linux']
