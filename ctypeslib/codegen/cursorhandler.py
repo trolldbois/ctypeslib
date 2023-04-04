@@ -96,6 +96,11 @@ class CursorHandler(ClangHandler):
     # now fixed by TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
     COMPOUND_STMT = ClangHandler._do_nothing
 
+    @log_entity
+    def NAMESPACE(self, cursor):
+        for child in cursor.get_children():
+            self.parse_cursor(child)  # FIXME, where is the starElement
+
     ################################
     # TYPE REFERENCES handlers
 
@@ -627,9 +632,12 @@ class CursorHandler(ClangHandler):
                 '_record_decl: %s is already registered with members',
                 name)
             return self.get_registered(name)
-        # FIXME: lets ignore bases for now.
-        # bases = attrs.get("bases", "").split() # that for cpp ?
-        bases = []  # FIXME: support CXX
+        # CPP bases
+        bases = []
+        for c in cursor.get_children():
+            if c.kind == CursorKind.CXX_BASE_SPECIFIER:
+                bases.append(self.get_registered(self.get_unique_name(c)))
+                log.debug("got base class %s", c.displayname)
         size = cursor.type.get_size()
         align = cursor.type.get_align()
         if size == -2: #

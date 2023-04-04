@@ -126,13 +126,14 @@ class ClangHandler(object):
 
     def get_unique_name(self, cursor, field_name=None):
         """get the spelling or create a unique name for a cursor"""
-        name = ''
         if cursor.kind in [CursorKind.UNEXPOSED_DECL]:
             return ''
         # covers most cases
         name = cursor.spelling
+        if cursor.kind == CursorKind.CXX_BASE_SPECIFIER:
+            name = cursor.type.spelling
         # if it's a record decl or field decl and its type is anonymous
-        if cursor.spelling == '':
+        if name == '':
             # if cursor.is_anonymous():
             # a unnamed object at the root TU
             if (cursor.semantic_parent
@@ -149,11 +150,13 @@ class ClangHandler(object):
                 #code.interact(local=locals())
                 return ''
         if cursor.kind in [CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,
-                                 CursorKind.CLASS_DECL]:
+                                 CursorKind.CLASS_DECL, CursorKind.CXX_BASE_SPECIFIER]:
             names= {CursorKind.STRUCT_DECL: 'struct',
                     CursorKind.UNION_DECL: 'union',
                     CursorKind.CLASS_DECL: 'class',
-                    CursorKind.TYPE_REF: ''}
+                    CursorKind.TYPE_REF: '',
+                    CursorKind.CXX_BASE_SPECIFIER: 'class'
+                    }
             name = '%s_%s'%(names[cursor.kind],name)
         log.debug('get_unique_name: name "%s"',name)
         return name

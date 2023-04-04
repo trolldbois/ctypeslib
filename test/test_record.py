@@ -286,26 +286,23 @@ struct s {
 ''')
         # print(self.text_output)
         self.assertIn('struct_s', self.namespace)
-        self.assertHasFieldNamed('i', self.namespace.struct_s)
+        self.assertHasFieldNamed(self.namespace.struct_s, 'i')
         # we named the unamed anonymous union. .. maybe not the best idea
-        self.assertHasFieldNamed('_0', self.namespace.struct_s)
+        self.assertHasFieldNamed(self.namespace.struct_s, '_0')
         self.assertIn('union_s_0', self.namespace)
         # python ctypes properly merges anonymous union and exposes members
-        self.assertTrue(hasattr(self.namespace.struct_s, 'f1'))
-        self.assertTrue(hasattr(self.namespace.struct_s, 'l1'))
-        # but not as a field
-        self.assertNotHasFieldNamed('f1', self.namespace.struct_s)
-        self.assertNotHasFieldNamed('l1', self.namespace.struct_s)
+        self.assertHasFieldNamed(self.namespace.struct_s, 'f1')
+        self.assertHasFieldNamed(self.namespace.struct_s, 'l1')
         # and not for unamed anonymous union
-        self.assertNotHasFieldNamed('l2', self.namespace.struct_s)
-        self.assertNotHasFieldNamed('f2', self.namespace.struct_s)
+        self.assertNotHasFieldNamed(self.namespace.struct_s, 'l2')
+        self.assertNotHasFieldNamed(self.namespace.struct_s, 'f2')
         # and we have a named union
-        self.assertHasFieldNamed('u', self.namespace.struct_s)
+        self.assertHasFieldNamed(self.namespace.struct_s, 'u')
         # Issue #117
         self.assertNotIn('union_s_1', self.namespace)
         self.assertIn('union_s_u', self.namespace)
-        self.assertHasFieldNamed('l2', self.namespace.union_s_u)
-        self.assertHasFieldNamed('f2', self.namespace.union_s_u)
+        self.assertHasFieldNamed(self.namespace.union_s_u, 'l2')
+        self.assertHasFieldNamed(self.namespace.union_s_u, 'f2')
 
 
 if __name__ == "__main__":
