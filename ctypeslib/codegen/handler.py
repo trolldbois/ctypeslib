@@ -90,7 +90,7 @@ class ClangHandler(object):
             return "_" + name
         return name
 
-    def _make_unknown_name(self, cursor):
+    def _make_unknown_name(self, cursor, field_name):
         """Creates a name for unnamed type """
         parent = cursor.lexical_parent
         pname = self.get_unique_name(parent)
@@ -117,18 +117,23 @@ class ClangHandler(object):
             raise NotImplementedError("_make_unknown_name BUG %s" % cursor.location)
         # truncate parent name to remove the first part (union or struct)
         _premainer = '_'.join(pname.split('_')[1:])
-        name = '%s_%d'%(_premainer,_i)
+        # name the anonymous record with the field name if it has one
+        if field_name:
+            name = '%s_%s' % (_premainer, field_name)
+        else:
+            name = '%s_%d' % (_premainer, _i)
         return name
 
-    def get_unique_name(self, cursor):
+    def get_unique_name(self, cursor, field_name=None):
         """get the spelling or create a unique name for a cursor"""
         name = ''
         if cursor.kind in [CursorKind.UNEXPOSED_DECL]:
             return ''
         # covers most cases
         name = cursor.spelling
-        # if its a record decl or field decl and its type is unnamed
+        # if it's a record decl or field decl and its type is anonymous
         if cursor.spelling == '':
+            # if cursor.is_anonymous():
             # a unnamed object at the root TU
             if (cursor.semantic_parent
                 and cursor.semantic_parent.kind == CursorKind.TRANSLATION_UNIT):
@@ -136,7 +141,7 @@ class ClangHandler(object):
                 log.debug('get_unique_name: root unnamed type kind %s',cursor.kind)
             elif cursor.kind in [CursorKind.STRUCT_DECL,CursorKind.UNION_DECL,
                                  CursorKind.CLASS_DECL,CursorKind.FIELD_DECL]:
-                name = self._make_unknown_name(cursor)
+                name = self._make_unknown_name(cursor, field_name)
                 log.debug('Unnamed cursor type, got name %s',name)
             else:
                 log.debug('Unnamed cursor, No idea what to do')

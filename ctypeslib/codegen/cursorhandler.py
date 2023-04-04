@@ -1028,7 +1028,8 @@ class CursorHandler(ClangHandler):
                     list(
                         cursor.get_children())[0])
             else:
-                _decl_name = self.get_unique_name(_decl)
+                # pass a field name to get a better name for an anonymous record, that is a named field
+                _decl_name = self.get_unique_name(_decl, field_name=name)
             log.debug('FIELD_DECL: the declaration name %s', _decl_name)
             # rename anonymous field type name
             # 2015-06-26 handled in get_name
@@ -1053,7 +1054,7 @@ class CursorHandler(ClangHandler):
                                 name, _canonical_type.kind.name)
                     return None
         if cursor.is_anonymous():
-            # we have to unregister the _type and register a alternate named
+            # we have to unregister the _type and register an alternate named
             # type.
             self.parser.remove_registered(_type.name)
             _type.name = _decl_name

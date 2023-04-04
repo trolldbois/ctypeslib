@@ -96,7 +96,9 @@ class ArgumentHelper(ClangTest):
         self.assertEqual(0, p.returncode)
         self.assertIn("Cross-architecture:", output)
         self.assertIn("usage:", output)
-        self.assertIn("optional arguments", output)
+        # self.assertIn("optional arguments", output)
+        # py310
+        self.assertIn("options", output)
 
 
 class ArgumentTypeKind(ClangTest):

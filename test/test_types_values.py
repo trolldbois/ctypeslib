@@ -314,7 +314,7 @@ typedef union MY_ROOT_UNION {
         ULONGLONG Reserved : 59;
         ULONGLONG Region : 3;
     };
-} Header8;
+} Header8; // struct_MY_ROOT_UNION_1
  struct {
      struct {
         ULONGLONG Depth : 16;
@@ -324,7 +324,7 @@ typedef union MY_ROOT_UNION {
         ULONGLONG Reserved : 2;
         ULONGLONG NextEntry : 60;
     };
-} Header16;
+} Header16; // struct_MY_ROOT_UNION_2
  struct {
   struct {
      struct {
@@ -334,16 +334,19 @@ typedef union MY_ROOT_UNION {
         ULONGLONG Reserved : 3;
         ULONGLONG NextEntry : 60;
     };
-  } HeaderX64;
+  } HeaderX64; // struct_MY_ROOT_UNION_3_0
  };
 } __attribute__((packed)) MY_ROOT_UNION, *PMY_ROOT_UNION, **PPMY_ROOT_UNION ;
         """, flags)
         self.assertIn("MY_ROOT_UNION", self.namespace.keys())
         self.assertIn("struct_MY_ROOT_UNION_0", self.namespace.keys())
-        self.assertIn("struct_MY_ROOT_UNION_1", self.namespace.keys())
-        self.assertIn("struct_MY_ROOT_UNION_2", self.namespace.keys())
+        self.assertNotIn("struct_MY_ROOT_UNION_1", self.namespace.keys())
+        self.assertIn("struct_MY_ROOT_UNION_Header8", self.namespace.keys())
+        self.assertNotIn("struct_MY_ROOT_UNION_2", self.namespace.keys())
+        self.assertIn("struct_MY_ROOT_UNION_Header16", self.namespace.keys())
         self.assertIn("struct_MY_ROOT_UNION_3", self.namespace.keys())
-        self.assertIn("struct_MY_ROOT_UNION_3_0", self.namespace.keys())
+        self.assertNotIn("struct_MY_ROOT_UNION_3_0", self.namespace.keys())
+        self.assertIn("struct_MY_ROOT_UNION_3_HeaderX64", self.namespace.keys())
         self.assertIn("struct_MY_ROOT_UNION_3_0_0", self.namespace.keys())
         self.assertIn("struct_MY_ROOT_UNION_1_0", self.namespace.keys())
         self.assertEqual(ctypes.sizeof(self.namespace.union_MY_ROOT_UNION), 16)

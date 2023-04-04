@@ -241,7 +241,7 @@ class TypeHandler(ClangHandler):
     @log_entity
     def RECORD(self, _cursor_type):
         """
-        A record is a NOT a declaration. A record is the occurrence of of
+        A record is a NOT a declaration. A record is the occurrence of a
         previously defined record type. So no action is needed. Type is already
         known.
         Type is accessible by cursor.type.get_declaration()

@@ -273,6 +273,11 @@ struct s {
         long l2;
         float f2;
     } u;
+
+    union {
+        long x1;
+        float y1;
+    };
 };
 
 // we want the first union to be an anonymous field in struct_s (s_0)
@@ -296,9 +301,11 @@ struct s {
         self.assertNotHasFieldNamed('f2', self.namespace.struct_s)
         # and we have a named union
         self.assertHasFieldNamed('u', self.namespace.struct_s)
-        self.assertIn('union_s_1', self.namespace)
-        self.assertHasFieldNamed('l2', self.namespace.union_s_1)
-        self.assertHasFieldNamed('f2', self.namespace.union_s_1)
+        # Issue #117
+        self.assertNotIn('union_s_1', self.namespace)
+        self.assertIn('union_s_u', self.namespace)
+        self.assertHasFieldNamed('l2', self.namespace.union_s_u)
+        self.assertHasFieldNamed('f2', self.namespace.union_s_u)
 
 
 if __name__ == "__main__":
