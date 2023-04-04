@@ -98,7 +98,7 @@ class ArgumentHelper(ClangTest):
         self.assertIn("usage:", output)
         # self.assertIn("optional arguments", output)
         # py310
-        self.assertIn("options", output)
+        self.assertRegex(output, r"\noption.*:")
 
 
 class ArgumentTypeKind(ClangTest):
