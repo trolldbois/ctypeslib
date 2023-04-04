@@ -20,6 +20,19 @@ class EnumTest(ClangTest):
         self.assertEqual(self.namespace.ONE, 1)
         self.assertEqual(self.namespace.FOUR, 4)
 
+    def test_enum_nameless(self):
+        """
+        Test nameless and typedef
+        """
+        self.gen('test/data/test-enum.c')
+        self.assertEqual(self.namespace.NAMELESS_ENUM_ONE, 0)
+        self.assertEqual(self.namespace.NAMELESS_ENUM_TWO, 1)
+        self.assertEqual(self.namespace.NAMELESS_ENUM_THREE, 2)
+        self.assertEqual(self.namespace.TD_NAMELESS_ENUM_A, 0)
+        self.assertEqual(self.namespace.TD_NAMELESS_ENUM_B, 1)
+        self.assertEqual(self.namespace.TD_NAMELESS_ENUM_C, 2)
+        self.assertEqual(ctypes.sizeof(self.namespace.nameless_enum_type), 4)
+
     def test_enum_short_option_uint8(self):
         """
         Test the enum size when compiler flag '-fshort-enums' is used.
