@@ -64,6 +64,20 @@ class InputOutput(ClangTest):
         self.assertIn("my__quad_t ", output)
         self.assertIn("class struct_bytes4(", output)
 
+    def test_error_translationunit(self):
+        """run clang2py with error in source files"""
+        p, output, stderr = run(['clang2py', 'test/data/test-error2.c'])
+        self.assertEqual(1, p.returncode)
+        print(stderr)
+        self.assertIn("unknown type name 'SS' (test/data/test-error2.c:3:1) during processing test/data/test-error2.c", stderr)
+
+    def test_error_translationunit_include(self):
+        """run clang2py with error in included source files"""
+        p, output, stderr = run(['clang2py', '-i', 'test/data/test-error1.c'])
+        self.assertEqual(1, p.returncode)
+        self.assertIn("unknown type name 'axasxas' (test/data/test-error1.h:5:1) during processing test/data/test-error1.c", stderr)
+
+
 
 class ArgumentInclude(ClangTest):
 
