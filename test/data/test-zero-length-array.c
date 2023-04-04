@@ -9,3 +9,13 @@ struct example {
 	int count;
 	struct example_detail details[];
 };
+
+typedef char array[];
+struct blah {
+    int N;
+    char varsize[];
+};
+struct bar {
+    int N;
+    char * varsize[];
+};

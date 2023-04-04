@@ -135,6 +135,12 @@ class Generator:
         if isinstance(t, typedesc.FundamentalType):
             return self.FundamentalType(t)
         if isinstance(t, typedesc.ArrayType):
+            # C99 feature called the flexible array member feature.
+            # changing this to a pointer is incorrect.
+            # if t.size == 0:
+            #     pointer_class = self.enable_pointer_type()
+            #     return "%s(%s)" % (pointer_class, self.type_name(t.typ, generate))
+            # else:
             return "%s * %s" % (self.type_name(t.typ, generate), t.size)
         if isinstance(t, typedesc.PointerType) and isinstance(t.typ, typedesc.FunctionType):
             return self.type_name(t.typ, generate)

@@ -110,14 +110,21 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.buf, [])
 
     def test_incomplete_array(self):
+        """C99 feature called the flexible array member feature."""
         self.convert("""
         typedef char array[];
         struct blah {
             int N;
             char varsize[];
         };
+        struct bar {
+            int N;
+            char * varsize[];
+        };
         """)
+        self.assertSizes("array")
         self.assertSizes("struct_blah")
+        self.assertSizes("struct_bar")
         # self brewn size modification
         self.assertEqual(ctypes.sizeof(self.namespace.array), 0)
 

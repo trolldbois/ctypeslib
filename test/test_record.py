@@ -207,6 +207,7 @@ struct entry {
         self.assertEqual(ctypes.sizeof(self.namespace.struct_entry), 16)
 
     def test_zero_length_array(self):
+        """C99 feature called the flexible array member feature."""
         flags = ['-target', 'x86_64-linux']
         self.gen('test/data/test-zero-length-array.c', flags)
         self.assertEqual(self.namespace.struct_example_detail.first.offset, 0)
