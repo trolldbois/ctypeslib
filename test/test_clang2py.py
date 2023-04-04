@@ -238,6 +238,7 @@ class ModuleTesting(ClangTest):
     @unittest.skip('2023-03 temporary CI bypass')
     def test_arg_debug(self):
         """run clang2py --debug test/data/test-basic-types.c"""
+        # FIXME maybe the CI doesn't like the stderr patching.
         from ctypeslib import clang2py as cli
         with patch('sys.stdout', new=StringIO()) as fake_out, patch('sys.stderr', new=StringIO()) as fake_err:
             cli.main(['--debug', 'test/data/test-basic-types.c'])
@@ -304,6 +305,18 @@ class TestLocation(ClangTest):
         self.assertIn("# test/data/test-records.c:3\nclass struct_Name(", output)
 
 
+class TestIncludeRegex(ClangTest):
+
+    def test_re(self):
+        """check that the -r flag works"""
+        p, output, stderr = clang2py(['-k', 'emstu', '-r', 'API_[NV].*', 'test/data/test-macros.h'])
+        self.assertEqual(0, p.returncode)
+        self.assertIn("API_NAME", output)
+        self.assertIn("API_VER_MAJOR", output)
+        self.assertIn("API_VER_MINOR", output)
+        self.assertIn("API_VER_PATCH", output)
+        self.assertNotIn("ANOTHER", output)
+        self.assertNotIn("APREPOST", output)
 
 
 if __name__ == "__main__":

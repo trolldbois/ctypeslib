@@ -24,3 +24,9 @@ int i = MY_VAL;
 
 #define DATE __DATE__
 char c5[] = DATE;
+
+
+#define API_NAME  "this is a test"
+#define API_VER_MAJOR  3
+#define API_VER_MINOR  1
+#define API_VER_PATCH  0
