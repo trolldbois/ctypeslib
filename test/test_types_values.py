@@ -126,7 +126,8 @@ class ConstantsTest(ClangTest):
         self.assertSizes("struct_blah")
         self.assertSizes("struct_bar")
         # self brewn size modification
-        self.assertEqual(ctypes.sizeof(self.namespace.array), 0)
+        # clang
+        self.assertEqual(ctypes.sizeof(self.namespace.array), -2)
 
     def test_emptystruct(self):
         self.convert("""

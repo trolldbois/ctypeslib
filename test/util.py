@@ -74,7 +74,7 @@ class ClangTest(unittest.TestCase):
             # PY3 change
             exec(output, namespace)
         except Exception:
-            print(output)
+            # print(output)
             raise
         # except NameError:
         #     print(output)

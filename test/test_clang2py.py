@@ -48,7 +48,6 @@ class InputOutput(ClangTest):
         """run clang2py with error in source files"""
         p, output, stderr = run(['clang2py', 'test/data/test-error2.c'])
         self.assertEqual(1, p.returncode)
-        print(stderr)
         self.assertIn("unknown type name 'SS' (test/data/test-error2.c:3:1) during processing test/data/test-error2.c", stderr)
 
     def test_error_translationunit_include(self):
@@ -291,7 +290,6 @@ class OrderingTest(ClangTest):
         p, output, stderr = clang2py(['./test/data/test-enum.c'])
         decl = output.index("('e', c__EA_E),")
         enum = output.index("c__EA_E = ctypes.c_uint32")
-        print(output)
         self.assertGreater(decl, enum, "Generated incorrect ordering")
 
 
