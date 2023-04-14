@@ -122,12 +122,13 @@ class ConstantsTest(ClangTest):
             char * varsize[];
         };
         """)
-        self.assertSizes("array")
+        # ctypes returns -2, because this is an incomplete type
+        # self.assertSizes("array")
         self.assertSizes("struct_blah")
         self.assertSizes("struct_bar")
         # self brewn size modification
-        # clang
-        self.assertEqual(ctypes.sizeof(self.namespace.array), -2)
+        # we make it an array of size 0 (ctypes.c_char * 0)
+        self.assertEqual(ctypes.sizeof(self.namespace.array), 0)
 
     def test_emptystruct(self):
         self.convert("""
