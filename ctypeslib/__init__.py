@@ -101,7 +101,7 @@ try:
         if clang_version().split('.')[0] != clang_py_version().split('.')[0]:
             clang_major = clang_version().split('.')[0]
             warnings.warn("Version of python-clang (%s) and clang C library (%s) are different. "
-                          "Did you try pip install clang==%s" % (
+                          "Did you try pip install clang==%s.*" % (
                               clang_py_version(), clang_version(), clang_major), RuntimeWarning)
 except ImportError:
     __clang_py_version__ = None
