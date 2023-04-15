@@ -52,7 +52,8 @@ def __find_clang_libraries():
 
 def clang_version():
     """Pull the clang C library version from the API"""
-    get_version = cindex.conf.lib.clang_getClangVersion
+    # avoid loading the cindex API (cindex.conf.lib) to avoid version conflicts
+    get_version = cindex.conf.get_cindex_library().clang_getClangVersion
     get_version.restype = ctypes.c_char_p
     version_string = get_version()
     version = 'Unknown'
