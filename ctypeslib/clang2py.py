@@ -14,7 +14,7 @@ import ctypeslib
 from ctypeslib.codegen import typedesc, config
 from ctypeslib.codegen.codegenerator import translate_files
 from ctypeslib.library import Library
-from ctypeslib import clang_version
+from ctypeslib import clang_version, clang_py_version
 
 ################################################################
 windows_dll_names = """\
@@ -185,8 +185,8 @@ def main(argv=None):
     parser.add_argument("-o", "--output",
                         dest="output",
                         help="output filename (if not specified, standard output will be used)",
-                        default="-",)
-                        # type=argparse.FileType('w'))
+                        default="-", )
+    # type=argparse.FileType('w'))
 
     parser.add_argument("-p", "--preload",
                         dest="preload",
@@ -231,7 +231,8 @@ def main(argv=None):
                         default=False)
     parser.add_argument('-V', '--version',
                         action='version',
-                        version="%(prog)s version " + cfg.version + " clang: " + clang_version())
+                        version="versions - %(prog)s:" + "%s clang:%s python-clang:%s" % (cfg.version, clang_version(),
+                                                                                          clang_py_version()))
 
     parser.add_argument("-w",
                         action="store",

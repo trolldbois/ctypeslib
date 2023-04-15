@@ -182,9 +182,9 @@ class ArgumentVersion(ClangTest):
         p, output, stderr = clang2py(['-V', 'XXXXX'])
         self.assertEqual(0, p.returncode)
         if sys.version_info[0] < 3:
-            self.assertIn("clang2py version", stderr)
+            self.assertIn("versions - clang2py", stderr)
         else:
-            self.assertIn("clang2py version", output)
+            self.assertIn("versions - clang2py", output)
 
 
 class ArgumentVerbose(ClangTest):
