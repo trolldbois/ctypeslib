@@ -91,14 +91,14 @@ def __configure_clang_cindex():
 try:
     from clang import cindex
 
-    __clang_py_version__ = None
+    __clang_py_version__ = 'not-installed'
     _filename = __configure_clang_cindex()
     if _filename is None:
         warnings.warn("Could not find the clang library. please install llvm libclang", RuntimeWarning)
         # do not fail - maybe the user has a plan
     else:
         # set a warning if major versions differs.
-        if clang_version() != clang_py_version():
+        if clang_version().split('.')[0] != clang_py_version().split('.')[0]:
             clang_major = clang_version().split('.')[0]
             warnings.warn("Version of python-clang (%s) and clang C library (%s) are different. "
                           "Did you try pip install clang==%s" % (
