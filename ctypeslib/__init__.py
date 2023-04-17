@@ -75,13 +75,19 @@ def __configure_clang_cindex():
     # first try for a perfect match.
     __lib_filename = find_library("clang-" + __clang_py_version__)
     if __lib_filename is not None:
-        cindex.Config.set_library_file(__lib_filename)
+        if os.path.isdir(__lib_filename):
+            cindex.Config.set_library_path(__lib_filename)
+        else:
+            cindex.Config.set_library_file(__lib_filename)
         return __lib_filename
     else:
         __libs = __find_clang_libraries()
         if len(__libs) > 0:
             __version, __filename = __libs[0]
-            cindex.Config.set_library_file(__filename)
+            if os.path.isdir(__filename):
+                cindex.Config.set_library_path(__filename)
+            else:
+                cindex.Config.set_library_file(__filename)
             return __filename
     return None
 
