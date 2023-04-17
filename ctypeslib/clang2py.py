@@ -94,7 +94,8 @@ class Output:
     def __exit__(self, exc_type, exc_value, tb):
         if self.output_file is not None:
             self.output_file.close()
-            os.remove(self.options.output)
+            # we do not want to delete the output file.
+            # os.remove(self.output_file.name)
         # If an exception is supplied, and the method wishes to suppress the exception
         # (i.e., prevent it from being propagated), it should return a true value.
         return False

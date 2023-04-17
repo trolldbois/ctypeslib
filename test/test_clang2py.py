@@ -1,4 +1,6 @@
+import os.path
 import sys
+import tempfile
 import unittest
 
 from test.util import ClangTest, clang2py, run
@@ -18,6 +20,18 @@ class InputOutput(ClangTest):
         p, output, stderr = clang2py(['test/data/test-includes.h', '-o', '-'])
         self.assertEqual(0, p.returncode)
         self.assertIn("WORD_SIZE is:", output)
+
+    def test_stdout_with_filename(self):
+        """run clang2py test/data/test-includes.h -o filename"""
+        with tempfile.NamedTemporaryFile("w", prefix='output', suffix='.c') as fout:
+            fout.close()
+            p, output, stderr = clang2py(['test/data/test-includes.h', '-o', fout.name])
+            self.assertEqual(0, p.returncode)
+            self.assertNotIn("WORD_SIZE is:", output)
+            with open(fout.name, 'r') as fin:
+                fileoutput = fin.read()
+            self.assertIn("WORD_SIZE is:", fileoutput)
+            self.assertTrue(os.path.exists(fout.name))
 
     def test_stdin_succeed(self):
         """Support of stdin is done """
