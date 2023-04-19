@@ -32,7 +32,7 @@ See the LLVM Clang instructions at http://apt.llvm.org/ or use your distribution
 
 Either use an installer relevant for your OS (APT, downloads, etc..) to install libclang 
 ```
-$ sudo apt install lib-clang1-11
+$ sudo apt install libclang1-11
 ```
 
 or you can use the LLVM install script that installs the whole llvm toolkit 
@@ -47,7 +47,10 @@ or you can use anaconda, or any local installation of your favorite choice
 
 ### ctypeslib and python packages
 Then, install ctypeslib2 and the clang python package with the **same version as your llvm clang library**.
-    
+
+Stable Distribution is available through PyPi at https://pypi.python.org/pypi/ctypeslib2/
+if you are not using the latest LLVM clang version, you will need to specify the correct clang python package version
+
   - If you have installed the latest llvm version: `pip install ctypeslib2` should work fine
   - If you are using llvm clang 16: `pip install ctypeslib2 clang==16`
   - If you are using llvm clang 14: `pip install ctypeslib2 clang==14` 
@@ -75,19 +78,8 @@ versions - clang2py:2.3.3 clang:11.1.0 python-clang:11.0
 3. OR hardcode a call to clang.cindex.Config.load_library_file('libclang-<version\>.so.1') in your code before importing ctypeslib
 
 
-
-### Pypi
-
-Stable Distribution is available through PyPi at https://pypi.python.org/pypi/ctypeslib2/
-
-`pip install ctypeslib2`
-
-if you are not using the latest LLVM clang version, you will need to specify the correct clang python package version
-
-Example for llvm clang version 14: `pip install ctypeslib2 clang==14`
-
-
-## Examples - Library usage
+## Usage
+### Use ctypeslib2 as a Library in your own python code
 
 
     import ctypeslib
@@ -102,7 +94,7 @@ Example for llvm clang version 14: `pip install ctypeslib2 clang==14`
 Look at `test/test_example_script.py` for more advanced Library usage
 
 
-## Other example - CLI
+### Use ctypeslib2 on the command line
 
 Source file:
 
@@ -143,7 +135,7 @@ Output:
     __all__ = \
         ['struct_my_bitfield']
 
-## Other example with headers:
+### use ctypeslib with additional clang arguments:
 
 Source file:
 
@@ -211,71 +203,55 @@ different architecture (like reading a memory dump from a different architecture
 
 
 
-## Usage
+## Usage details
 
-    usage: clang2py [-h] [-c] [-d] [--debug] [-e] [-k TYPEKIND] [-i] [-l DLL]
-                    [-m module] [--nm NM] [-o OUTPUT] [-p DLL] [-q]
-                    [-r EXPRESSION] [-s SYMBOL] [-t TARGET] [-v] [-V] [-w W] [-x]
-                    [--show-ids SHOWIDS] [--max-depth N] [--clang-args CLANG_ARGS]
+    usage: clang2py [-h] [-c] [-d] [--debug] [-e] [-k TYPEKIND] [-i] [-l DLL] [-m module] [--nm NM] [-o OUTPUT] [-p DLL] [-q] [-r EXPRESSION] [-s SYMBOL] [-t TARGET] [-v] [-V] [-w W] [-x] [--show-ids SHOWIDS] [--max-depth N]
+                    [--validate VALIDATE] [--clang-args CLANG_ARGS]
                     files [files ...]
     
-    Version 2.3.0. Generate python code from C headers
+    Version 2.3.3. Generate python code from C headers
     
     positional arguments:
       files                 source filenames. stdin is not supported
     
-    optional arguments:
+    options:
       -h, --help            show this help message and exit
       -c, --comments        include source doxygen-style comments
-      -d, --doc             include docstrings containing C prototype and source
-                            file location
+      -d, --doc             include docstrings containing C prototype and source file location
       --debug               setLevel to DEBUG
       -e, --show-definition-location
                             include source file location in comments
       -k TYPEKIND, --kind TYPEKIND
-                            kind of type descriptions to include: a = Alias, c =
-                            Class, d = Variable, e = Enumeration, f = Function, m
-                            = Macro, #define s = Structure, t = Typedef, u = Union
-                            default = 'cdefstu'
+                            kind of type descriptions to include: a = Alias, c = Class, d = Variable, e = Enumeration, f = Function, m = Macro, #define s = Structure, t = Typedef, u = Union default = 'cdefstu'
       -i, --includes        include declaration defined outside of the sourcefiles
       -l DLL, --include-library DLL
-                            library to search for exported functions. Add multiple
-                            times if required
+                            library to search for exported functions. Add multiple times if required
       -m module, --module module
-                            Python module(s) containing symbols which will be
-                            imported instead of generated
+                            Python module(s) containing symbols which will be imported instead of generated
       --nm NM               nm program to use to extract symbols from libraries
       -o OUTPUT, --output OUTPUT
-                            output filename (if not specified, standard output
-                            will be used)
+                            output filename (if not specified, standard output will be used)
       -p DLL, --preload DLL
-                            dll to be loaded before all others (to resolve
-                            symbols)
+                            dll to be loaded before all others (to resolve symbols)
       -q, --quiet           Shut down warnings and below
       -r EXPRESSION, --regex EXPRESSION
-                            regular expression for symbols to include (if neither
-                            symbols nor expressions are specified,everything will
-                            be included)
+                            regular expression for symbols to include (if neither symbols nor expressions are specified,everything will be included)
       -s SYMBOL, --symbol SYMBOL
-                            symbol to include (if neither symbols nor expressions
-                            are specified,everything will be included)
+                            symbol to include (if neither symbols nor expressions are specified,everything will be included)
       -t TARGET, --target TARGET
                             target architecture (default: x86_64-Linux)
       -v, --verbose         verbose output
       -V, --version         show program's version number and exit
-      -w W                  add all standard windows dlls to the searched dlls
-                            list
+      -w W                  add all standard windows dlls to the searched dlls list
       -x, --exclude-includes
                             Parse object in sources files only. Ignore includes
       --show-ids SHOWIDS    Don't compute cursor IDs (very slow)
       --max-depth N         Limit cursor expansion to depth N
+      --validate VALIDATE   validate the python code is correct
       --clang-args CLANG_ARGS
-                            clang options, in quotes: --clang-args="-std=c99
-                            -Wall"
+                            clang options, in quotes: --clang-args="-std=c99 -Wall"
     
-    Cross-architecture: You can pass target modifiers to clang. For example, try
-    --clang-args="-target x86_64" or "-target i386-linux" to change the target CPU
-    arch.
+    Cross-architecture: You can pass target modifiers to clang. For example, try --clang-args="-target x86_64" or "-target i386-linux" to change the target CPU arch.
 
 
 ## Inner workings for memo
