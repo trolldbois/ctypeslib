@@ -91,7 +91,7 @@ versions - clang2py:2.3.3 clang:11.1.0 python-clang:11.0
     print(py_module2.struct_coordinates(1,2))  # <struct_coordinates object at 0xabcde12345>
 
 
-Look at `test/test_example_script.py` for more advanced Library usage
+Look at `test/test_api.py` for more advanced Library usage
 
 
 ### Use ctypeslib2 on the command line

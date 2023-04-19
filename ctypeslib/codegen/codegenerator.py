@@ -1148,12 +1148,13 @@ def translate(input_io, cfg=None):
     return util.ADict(namespace)
 
 
-def translate_files(source_files, outfile, cfg: config.CodegenConfig):
+def translate_files(source_files, outfile=None, cfg: config.CodegenConfig=None):
     """
     Translate the content of source_files in python code in outfile
 
     source_files: list of filenames or single filename
     """
+    cfg = cfg or config.CodegenConfig()
     translator = CodeTranslator(cfg)
     translator.preload_dlls()
     if isinstance(source_files, list):
@@ -1161,6 +1162,19 @@ def translate_files(source_files, outfile, cfg: config.CodegenConfig):
     else:
         translator.parse_input_file(source_files)
     log.debug("Input was parsed")
-    translator.generate_code(outfile)
+    if outfile:
+        translator.generate_code(outfile)
+    else:
+        output = io.StringIO()
+        translator.generate_code(output)
+        output.seek(0)
+        # inject generated code in python namespace
+        ignore_coding = output.readline()
+        # exec ofi.getvalue() in namespace
+        output = ''.join(output.readlines())
+        namespace = {}
+        exec(output, namespace)
+        return util.ADict(namespace)
+
     return
 

@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 import io
 
@@ -55,6 +56,29 @@ struct example {
         self.assertIn("struct_example", py_namespace)
         self.assertEqual(py_namespace.i, 12)
         self.assertEqual(py_namespace.c2, ['a', 'b', 'c'])
+
+    def test_basic_file_io(self):
+        py_namespace = ctypeslib.translate_files('test/data/test-library.c')
+        self.assertIn("a", py_namespace)
+        self.assertEqual(py_namespace.a, 0)
+
+    def test_advanced_file_io(self):
+        cfg = config.CodegenConfig()
+        cfg.clang_opts.append('-I/home/jal/Code/ctypeslib/test/data/')
+        py_namespace = ctypeslib.translate_files('test/data/test-enum.c', cfg=cfg)
+        self.assertIn("ZERO", py_namespace)
+        self.assertIn("myEnum", py_namespace)
+        self.assertEqual(py_namespace.ZERO, 0)
+
+    def test_advanced_file_io_to_file(self):
+        cfg = config.CodegenConfig()
+        cfg.clang_opts.append('-I/home/jal/Code/ctypeslib/test/data/')
+        with tempfile.NamedTemporaryFile(suffix=".py", mode='w+') as tmpfile:
+            ctypeslib.translate_files('test/data/test-enum.c', outfile=tmpfile, cfg=cfg)
+            tmpfile.seek(0)
+            output = tmpfile.read()
+        self.assertIn("ZERO = 0", output)
+        self.assertIn("myEnum", output)
 
 
 class ConfigTest(unittest.TestCase):
