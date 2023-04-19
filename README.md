@@ -15,34 +15,77 @@
 
 ## Status update
 
+ - 2023-04:
+   - Please read the installation instructions
  - 2021-02:
-    - Thanks for the pull requests
-    - Note: libclang-xx-dev must be installed for stddef and other reasons.
-    - bump to libclang-11
+   - Thanks for the pull requests
+   - Note: libclang-xx-dev must be installed for stddef and other reasons.
+   - bump to libclang-11
  - 2018-01-03: master branch works with libclang-5.0 HEAD, python clang from pypi, python3
  - 2017-05-01: master branch works with libclang-4.0 HEAD
 
 ## Installation
 
-On Ubuntu, libclang libraries are installed with versions.
+### LLVM Clang library
+First, you should install LLVM clang.
+See the LLVM Clang instructions at http://apt.llvm.org/ or use your distribution's packages.
+
+Either use an installer relevant for your OS (APT, downloads, etc..) to install libclang 
+```
+$ sudo apt install lib-clang1-11
+```
+
+or you can use the LLVM install script that installs the whole llvm toolkit 
+```
+ wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
+ # then install llvm version 16 
+ ./llvm.sh 16
+ # or version 11 or any other version
+ ./llvm.sh 11
+```
+or you can use anaconda, or any local installation of your favorite choice
+
+### ctypeslib and python packages
+Then, install ctypeslib2 and the clang python package with the **same version as your llvm clang library**.
+    
+  - If you have installed the latest llvm version: `pip install ctypeslib2` should work fine
+  - If you are using llvm clang 16: `pip install ctypeslib2 clang==16`
+  - If you are using llvm clang 14: `pip install ctypeslib2 clang==14` 
+  - If you are using llvm clang 11: `pip install ctypeslib2 clang==11`
+  - etc...
+
+### Alternate configurations
+
+On Ubuntu, libclang libraries are installed with version in the filename.
 This library tries to load a few different versions to help you out. (`__init__.py`)
 But if you encounter a version compatibility issue, you might have to fix the problem
 using one of the following solutions:
 
-1. Install libclang-11-dev to get libclang.so (maybe)
-2. OR create a link to libclang-11.so.1 named libclang.so
-3. OR hardcode a call to clang.cindex.Config.load_library_file('libclang-10.so.1') in your code
+1. set the CLANG_LIBRARY_PATH environmental variable to the clang library file or path
+```
+$ export CLANG_LIBRARY_PATH=/lib/x86_64-linux-gnu/libclang-11.so.1
+$ clang2py --version
+versions - clang2py:2.3.3 clang:11.1.0 python-clang:11.0
+```
+ 
+2. OR Install the development package libclang-<version\>-dev to get a file called libclang.so
+
+`$ sudo apt get install libclang-11-dev`
+2. OR create a link to libclang-<version\>.so.1 named libclang.so
+3. OR hardcode a call to clang.cindex.Config.load_library_file('libclang-<version\>.so.1') in your code before importing ctypeslib
+
 
 
 ### Pypi
 
 Stable Distribution is available through PyPi at https://pypi.python.org/pypi/ctypeslib2/
 
-`sudo pip install ctypeslib2`
+`pip install ctypeslib2`
 
-### Setting up clang >= 3.7 dependency
+if you are not using the latest LLVM clang version, you will need to specify the correct clang python package version
 
-See the LLVM Clang instructions at http://apt.llvm.org/ or use your distribution's packages.
+Example for llvm clang version 14: `pip install ctypeslib2 clang==14`
+
 
 ## Examples - Library usage
 

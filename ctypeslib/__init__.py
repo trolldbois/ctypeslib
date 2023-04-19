@@ -5,6 +5,7 @@ from pkg_resources import get_distribution, DistributionNotFound
 import ctypes
 from ctypes.util import find_library
 import os
+import logging
 import re
 import sys
 import warnings
@@ -27,8 +28,10 @@ else:
 def __find_clang_libraries():
     """ configure python-clang to use the local clang library """
     _libs = []
+    # try for a file with a version match with the clang python package version
+    version_major = __clang_py_version__.split('.')[0]
     # try default system name
-    v0 = ["libclang", "clang"]
+    v0 = [f"clang-{__clang_py_version__}", f"clang-{version_major}", "libclang", "clang"]
     # tries clang version 16 to 7
     v1 = ["clang-%d" % _ for _ in range(16, 6, -1)]
     # with the dotted form of clang 6.0 to 4.0
@@ -39,14 +42,14 @@ def __find_clang_libraries():
     for _version in v_list:
         _filename = find_library(_version)
         if _filename:
-            _libs.append((_version, _filename))
+            _libs.append(_filename)
     # On darwin, also consider either Xcode or CommandLineTools.
     if os.name == "posix" and sys.platform == "darwin":
         for _ in ['/Library/Developer/CommandLineTools/usr/lib/libclang.dylib',
                   '/Applications/Xcode.app/Contents/Frameworks/libclang.dylib',
                   ]:
             if os.path.exists(_):
-                _libs.insert(0, (_, _))
+                _libs.insert(0, _)
     return _libs
 
 
@@ -70,25 +73,34 @@ def clang_py_version():
 
 
 def __configure_clang_cindex():
+    """
+    First we attempt to configure clang with the library path set in environment variable
+    Second we attempt to configure clang with a clang library version similar to the clang python package version
+    Third we attempt to configure clang with any clang library we can find
+    """
     global __clang_py_version__
     __clang_py_version__ = get_distribution('clang').version
-    # first try for a perfect match.
-    __lib_filename = find_library("clang-" + __clang_py_version__)
-    if __lib_filename is not None:
-        if os.path.isdir(__lib_filename):
-            cindex.Config.set_library_path(__lib_filename)
+    # first, use environment variables set by user
+    __libs = []
+    __lib_path = os.environ.get('CLANG_LIBRARY_PATH')
+    if __lib_path is not None:
+        if not os.path.exists(__lib_path):
+            warnings.warn("Filepath in CLANG_LIBRARY_PATH does not exist", RuntimeWarning)
         else:
-            cindex.Config.set_library_file(__lib_filename)
-        return __lib_filename
-    else:
-        __libs = __find_clang_libraries()
-        if len(__libs) > 0:
-            __version, __filename = __libs[0]
-            if os.path.isdir(__filename):
-                cindex.Config.set_library_path(__filename)
+            __libs.append(__lib_path)
+    __libs.extend(__find_clang_libraries())
+    for __library_path in __libs:
+        try:
+            if os.path.isdir(__library_path):
+                cindex.Config.set_library_path(__library_path)
             else:
-                cindex.Config.set_library_file(__filename)
-            return __filename
+                cindex.Config.set_library_file(__library_path)
+            # force-check that clang is configured properly
+            clang_version()
+        except cindex.LibclangError:
+            warnings.warn(f"Could not configure clang with library_path={__library_path}", RuntimeWarning)
+            continue
+        return __library_path
     return None
 
 
