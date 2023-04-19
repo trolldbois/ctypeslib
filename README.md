@@ -90,6 +90,21 @@ versions - clang2py:2.3.3 clang:11.1.0 python-clang:11.0
     print(py_module2.struct_coordinates)  # <class 'struct_coordinates'>
     print(py_module2.struct_coordinates(1,2))  # <struct_coordinates object at 0xabcde12345>
 
+    # input files, output file
+    py_module3 = ctypeslib.translate_files(['mytest.c'], outfile=open('mytest.py', 'w'))
+    print(open('mytest.py').read())
+
+    # input files, output code
+    py_module4 = ctypeslib.translate_files(['mytest.c'])
+    print(open('mytest.py').read())
+
+    # input files, output code, with clang options, like cross-platform
+    from ctypeslib.codegen import config
+    cfg = config.CodegenConfig()
+    cfg.clang_opts.extend(['-target', 'arm-gnu-linux'])
+    py_module5 = ctypeslib.translate_files(['mytest.c'], cfg=cfg)
+    print(open('mytest.py').read())
+
 
 Look at `test/test_api.py` for more advanced Library usage
 
@@ -201,6 +216,7 @@ on 0 bytes, to ensure all fields are as defined by this library, and not per the
 The objective of this, is to be able to produce cross-architecture python code, that can read memory structures from a 
 different architecture (like reading a memory dump from a different architecture)
 
+See `clang-11 -print-targets` for options
 
 
 ## Usage details

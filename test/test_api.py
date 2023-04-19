@@ -72,13 +72,14 @@ struct example {
 
     def test_advanced_file_io_to_file(self):
         cfg = config.CodegenConfig()
-        cfg.clang_opts.append('-I/home/jal/Code/ctypeslib/test/data/')
+        cfg.clang_opts.extend(['-I./test/data/', '-target', 'arm-gnu-linux'])
         with tempfile.NamedTemporaryFile(suffix=".py", mode='w+') as tmpfile:
             ctypeslib.translate_files('test/data/test-enum.c', outfile=tmpfile, cfg=cfg)
             tmpfile.seek(0)
             output = tmpfile.read()
         self.assertIn("ZERO = 0", output)
         self.assertIn("myEnum", output)
+        self.assertIn("WORD_SIZE is: 4", output)
 
 
 class ConfigTest(unittest.TestCase):
