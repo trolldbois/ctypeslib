@@ -21,7 +21,7 @@ jobs:
         id: build-package
 
   test:
-    needs: jobs.check-package-build
+    needs: check-package-build
     runs-on: ubuntu-latest
     strategy:
       matrix:
