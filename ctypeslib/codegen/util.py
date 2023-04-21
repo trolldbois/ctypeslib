@@ -195,4 +195,5 @@ __all__ = [
     'get_cursors',
     'get_tu',
     'from_c_float_literal',
+    'log_entity'
 ]

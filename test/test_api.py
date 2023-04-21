@@ -102,7 +102,7 @@ class ConfigTest(unittest.TestCase):
 
     def test_config_default(self):
         cfg = config.CodegenConfig()
-        py_namespace = ctypeslib.translate(self.input_io, cfg)
+        py_namespace = ctypeslib.translate(self.input_io, cfg=cfg)
         self.assertIn("struct_example_1", py_namespace)
         self.assertIn("union_example_2", py_namespace)
 

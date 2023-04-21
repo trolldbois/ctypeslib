@@ -1127,7 +1127,7 @@ class CodeTranslator:
 
 # easy to use API.
 
-def translate(input_io, cfg=None):
+def translate(input_io, outfile=None, cfg=None):
     """
         Take a readable C like input readable and translate it to python.
     """
@@ -1136,6 +1136,9 @@ def translate(input_io, cfg=None):
     translator.preload_dlls()
     translator.parse_input_string(input_io)
     # gen python code
+    if outfile:
+        return translator.generate_code(outfile)
+    # otherwise return python
     output = io.StringIO()
     translator.generate_code(output)
     output.seek(0)
@@ -1163,18 +1166,16 @@ def translate_files(source_files, outfile=None, cfg: config.CodegenConfig=None):
         translator.parse_input_file(source_files)
     log.debug("Input was parsed")
     if outfile:
-        translator.generate_code(outfile)
-    else:
-        output = io.StringIO()
-        translator.generate_code(output)
-        output.seek(0)
-        # inject generated code in python namespace
-        ignore_coding = output.readline()
-        # exec ofi.getvalue() in namespace
-        output = ''.join(output.readlines())
-        namespace = {}
-        exec(output, namespace)
-        return util.ADict(namespace)
-
-    return
+        return translator.generate_code(outfile)
+    # otherwise return python
+    output = io.StringIO()
+    translator.generate_code(output)
+    output.seek(0)
+    # inject generated code in python namespace
+    ignore_coding = output.readline()
+    # exec ofi.getvalue() in namespace
+    output = ''.join(output.readlines())
+    namespace = {}
+    exec(output, namespace)
+    return util.ADict(namespace)
 
