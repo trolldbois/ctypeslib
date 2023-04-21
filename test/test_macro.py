@@ -567,6 +567,24 @@ int tab1[] = MACRO_EXAMPLE(1,2);
     https://blog.kowalczyk.info/article/j/guide-to-predefined-macros-in-c-compilers-gcc-clang-msvc-etc..html
     """
 
+    def test_macro_value_with_parenthesis(self):
+        self.convert('''
+#define CPU_DEF_SET   (-1)
+#define another_one   (2)
+#define a_tuple   (2,3)
+#define HI(x) x
+        ''')
+        print(self.text_output)
+        # we want to allow for macro substitution of (int)
+        self.assertIn("CPU_DEF_SET", self.namespace)
+        self.assertIn("another_one", self.namespace)
+        self.assertIn("a_tuple", self.namespace)
+        self.assertEqual(self.namespace.CPU_DEF_SET, -1)
+        self.assertEqual(self.namespace.another_one, (2))
+        self.assertEqual(self.namespace.a_tuple, (2, 3))
+        # but not functions.
+        self.assertNotIn("HI", self.namespace)
+
     @unittest.expectedFailure
     def test_defines_predefined(self):
         self.convert('''
@@ -650,8 +668,8 @@ int v = __STDC_VERSION__;
         self.assertIn("struct_foo", self.namespace)
 
     def test_enum_macro(self):
-        self.convert(
-            '''
+        from ctypeslib import translate
+        self.namespace = translate('''
         #include <stdint.h>
         enum myEnum {
             MIN=INT32_MIN, 
@@ -664,6 +682,36 @@ int v = __STDC_VERSION__;
         self.assertEqual(ctypes.sizeof(self.namespace.myEnum), 4)
         self.assertEqual(self.namespace.MIN, -2147483648)
         self.assertEqual(self.namespace.MAX, 2147483647)
+
+    def test_enum_stringize(self):
+        """     Stringizing operator (#)
+        https://www.geeksforgeeks.org/and-operators-in-c/# """
+        self.convert('''
+#define mkstr(s) #s
+char * ret = mkstr(mytext value);
+        ''')
+        print(self.text_output)
+        self.assertIn("ret", self.namespace)
+        self.assertEqual(self.namespace.ret, "mytext value")
+
+    @unittest.expectedFailure
+    def test_enum_token_pasting(self):
+        """
+        Token-pasting operator (##)
+        https://www.geeksforgeeks.org/and-operators-in-c/# """
+        from ctypeslib import translate
+        self.namespace = translate('''
+#define concat(a, b) a##b
+// char * ret = concat("mytext", "value");
+int add = concat(1, 2);
+        ''')
+        print(self.text_output)
+        self.assertIn("add", self.namespace)
+        # expected failure, see bug #77
+        # "Bug #77 - integer literal from macros don't work"
+        self.assertEqual(self.namespace.add, 12)
+        self.assertIn("ret", self.namespace)
+        self.assertEqual(self.namespace.ret, "mytextvalue")
 
 
 if __name__ == "__main__":
