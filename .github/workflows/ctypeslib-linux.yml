@@ -10,7 +10,7 @@ jobs:
     name: Build & inspect our package.
     runs-on: ubuntu-latest
     outputs:
-      dist-folder: ${{ steps.build-package.outputs.dist }}
+      dist: ${{ steps.build-package.outputs.dist }}
 
     steps:
       - uses: actions/checkout@v3
@@ -73,7 +73,7 @@ jobs:
         echo "DYLD_LIBRARY_PATH=$(pwd)/test/data/:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
     - name: Install clang2py
       run: |
-        pip install ${{ jobs.build_job.outputs.dist-folder }}/ctypeslib2-*.whl
+        pip install ${{ needs.check-package-build.outputs.dist }}/ctypeslib2-*.whl
       # pip install --upgrade -e .
     - name: Test with Unittest and coverage
       run: |
