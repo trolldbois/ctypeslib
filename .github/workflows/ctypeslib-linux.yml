@@ -6,7 +6,8 @@ on: [push, pull_request]
 
 
 jobs:
-  check-package:
+  check-package-build:
+    id: build_job
     name: Build & inspect our package.
     runs-on: ubuntu-latest
 
@@ -15,6 +16,7 @@ jobs:
       - uses: hynek/build-and-inspect-python-package@v1
 
   test:
+    needs: jobs.build_job
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -66,7 +68,8 @@ jobs:
         echo "DYLD_LIBRARY_PATH=$(pwd)/test/data/:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
     - name: Install clang2py
       run: |
-        pip install --upgrade -e .
+        pip install ${{ steps.build_job.outputs.dist }}/ctypeslib2-*.whl
+      # pip install --upgrade -e .
     - name: Test with Unittest and coverage
       run: |
         coverage run --source=ctypeslib -m unittest test.alltests
