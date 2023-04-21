@@ -13,6 +13,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          pip install setuptools setuptools_scm
       - uses: hynek/build-and-inspect-python-package@v1
 
   test:
