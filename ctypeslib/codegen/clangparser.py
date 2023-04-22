@@ -75,6 +75,7 @@ class Clang_Parser:
         self._unhandled = []
         self.fields = {}
         self.tu = None
+        self.tu_options = None
         self.flags = flags
         self.ctypes_sizes = {}
         self.init_parsing_options()
@@ -222,7 +223,7 @@ class Clang_Parser:
         return obj
 
     def get_registered(self, name):
-        """Returns an registered type description"""
+        """Returns a registered type description"""
         return self.all[name]
 
     def is_registered(self, name):
@@ -284,7 +285,7 @@ typedef void* pointer_t;""",
         size2 = util.get_cursor(translation_unit, "longdouble_t").type.get_size() * 8
         # 2014-01 stop generating crap.
         # 2015-01 reverse until better solution is found
-        # the idea is that a you cannot assume a c_double will be same format as a c_long_double.
+        # the idea is that you cannot assume a c_double will be same format as a c_long_double.
         # at least this pass size TU
         if size1 != size2:
             self.ctypes_typename[TypeKind.LONGDOUBLE] = "c_long_double_t"
