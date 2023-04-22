@@ -5,7 +5,7 @@ int twice(int i)
 
 int (*ptwice)(int) = &twice;
 
-int (*get_func_ptr())(int)
+int (*get_func_ptr(void))(int)
 {
     return &twice;
 }
