@@ -126,9 +126,11 @@ try:
             warnings.warn(f"Version of python-clang ({clang_py_version()}) and "
                           f"clang C library ({clang_version()}) are different. "
                           f"Did you try pip install clang=={clang_major}.*", RuntimeWarning)
-except ImportError:
+except ImportError as e:
     __clang_py_version__ = None
-    warnings.warn("Could not find a version of python-clang installed. please pip install clang", RuntimeWarning)
+    warnings.warn("Could not find a version of python-clang installed. "
+                  "Please pip install clang==<version>.*", RuntimeWarning)
+    raise e
 
 
 __all__ = ['translate', 'translate_files', 'clang_version', 'clang_py_version']
