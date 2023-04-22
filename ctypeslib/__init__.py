@@ -110,8 +110,8 @@ try:
     from clang import cindex
 
     __clang_py_version__ = 'not-installed'
-    _filename = __configure_clang_cindex()
-    if _filename is None:
+    __clang_library_filename = __configure_clang_cindex()
+    if __clang_library_filename is None:
         warnings.warn("Could not find the clang library. please install llvm libclang", RuntimeWarning)
         # do not fail - maybe the user has a plan
     else:
