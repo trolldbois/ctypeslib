@@ -19,17 +19,7 @@ jobs:
           pip install setuptools setuptools_scm
       - uses: hynek/build-and-inspect-python-package@v1
         id: build-package
-      - name: Match wheel filename
-        uses: tj-actions/glob@v17
-        id: glob
-        with:
-          files: ${{ steps.build-package.outputs.dist }}/*.whl
-      - name: Cache wheel
-        id: cache-wheel
-        uses: actions/cache/save@v3
-        with:
-          path: ${{ steps.glob.outputs.paths }}
-          key: package
+      # packages are uploaded to Packages
 
   test:
     needs: check-package-build
@@ -82,14 +72,18 @@ jobs:
       if: ${{runner.os == 'macOS' }}
       run: |
         echo "DYLD_LIBRARY_PATH=$(pwd)/test/data/:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-    - name: Restore cached wheel
-      uses: actions/cache/restore@v3
+    - uses: actions/download-artifact@v3
       with:
-        path: ctypeslib2.whl
-        key: package
+        name: Packages
+        path: ~/packages/
+    - name: Display structure of downloaded files
+      run: ls -R
+      working-directory: ~/packages/
+    - name: Display wheel name
+      run: ls -al ~/packages/ctypeslib2*.whl
     - name: Install clang2py
       run: |
-        pip install ctypeslib2.whl
+        pip install ~/packages/ctypeslib2*.whl
       # pip install --upgrade -e .
     - name: Test with Unittest and coverage
       run: |
