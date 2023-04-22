@@ -128,4 +128,4 @@ except ImportError:
 from clang import cindex
 from ctypeslib.codegen.codegenerator import translate, translate_files
 
-__all__ = ['translate', 'translate_files', 'clang_version']
+__all__ = ['translate', 'translate_files', 'clang_version', 'clang_py_version']

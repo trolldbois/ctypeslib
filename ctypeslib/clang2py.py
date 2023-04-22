@@ -19,6 +19,7 @@ import ctypeslib
 from ctypeslib import clang_version, clang_py_version
 from ctypeslib.codegen import config
 from ctypeslib.codegen.codegenerator import translate_files
+from ctypeslib.codegen.handler import InvalidTranslationUnitException
 
 ################################################################
 windows_dll_names = """\
@@ -55,48 +56,54 @@ rpcrt4""".split()
 
 
 def _is_typedesc(item):
-    for c in item:
-        if c not in "acdefmstu":
+    for char in item:
+        if char not in "acdefmstu":
             raise argparse.ArgumentTypeError("types choices are 'acdefmstu'")
     return item
 
 
 class Input:
+    """A context manager to abstract input file, files or stdin"""
+
     def __init__(self, options):
         self.files = []
         self._stdin = None
-        for f in options.files:
+        for in_file in options.files:
             # stdin case
-            if f == sys.stdin:
+            if in_file == sys.stdin:
+                # pylint: disable-next=consider-using-with
                 _stdin = tempfile.NamedTemporaryFile(mode="w", prefix="stdin", suffix=".c", delete=False)
-                _stdin.write(f.read())
-                f = _stdin
-            self.files.append(f.name)
-            f.close()
+                _stdin.write(in_file.read())
+                in_file = _stdin
+            self.files.append(in_file.name)
+            in_file.close()
 
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, tb):
+    def __exit__(self, exc_type, exc_value, ecx_tb):
         if self._stdin:
             os.remove(self._stdin.name)
         return False
 
 
 class Output:
+    """A context manager to abstract out file or stdout"""
+
     def __init__(self, options):
         # handle output
         if options.output == "-":
             self.stream = sys.stdout
             self.output_file = None
         else:
+            # pylint: disable-next=unspecified-encoding,consider-using-with
             self.stream = open(options.output, "w")
             self.output_file = self.stream
 
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, tb):
+    def __exit__(self, exc_type, exc_value, ecx_tb):
         if self.output_file is not None:
             self.output_file.close()
             # we do not want to delete the output file.
@@ -106,23 +113,14 @@ class Output:
         return False
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv[1:]
-    cfg = config.CodegenConfig()
-    cfg.local_platform_triple = "%s-%s" % (platform.machine(), platform.system())
-    cfg.known_symbols = {}
-    cfg.searched_dlls = []
-    cfg.clang_opts = []
-    files = None
+def _make_parser(cfg):
+    """Build the argparse parser"""
 
-    def windows_dlls(option, opt, value, parser):
-        parser.values.dlls.extend(windows_dll_names)
-
-    cfg.version = ctypeslib.__version__
+    def windows_dlls(option, opt, value, _parser):  # pylint: disable=unused-argument
+        _parser.values.dlls.extend(windows_dll_names)
 
     parser = argparse.ArgumentParser(
-        prog="clang2py", description="Version %s. Generate python code from C headers" % cfg.version
+        prog="clang2py", description=f"Version {ctypeslib.__version__}. Generate python code from C headers"
     )
     parser.add_argument(
         "-c",
@@ -155,16 +153,16 @@ def main(argv=None):
         action="store",
         dest="kind",
         help="kind of type descriptions to include: "
-        "a = Alias,\n"
-        "c = Class,\n"
-        "d = Variable,\n"
-        "e = Enumeration,\n"
-        "f = Function,\n"
-        "m = Macro, #define\n"
-        "s = Structure,\n"
-        "t = Typedef,\n"
-        "u = Union\n"
-        "default = 'cdefstu'\n",
+             "a = Alias,\n"
+             "c = Class,\n"
+             "d = Variable,\n"
+             "e = Enumeration,\n"
+             "f = Function,\n"
+             "m = Macro, #define\n"
+             "s = Structure,\n"
+             "t = Typedef,\n"
+             "u = Union\n"
+             "default = 'cdefstu'\n",
         metavar="TYPEKIND",
         default="cdefstu",
         type=_is_typedesc,
@@ -235,8 +233,8 @@ def main(argv=None):
         metavar="EXPRESSION",
         action="append",
         help="regular expression for symbols to include "
-        "(if neither symbols nor expressions are specified,"
-        "everything will be included)",
+             "(if neither symbols nor expressions are specified,"
+             "everything will be included)",
         default=[],
     )
 
@@ -254,21 +252,17 @@ def main(argv=None):
         "-t",
         "--target",
         dest="target",
-        help="target architecture (default: %s)" % cfg.local_platform_triple,
+        help=f"target architecture (default: {cfg.local_platform_triple})",
         default=None,
     )  # actually let clang alone decide.
 
     parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="verbose output", default=False)
 
     def version_string():
-        a = "versions - %(prog)s:"
-        b = "%s python-clang:%s clang:%s clang_filename:%s" % (
-            cfg.version,
-            clang_version(),
-            clang_py_version(),
-            ctypeslib.__clang_library_filename,
-        )
-        return a + b
+        version = "versions - %(prog)s:" \
+                  f"{ctypeslib.__version__} python-clang:{clang_version()} clang:{clang_py_version()} " \
+                  f"clang_filename:{ctypeslib.__clang_library_filename}"  # pylint: disable=protected-access
+        return version
 
     parser.add_argument("-V", "--version", action="version", version=version_string())
 
@@ -294,10 +288,9 @@ def main(argv=None):
         "--validate", dest="validate", help="validate the python code is correct", type=bool, default=True
     )
 
-    # FIXME recognize - as stdin
-    # we do NOT support stdin
+    # we do support stdin
     parser.add_argument(
-        "files", nargs="+", help="source filenames. stdin is not supported", type=argparse.FileType("r")
+        "files", nargs="+", help="source filenames. use '-' for stdin ", type=argparse.FileType("r")
     )
 
     parser.add_argument(
@@ -312,6 +305,20 @@ def main(argv=None):
     parser.epilog = """Cross-architecture: You can pass target modifiers to clang.
     For example, try --clang-args="-target x86_64" or "-target i386-linux" to change the target CPU arch."""
 
+    return parser
+
+
+def main(argv=None):
+    """entry point for clang2py"""
+    if argv is None:
+        argv = sys.argv[1:]
+    cfg = config.CodegenConfig()
+    cfg.local_platform_triple = f"{platform.machine()}-{platform.system()}"
+    cfg.known_symbols = {}
+    cfg.searched_dlls = []
+    cfg.clang_opts = []
+
+    parser = _make_parser(cfg)
     options = parser.parse_args(argv)
 
     # cfg is the CodegenConfig, not the runtime config.
@@ -326,14 +333,12 @@ def main(argv=None):
     cfg.parse_options(options)
 
     # handle input files, and outputs
-    from ctypeslib.codegen.handler import InvalidTranslationUnitException
-
     try:
         with Input(options) as inputs, Output(options) as outputs:
             # start codegen
             if cfg.generate_comments:
                 outputs.stream.write("# generated by 'clang2py'\n")
-                outputs.stream.write("# flags '%s'\n" % " ".join(argv[1:]))
+                outputs.stream.write(f"# flags '{' '.join(argv[1:])}'\n")
 
             # Preload libraries
             # [Library(name, mode=RTLD_GLOBAL) for name in options.preload]
@@ -347,7 +352,7 @@ def main(argv=None):
 if __name__ == "__main__":
     try:
         sys.exit(main(sys.argv[1:]))
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         # return non-zero exit status in case of an unhandled exception
         traceback.print_exc()
         sys.exit(1)

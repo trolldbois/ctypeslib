@@ -1,3 +1,6 @@
+"""
+The configuration class that will modify the behavior of ctypeslib
+"""
 import re
 
 from ctypeslib.library import Library
@@ -17,7 +20,7 @@ class CodegenConfig:
     generate_docstrings: bool = False
     # include source file location in comments
     generate_locations: bool = False
-    # do not include declaration defined outside of the source files
+    # do not include declaration defined outside the source files
     filter_location: bool = True
     # dll to be loaded before all others (to resolve symbols)
     preloaded_dlls: list = []
