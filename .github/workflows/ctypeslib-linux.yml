@@ -11,20 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Install dependencies
+        with:
+          # get all history and tags for setuptools_scm to find the right version
+          fetch-depth: 0
+      - name: Install build dependencies
         run: |
-          pip install setuptools setuptools_scm twine wheel check-wheel-contents build
-      - name: Where is python, do we need actions/setup-python@v4
-        run: pip -v list
-      - name: Build package
-        run: python -m build
+          pip install setuptools setuptools_scm wheel build
+      - name: Build package wheel
+        run: python -m build -w
       - name: Upload built artifacts.
         uses: actions/upload-artifact@v3
         with:
           name: Packages
           path: ./dist/*
-      - name: Error out
-        run: error
 #      - uses: hynek/build-and-inspect-python-package@v1
 #        id: build-package
       # packages are uploaded to Packages
