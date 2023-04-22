@@ -15,10 +15,10 @@ from ctypeslib.codegen.handler import DuplicateDefinitionException
 from ctypeslib.codegen.handler import InvalidDefinitionError
 from ctypeslib.codegen.handler import InvalidTranslationUnitException
 
-log = logging.getLogger('clangparser')
+log = logging.getLogger("clangparser")
 
 
-class Clang_Parser(object):
+class Clang_Parser:
     """
     Will parse libclang AST tree to create a representation of Types and
     different others source code objects objets as described in Typedesc.
@@ -27,37 +27,44 @@ class Clang_Parser(object):
     declaration will be cached and saved.
     """
 
-    has_values = {"Enumeration", "Function", "FunctionType",
-                  "OperatorFunction", "Method", "Constructor",
-                  "Destructor", "OperatorMethod",
-                  "Converter"}
+    has_values = {
+        "Enumeration",
+        "Function",
+        "FunctionType",
+        "OperatorFunction",
+        "Method",
+        "Constructor",
+        "Destructor",
+        "OperatorMethod",
+        "Converter",
+    }
 
     # FIXME, macro definition __SIZEOF_DOUBLE__
     ctypes_typename = {
-        TypeKind.VOID: 'None',  # because ctypes.POINTER(None) == c_void_p
-        TypeKind.BOOL: 'c_bool',
-        TypeKind.CHAR_U: 'c_ubyte',  # ?? used for PADDING
-        TypeKind.UCHAR: 'c_ubyte',  # unsigned char
-        TypeKind.CHAR16: 'c_wchar',  # char16_t
-        TypeKind.CHAR32: 'c_wchar',  # char32_t
-        TypeKind.USHORT: 'c_ushort',
-        TypeKind.UINT: 'c_uint',
-        TypeKind.ULONG: 'TBD',
-        TypeKind.ULONGLONG: 'c_ulonglong',
-        TypeKind.UINT128: 'c_uint128',  # FIXME
-        TypeKind.CHAR_S: 'c_char',  # char
-        TypeKind.SCHAR: 'c_byte',  # signed char
-        TypeKind.WCHAR: 'c_wchar',
-        TypeKind.SHORT: 'c_short',
-        TypeKind.INT: 'c_int',
-        TypeKind.LONG: 'TBD',
-        TypeKind.LONGLONG: 'c_longlong',
-        TypeKind.INT128: 'c_int128',  # FIXME
-        TypeKind.FLOAT: 'c_float',
-        TypeKind.DOUBLE: 'c_double',
-        TypeKind.LONGDOUBLE: 'c_longdouble',
-        TypeKind.POINTER: 'POINTER_T',
-        TypeKind.NULLPTR: 'c_void_p'
+        TypeKind.VOID: "None",  # because ctypes.POINTER(None) == c_void_p
+        TypeKind.BOOL: "c_bool",
+        TypeKind.CHAR_U: "c_ubyte",  # ?? used for PADDING
+        TypeKind.UCHAR: "c_ubyte",  # unsigned char
+        TypeKind.CHAR16: "c_wchar",  # char16_t
+        TypeKind.CHAR32: "c_wchar",  # char32_t
+        TypeKind.USHORT: "c_ushort",
+        TypeKind.UINT: "c_uint",
+        TypeKind.ULONG: "TBD",
+        TypeKind.ULONGLONG: "c_ulonglong",
+        TypeKind.UINT128: "c_uint128",  # FIXME
+        TypeKind.CHAR_S: "c_char",  # char
+        TypeKind.SCHAR: "c_byte",  # signed char
+        TypeKind.WCHAR: "c_wchar",
+        TypeKind.SHORT: "c_short",
+        TypeKind.INT: "c_int",
+        TypeKind.LONG: "TBD",
+        TypeKind.LONGLONG: "c_longlong",
+        TypeKind.INT128: "c_int128",  # FIXME
+        TypeKind.FLOAT: "c_float",
+        TypeKind.DOUBLE: "c_double",
+        TypeKind.LONGDOUBLE: "c_longdouble",
+        TypeKind.POINTER: "POINTER_T",
+        TypeKind.NULLPTR: "c_void_p",
     }
 
     def __init__(self, flags):
@@ -94,8 +101,7 @@ class Clang_Parser(object):
         self.tu_options |= TranslationUnit.PARSE_SKIP_FUNCTION_BODIES
 
     def filter_location(self, src_files):
-        self.__filter_location = list(
-            map(lambda f: os.path.abspath(f), src_files))
+        self.__filter_location = [os.path.abspath(f) for f in src_files]
 
     def parse(self, filename):
         """
@@ -112,67 +118,68 @@ class Clang_Parser(object):
         if os.path.abspath(filename) in self.__processed_location:
             return
         index = Index.create()
-        tu = index.parse(filename, self.flags, options=self.tu_options)
-        if not tu:
+        translation_unit = index.parse(filename, self.flags, options=self.tu_options)
+        if not translation_unit:
             log.warning("unable to load input")
             return
-        self._parse_tu_diagnostics(tu, filename)
-        self.tu = tu
+        self._parse_tu_diagnostics(translation_unit, filename)
+        self.tu = translation_unit
         root = self.tu.cursor
         for node in root.get_children():
-            self.startElement(node)
+            self.start_element(node)
         return
 
-    def parse_string(self, input_data, lang='c', all_warnings=False, flags=None):
+    def parse_string(self, input_data, lang="c", all_warnings=False, flags=None):
         """Use this parser on a memory string/file, instead of a file on disk"""
-        tu = util.get_tu(input_data, lang, all_warnings, flags)
-        self._parse_tu_diagnostics(tu, "memory_input.c")
-        self.tu = tu
+        translation_unit = util.get_tu(input_data, lang, all_warnings, flags)
+        self._parse_tu_diagnostics(translation_unit, "memory_input.c")
+        self.tu = translation_unit
         root = self.tu.cursor
         for node in root.get_children():
-            self.startElement(node)
-        return
+            self.start_element(node)
 
     @staticmethod
-    def _parse_tu_diagnostics(tu, input_filename):
-        if len(tu.diagnostics) == 0:
+    def _parse_tu_diagnostics(translation_unit, input_filename):
+        if len(translation_unit.diagnostics) == 0:
             return
         errors = []
-        for x in tu.diagnostics:
-            msg = "{} ({}:{}:{}) during processing {}".format(
-                x.spelling, x.location.file,
-                x.location.line, x.location.column, input_filename)
+        for diagnostic in translation_unit.diagnostics:
+            msg = (
+                f"{diagnostic.spelling} ({diagnostic.location.file}:{diagnostic.location.line}:"
+                f"{diagnostic.location.column}) during processing {input_filename}"
+            )
             log.warning(msg)
-            if x.severity > 2:
+            if diagnostic.severity > 2:
                 errors.append(msg)
         if len(errors) > 0:
             log.warning("Source code has %d error. Please fix.", len(errors))
             # code.interact(local=locals())
             raise InvalidTranslationUnitException(errors[0])
 
-    def startElement(self, node):
+    def start_element(self, node):
         """Recurses in children of this node"""
         if node is None:
-            return
+            return None
 
         if self.__filter_location is not None:
             # dont even parse includes.
             # FIXME: go back on dependencies ?
             if node.location.file is None:
-                return
+                return None
             filepath = os.path.abspath(node.location.file.name)
             if filepath not in self.__filter_location:
-                if not filepath.startswith('/usr'):
+                if not filepath.startswith("/usr"):
                     log.debug("skipping include '%s'", filepath)
-                return
+                return None
         # find and call the handler for this element
         log.debug(
-            '%s:%d: Found a %s|%s|%s',
+            "%s:%d: Found a %s|%s|%s",
             node.location.file,
             node.location.line,
             node.kind.name,
             node.displayname,
-            node.spelling)
+            node.spelling,
+        )
         # build stuff.
         try:
             stop_recurse = self.parse_cursor(node)
@@ -183,36 +190,33 @@ class Clang_Parser(object):
             # if the fn returns True, do not recurse into children.
             # anything else will be ignored.
             if stop_recurse is not False:  # True:
-                return
+                return None
             # if fn returns something, if this element has children, treat
             # them.
             for child in node.get_children():
-                self.startElement(child)
+                self.start_element(child)
         except InvalidDefinitionError:
-            log.exception('Invalid definition')
+            log.exception("Invalid definition")
             # if the definition is invalid
-            pass
         # startElement returns None.
         return None
 
     def register(self, name, obj):
         """Registers an unique type description"""
         if (name, obj) in self.all_set:
-            log.debug('register: %s already defined: %s', name, obj.name)
+            log.debug("register: %s already defined: %s", name, obj.name)
             return self.all[name]
         if name in self.all:
-            if not isinstance(self.all[name], typedesc.Structure) or (
-                    self.all[name].members is not None):
+            if not isinstance(self.all[name], typedesc.Structure) or (self.all[name].members is not None):
                 # code.interact(local=locals())
                 raise DuplicateDefinitionException(
-                    'register: %s which has a previous incompatible definition: %s'
-                    '\ndefined here: %s'
-                    '\npreviously defined here: %s'
-                    % (name, obj.name, obj.location, self.all[name].location))
-            if isinstance(self.all[name], typedesc.Structure) and (
-                    self.all[name].members is None):
+                    f"register: {name} which has a previous incompatible definition: {obj.name}"
+                    f"\ndefined here: {obj.location}"
+                    f"\npreviously defined here: {self.all[name].location}"
+                )
+            if isinstance(self.all[name], typedesc.Structure) and (self.all[name].members is None):
                 return obj
-        log.debug('register: %s ', name)
+        log.debug("register: %s ", name)
         self.all[name] = obj
         self.all_set.add((name, obj))
         return obj
@@ -227,7 +231,7 @@ class Clang_Parser(object):
 
     def remove_registered(self, name):
         """Removes a named type"""
-        log.debug('Unregister %s', name)
+        log.debug("Unregister %s", name)
         self.all_set.remove((name, self.all[name]))
         del self.all[name]
 
@@ -238,7 +242,8 @@ class Clang_Parser(object):
         architecture is not the same as local
         """
         # NOTE: one could also use the __SIZEOF_x__ MACROs to obtain sizes.
-        tu = util.get_tu('''
+        translation_unit = util.get_tu(
+            """
 typedef short short_t;
 typedef int int_t;
 typedef long long_t;
@@ -246,56 +251,60 @@ typedef long long longlong_t;
 typedef float float_t;
 typedef double double_t;
 typedef long double longdouble_t;
-typedef void* pointer_t;''', flags=_flags)
-        size = util.get_cursor(tu, 'short_t').type.get_size() * 8
-        self.ctypes_typename[TypeKind.SHORT] = 'c_int%d' % (size)
-        self.ctypes_typename[TypeKind.USHORT] = 'c_uint%d' % (size)
+typedef void* pointer_t;""",
+            flags=_flags,
+        )
+        size = util.get_cursor(translation_unit, "short_t").type.get_size() * 8
+        self.ctypes_typename[TypeKind.SHORT] = f"c_int{size:d}"
+        self.ctypes_typename[TypeKind.USHORT] = f"c_uint{size:d}"
         self.ctypes_sizes[TypeKind.SHORT] = size
         self.ctypes_sizes[TypeKind.USHORT] = size
 
-        size = util.get_cursor(tu, 'int_t').type.get_size() * 8
-        self.ctypes_typename[TypeKind.INT] = 'c_int%d' % (size)
-        self.ctypes_typename[TypeKind.UINT] = 'c_uint%d' % (size)
+        size = util.get_cursor(translation_unit, "int_t").type.get_size() * 8
+        self.ctypes_typename[TypeKind.INT] = f"c_int{size:d}"
+        self.ctypes_typename[TypeKind.UINT] = f"c_uint{size:d}"
         self.ctypes_sizes[TypeKind.INT] = size
         self.ctypes_sizes[TypeKind.UINT] = size
 
-        size = util.get_cursor(tu, 'long_t').type.get_size() * 8
-        self.ctypes_typename[TypeKind.LONG] = 'c_int%d' % (size)
-        self.ctypes_typename[TypeKind.ULONG] = 'c_uint%d' % (size)
+        size = util.get_cursor(translation_unit, "long_t").type.get_size() * 8
+        self.ctypes_typename[TypeKind.LONG] = f"c_int{size:d}"
+        self.ctypes_typename[TypeKind.ULONG] = f"c_uint{size:d}"
         self.ctypes_sizes[TypeKind.LONG] = size
         self.ctypes_sizes[TypeKind.ULONG] = size
 
-        size = util.get_cursor(tu, 'longlong_t').type.get_size() * 8
-        self.ctypes_typename[TypeKind.LONGLONG] = 'c_int%d' % (size)
-        self.ctypes_typename[TypeKind.ULONGLONG] = 'c_uint%d' % (size)
+        size = util.get_cursor(translation_unit, "longlong_t").type.get_size() * 8
+        self.ctypes_typename[TypeKind.LONGLONG] = f"c_int{size:d}"
+        self.ctypes_typename[TypeKind.ULONGLONG] = f"c_uint{size:d}"
         self.ctypes_sizes[TypeKind.LONGLONG] = size
         self.ctypes_sizes[TypeKind.ULONGLONG] = size
 
         # FIXME : Float && http://en.wikipedia.org/wiki/Long_double
-        size0 = util.get_cursor(tu, 'float_t').type.get_size() * 8
-        size1 = util.get_cursor(tu, 'double_t').type.get_size() * 8
-        size2 = util.get_cursor(tu, 'longdouble_t').type.get_size() * 8
+        size0 = util.get_cursor(translation_unit, "float_t").type.get_size() * 8
+        size1 = util.get_cursor(translation_unit, "double_t").type.get_size() * 8
+        size2 = util.get_cursor(translation_unit, "longdouble_t").type.get_size() * 8
         # 2014-01 stop generating crap.
         # 2015-01 reverse until better solution is found
         # the idea is that a you cannot assume a c_double will be same format as a c_long_double.
         # at least this pass size TU
         if size1 != size2:
-            self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_long_double_t'
+            self.ctypes_typename[TypeKind.LONGDOUBLE] = "c_long_double_t"
         else:
-            self.ctypes_typename[TypeKind.LONGDOUBLE] = 'c_double'
+            self.ctypes_typename[TypeKind.LONGDOUBLE] = "c_double"
 
         self.ctypes_sizes[TypeKind.FLOAT] = size0
         self.ctypes_sizes[TypeKind.DOUBLE] = size1
         self.ctypes_sizes[TypeKind.LONGDOUBLE] = size2
 
         # save the target pointer size.
-        size = util.get_cursor(tu, 'pointer_t').type.get_size() * 8
+        size = util.get_cursor(translation_unit, "pointer_t").type.get_size() * 8
         self.ctypes_sizes[TypeKind.POINTER] = size
         self.ctypes_sizes[TypeKind.NULLPTR] = size
 
-        log.debug('ARCH sizes: long:%s longdouble:%s',
-                  self.ctypes_typename[TypeKind.LONG],
-                  self.ctypes_typename[TypeKind.LONGDOUBLE])
+        log.debug(
+            "ARCH sizes: long:%s longdouble:%s",
+            self.ctypes_typename[TypeKind.LONG],
+            self.ctypes_typename[TypeKind.LONGDOUBLE],
+        )
         return
 
     def get_ctypes_name(self, typekind):
@@ -322,10 +331,10 @@ typedef void* pointer_t;''', flags=_flags)
         text = "".join(text)
         # preprocessor definitions that look like macros with one or more
         # arguments
-        for m in text.splitlines():
-            name, body = m.split(None, 1)
+        for macro in text.splitlines():
+            name, body = macro.split(None, 1)
             name, args = name.split("(", 1)
-            args = "(%s" % args
+            args = f"({args}"
             self.all[name] = typedesc.Macro(name, args, body)
 
     def get_aliases(self, text, namespace):
@@ -335,21 +344,21 @@ typedef void* pointer_t;''', flags=_flags)
         #  #define A B
         text = "".join(text)
         aliases = {}
-        for a in text.splitlines():
-            name, value = a.split(None, 1)
-            a = typedesc.Alias(name, value)
-            aliases[name] = a
-            self.all[name] = a
+        for alias in text.splitlines():
+            name, value = alias.split(None, 1)
+            alias = typedesc.Alias(name, value)
+            aliases[name] = alias
+            self.all[name] = alias
 
-        for name, a in aliases.items():
-            value = a.alias
+        for name, alias in aliases.items():
+            value = alias.alias
             # the value should be either in namespace...
             if value in namespace:
                 # set the type
-                a.typ = namespace[value]
+                alias.typ = namespace[value]
             # or in aliases...
             elif value in aliases:
-                a.typ = aliases[value]
+                alias.typ = aliases[value]
             # or unknown.
             else:
                 # not known
@@ -358,10 +367,18 @@ typedef void* pointer_t;''', flags=_flags)
 
     def get_result(self):
         # all of these should register()
-        interesting = (typedesc.Typedef, typedesc.Enumeration, typedesc.EnumValue,
-                       typedesc.Function, typedesc.Structure, typedesc.Union,
-                       typedesc.Variable, typedesc.Macro, typedesc.Alias,
-                       typedesc.FunctionType)
+        interesting = (
+            typedesc.Typedef,
+            typedesc.Enumeration,
+            typedesc.EnumValue,
+            typedesc.Function,
+            typedesc.Structure,
+            typedesc.Union,
+            typedesc.Variable,
+            typedesc.Macro,
+            typedesc.Alias,
+            typedesc.FunctionType,
+        )
         # typedesc.Field) #???
 
         self.get_macros(self.cpp_data.get("functions"))
@@ -369,13 +386,13 @@ typedef void* pointer_t;''', flags=_flags)
         remove = []
         for _id, _item in self.all.items():
             if _item is None:
-                log.warning('ignoring %s', _id)
+                log.warning("ignoring %s", _id)
                 continue
             location = getattr(_item, "location", None)
             # FIXME , why do we get different location types
-            if location and hasattr(location, 'file'):
+            if location and hasattr(location, "file"):
                 _item.location = location.file.name, location.line
-                log.error('%s %s came in with a SourceLocation', _id, _item)
+                log.error("%s %s came in with a SourceLocation", _id, _item)
             elif location is None:
                 # FIXME make this optional to be able to see internals
                 # FIXME macro/alias are here
@@ -389,7 +406,7 @@ typedef void* pointer_t;''', flags=_flags)
         namespace = {}
         for i in self.all.values():
             if not isinstance(i, interesting):
-                log.debug('ignoring %s', i)
+                log.debug("ignoring %s", i)
                 continue  # we don't want these
             name = getattr(i, "name", None)
             if name is not None:

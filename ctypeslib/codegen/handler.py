@@ -221,7 +221,7 @@ class ClangHandler(object):
     @log_entity
     def _pass_through_children(self, node, **args):
         for child in node.get_children():
-            self.parser.startElement(child)
+            self.parser.start_element(child)
         return True
 
     def _do_nothing(self, node, **args):
