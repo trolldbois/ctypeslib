@@ -77,8 +77,7 @@ jobs:
         name: Packages
         path: ~/packages/
     - name: Display structure of downloaded files
-      run: ls -R
-      working-directory: ~/packages/
+      run: ls -R ~/packages/
     - name: Display wheel name
       run: ls -al ~/packages/ctypeslib2*.whl
     - name: Install clang2py
