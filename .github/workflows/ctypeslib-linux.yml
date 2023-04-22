@@ -87,6 +87,8 @@ jobs:
     - name: Install the package that was built
       run: |
         pip install ~/packages/ctypeslib2*.whl
+    - name: Show the versions involved
+      run: clang2py --version
     - name: Run tests with Unittest and coverage
       run: |
         coverage run --source=ctypeslib -m unittest test.alltests
