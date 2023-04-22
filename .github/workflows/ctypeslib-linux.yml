@@ -9,16 +9,24 @@ jobs:
   check-package-build:
     name: Build & inspect our package.
     runs-on: ubuntu-latest
-    outputs:
-      dist: ${{ steps.build-package.outputs.dist }}
-
     steps:
       - uses: actions/checkout@v3
       - name: Install dependencies
         run: |
-          pip install setuptools setuptools_scm
-      - uses: hynek/build-and-inspect-python-package@v1
-        id: build-package
+          pip install setuptools setuptools_scm twine wheel check-wheel-contents build
+      - name: Where is python, do we need actions/setup-python@v4
+        run: pip -v list
+      - name: Build package
+        run: python -m build
+      - name: Upload built artifacts.
+        uses: actions/upload-artifact@v3
+        with:
+          name: Packages
+          path: ./dist/*
+      - name: Error out
+        run: error
+#      - uses: hynek/build-and-inspect-python-package@v1
+#        id: build-package
       # packages are uploaded to Packages
 
   test:
@@ -76,15 +84,10 @@ jobs:
       with:
         name: Packages
         path: ~/packages/
-    - name: Display structure of downloaded files
-      run: ls -R ~/packages/
-    - name: Display wheel name
-      run: ls -al ~/packages/ctypeslib2*.whl
-    - name: Install clang2py
+    - name: Install the package that was built
       run: |
         pip install ~/packages/ctypeslib2*.whl
-      # pip install --upgrade -e .
-    - name: Test with Unittest and coverage
+    - name: Run tests with Unittest and coverage
       run: |
         coverage run --source=ctypeslib -m unittest test.alltests
     - name: Coveralls
@@ -102,9 +105,3 @@ jobs:
       with:
         parallel-finished: true
 
-#    - name: Coveralls
-#      run: |
-#        coveralls
-#    env:
-#      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#      COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
