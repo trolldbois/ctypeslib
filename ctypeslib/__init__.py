@@ -1,14 +1,21 @@
 # -*- coding: utf-8 -*-
-# ctypeslib package
+"""
+ctypeslib2 package
 
-from pkg_resources import get_distribution, DistributionNotFound
+ctypeslib2 helps generate Python-friendly interfaces to C libraries, such as automatically generating Python classes
+that represent C data structures, simplifying the process of wrapping C functions with Python functions,
+and providing tools for handling errors and exceptions that may occur when calling C functions.
+
+"""
+
 import ctypes
-from ctypes.util import find_library
 import os
-import logging
 import re
 import sys
 import warnings
+from ctypes.util import find_library
+
+from pkg_resources import get_distribution, DistributionNotFound
 
 try:
     __dist = get_distribution('ctypeslib2')
@@ -31,14 +38,13 @@ def __find_clang_libraries():
     # try for a file with a version match with the clang python package version
     version_major = __clang_py_version__.split('.')[0]
     # try default system name
-    v0 = [f"clang-{__clang_py_version__}", f"clang-{version_major}", "libclang", "clang"]
+    v_list = [f"clang-{__clang_py_version__}", f"clang-{version_major}", "libclang", "clang"]
     # tries clang version 16 to 7
-    v1 = ["clang-%d" % _ for _ in range(16, 6, -1)]
+    v_list += [f"clang-{_}" for _ in range(16, 6, -1)]
     # with the dotted form of clang 6.0 to 4.0
-    v2 = ["clang-%.1f" % _ for _ in range(6, 3, -1)]
+    v_list += [f"clang-{_:.1f}" for _ in range(6, 3, -1)]
     # clang 3 supported versions
-    v3 = ["clang-3.9", "clang-3.8", "clang-3.7"]
-    v_list = v0 + v1 + v2 + v3
+    v_list += ["clang-3.9", "clang-3.8", "clang-3.7"]
     for _version in v_list:
         _filename = find_library(_version)
         if _filename:
@@ -78,8 +84,6 @@ def __configure_clang_cindex():
     Second we attempt to configure clang with a clang library version similar to the clang python package version
     Third we attempt to configure clang with any clang library we can find
     """
-    global __clang_py_version__
-    __clang_py_version__ = get_distribution('clang').version
     # first, use environment variables set by user
     __libs = []
     __lib_path = os.environ.get('CLANG_LIBRARY_PATH')
@@ -108,8 +112,9 @@ def __configure_clang_cindex():
 # check which clang library is available
 try:
     from clang import cindex
+    from ctypeslib.codegen.codegenerator import translate, translate_files
 
-    __clang_py_version__ = 'not-installed'
+    __clang_py_version__ = get_distribution('clang').version
     __clang_library_filename = __configure_clang_cindex()
     if __clang_library_filename is None:
         warnings.warn("Could not find the clang library. please install llvm libclang", RuntimeWarning)
@@ -118,14 +123,12 @@ try:
         # set a warning if major versions differs.
         if clang_version().split('.')[0] != clang_py_version().split('.')[0]:
             clang_major = clang_version().split('.')[0]
-            warnings.warn("Version of python-clang (%s) and clang C library (%s) are different. "
-                          "Did you try pip install clang==%s.*" % (
-                              clang_py_version(), clang_version(), clang_major), RuntimeWarning)
+            warnings.warn(f"Version of python-clang ({clang_py_version()}) and "
+                          f"clang C library ({clang_version()}) are different. "
+                          f"Did you try pip install clang=={clang_major}.*", RuntimeWarning)
 except ImportError:
     __clang_py_version__ = None
     warnings.warn("Could not find a version of python-clang installed. please pip install clang", RuntimeWarning)
 
-from clang import cindex
-from ctypeslib.codegen.codegenerator import translate, translate_files
 
 __all__ = ['translate', 'translate_files', 'clang_version', 'clang_py_version']
