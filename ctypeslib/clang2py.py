@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
+
+"""
+clang2py - generate Python-friendly interfaces to C libraries, such as automatically generating Python classes
+that represent C data structures, simplifying the process of wrapping C functions with Python functions,
+and providing tools for handling errors and exceptions that may occur when calling C functions.
+
+"""
+
 import argparse
 import logging
 import os
 import platform
-import re
 import sys
 import tempfile
 import traceback
 
-from ctypes import RTLD_GLOBAL
-
 import ctypeslib
-from ctypeslib.codegen import typedesc, config
-from ctypeslib.codegen.codegenerator import translate_files
-from ctypeslib.library import Library
 from ctypeslib import clang_version, clang_py_version
+from ctypeslib.codegen import config
+from ctypeslib.codegen.codegenerator import translate_files
 
 ################################################################
 windows_dll_names = """\
@@ -49,9 +53,10 @@ rpcrt4""".split()
 # rpcndr
 # ntdll
 
+
 def _is_typedesc(item):
     for c in item:
-        if c not in 'acdefmstu':
+        if c not in "acdefmstu":
             raise argparse.ArgumentTypeError("types choices are 'acdefmstu'")
     return item
 
@@ -116,162 +121,193 @@ def main(argv=None):
 
     cfg.version = ctypeslib.__version__
 
-    parser = argparse.ArgumentParser(prog='clang2py',
-                                     description='Version %s. Generate python code from C headers' % cfg.version)
-    parser.add_argument("-c", "--comments",
-                        dest="generate_comments",
-                        action="store_true",
-                        help="include source doxygen-style comments",
-                        default=False)
-    parser.add_argument("-d", "--doc",
-                        dest="generate_docstrings", action="store_true",
-                        help="include docstrings containing C prototype and source file location",
-                        default=False)
-    parser.add_argument("--debug",
-                        action="store_const",
-                        const=True,
-                        help='setLevel to DEBUG')
-    parser.add_argument("-e", "--show-definition-location",
-                        dest="generate_locations",
-                        action="store_true",
-                        help="include source file location in comments",
-                        default=False)
-    parser.add_argument("-k", "--kind",
-                        action="store",
-                        dest="kind", help="kind of type descriptions to include: "
-                                          "a = Alias,\n"
-                                          "c = Class,\n"
-                                          "d = Variable,\n"
-                                          "e = Enumeration,\n"
-                                          "f = Function,\n"
-                                          "m = Macro, #define\n"
-                                          "s = Structure,\n"
-                                          "t = Typedef,\n"
-                                          "u = Union\n"
-                                          "default = 'cdefstu'\n",
-                        metavar="TYPEKIND",
-                        default="cdefstu",
-                        type=_is_typedesc)
+    parser = argparse.ArgumentParser(
+        prog="clang2py", description="Version %s. Generate python code from C headers" % cfg.version
+    )
+    parser.add_argument(
+        "-c",
+        "--comments",
+        dest="generate_comments",
+        action="store_true",
+        help="include source doxygen-style comments",
+        default=False,
+    )
+    parser.add_argument(
+        "-d",
+        "--doc",
+        dest="generate_docstrings",
+        action="store_true",
+        help="include docstrings containing C prototype and source file location",
+        default=False,
+    )
+    parser.add_argument("--debug", action="store_const", const=True, help="setLevel to DEBUG")
+    parser.add_argument(
+        "-e",
+        "--show-definition-location",
+        dest="generate_locations",
+        action="store_true",
+        help="include source file location in comments",
+        default=False,
+    )
+    parser.add_argument(
+        "-k",
+        "--kind",
+        action="store",
+        dest="kind",
+        help="kind of type descriptions to include: "
+        "a = Alias,\n"
+        "c = Class,\n"
+        "d = Variable,\n"
+        "e = Enumeration,\n"
+        "f = Function,\n"
+        "m = Macro, #define\n"
+        "s = Structure,\n"
+        "t = Typedef,\n"
+        "u = Union\n"
+        "default = 'cdefstu'\n",
+        metavar="TYPEKIND",
+        default="cdefstu",
+        type=_is_typedesc,
+    )
 
-    parser.add_argument("-i", "--includes",
-                        dest="generate_includes",
-                        action="store_true",
-                        help="include declaration defined outside of the sourcefiles",
-                        default=False)
+    parser.add_argument(
+        "-i",
+        "--includes",
+        dest="generate_includes",
+        action="store_true",
+        help="include declaration defined outside of the sourcefiles",
+        default=False,
+    )
 
-    parser.add_argument("-l", "--include-library",
-                        dest="dll",
-                        help="library to search for exported functions. Add multiple times if required",
-                        action="append",
-                        default=[])
+    parser.add_argument(
+        "-l",
+        "--include-library",
+        dest="dll",
+        help="library to search for exported functions. Add multiple times if required",
+        action="append",
+        default=[],
+    )
 
     if os.name in ("ce", "nt"):
         default_modules = ["ctypes.wintypes"]
     else:
         default_modules = []  # ctypes is already imported
 
-    parser.add_argument("-m", "--module",
-                        dest="modules",
-                        metavar="module",
-                        help="Python module(s) containing symbols which will "
-                             "be imported instead of generated",
-                        action="append",
-                        default=default_modules)
+    parser.add_argument(
+        "-m",
+        "--module",
+        dest="modules",
+        metavar="module",
+        help="Python module(s) containing symbols which will " "be imported instead of generated",
+        action="append",
+        default=default_modules,
+    )
 
-    parser.add_argument("--nm",
-                        dest="nm",
-                        default="nm",
-                        help="nm program to use to extract symbols from libraries")
+    parser.add_argument("--nm", dest="nm", default="nm", help="nm program to use to extract symbols from libraries")
 
-    parser.add_argument("-o", "--output",
-                        dest="output",
-                        help="output filename (if not specified, standard output will be used)",
-                        default="-", )
+    parser.add_argument(
+        "-o",
+        "--output",
+        dest="output",
+        help="output filename (if not specified, standard output will be used)",
+        default="-",
+    )
     # type=argparse.FileType('w'))
 
-    parser.add_argument("-p", "--preload",
-                        dest="preload",
-                        metavar="DLL",
-                        help="dll to be loaded before all others (to resolve symbols)",
-                        action="append",
-                        default=[])
+    parser.add_argument(
+        "-p",
+        "--preload",
+        dest="preload",
+        metavar="DLL",
+        help="dll to be loaded before all others (to resolve symbols)",
+        action="append",
+        default=[],
+    )
 
-    parser.add_argument("-q", "--quiet",
-                        action="store_const",
-                        const="quiet",
-                        help="Shut down warnings and below",
-                        default=False)
+    parser.add_argument(
+        "-q", "--quiet", action="store_const", const="quiet", help="Shut down warnings and below", default=False
+    )
 
-    parser.add_argument("-r", "--regex",
-                        dest="expressions",
-                        metavar="EXPRESSION",
-                        action="append",
-                        help="regular expression for symbols to include "
-                             "(if neither symbols nor expressions are specified,"
-                             "everything will be included)",
-                        default=[])
+    parser.add_argument(
+        "-r",
+        "--regex",
+        dest="expressions",
+        metavar="EXPRESSION",
+        action="append",
+        help="regular expression for symbols to include "
+        "(if neither symbols nor expressions are specified,"
+        "everything will be included)",
+        default=[],
+    )
 
-    parser.add_argument("-s", "--symbol",
-                        dest="symbols",
-                        metavar="SYMBOL",
-                        action="append",
-                        help="symbol to include "
-                             "(if neither symbols nor expressions are specified,"
-                             "everything will be included)",
-                        default=[])
+    parser.add_argument(
+        "-s",
+        "--symbol",
+        dest="symbols",
+        metavar="SYMBOL",
+        action="append",
+        help="symbol to include " "(if neither symbols nor expressions are specified," "everything will be included)",
+        default=[],
+    )
 
-    parser.add_argument("-t", "--target",
-                        dest="target",
-                        help="target architecture (default: %s)" % cfg.local_platform_triple,
-                        default=None)  # actually let clang alone decide.
+    parser.add_argument(
+        "-t",
+        "--target",
+        dest="target",
+        help="target architecture (default: %s)" % cfg.local_platform_triple,
+        default=None,
+    )  # actually let clang alone decide.
 
-    parser.add_argument("-v", "--verbose",
-                        action="store_true",
-                        dest="verbose",
-                        help="verbose output",
-                        default=False)
-    parser.add_argument('-V', '--version',
-                        action='version',
-                        version="versions - %(prog)s:" + "%s clang:%s python-clang:%s" % (cfg.version, clang_version(),
-                                                                                          clang_py_version()))
+    parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="verbose output", default=False)
 
-    parser.add_argument("-w",
-                        action="store",
-                        default=windows_dlls,
-                        help="add all standard windows dlls to the searched dlls list")
+    def version_string():
+        a = "versions - %(prog)s:"
+        b = "%s python-clang:%s clang:%s clang_filename:%s" % (
+            cfg.version,
+            clang_version(),
+            clang_py_version(),
+            ctypeslib.__clang_library_filename,
+        )
+        return a + b
 
-    parser.add_argument("-x", "--exclude-includes",
-                        action="store_true",
-                        default=False,
-                        help="Parse object in sources files only. Ignore includes")
+    parser.add_argument("-V", "--version", action="version", version=version_string())
 
-    parser.add_argument("--show-ids", dest="showIDs",
-                        help="Don't compute cursor IDs (very slow)",
-                        default=False)
+    parser.add_argument(
+        "-w", action="store", default=windows_dlls, help="add all standard windows dlls to the searched dlls list"
+    )
 
-    parser.add_argument("--max-depth", dest="maxDepth",
-                        help="Limit cursor expansion to depth N",
-                        metavar="N",
-                        type=int,
-                        default=None)
+    parser.add_argument(
+        "-x",
+        "--exclude-includes",
+        action="store_true",
+        default=False,
+        help="Parse object in sources files only. Ignore includes",
+    )
 
-    parser.add_argument("--validate", dest="validate",
-                        help="validate the python code is correct",
-                        type=bool,
-                        default=True)
+    parser.add_argument("--show-ids", dest="showIDs", help="Don't compute cursor IDs (very slow)", default=False)
+
+    parser.add_argument(
+        "--max-depth", dest="maxDepth", help="Limit cursor expansion to depth N", metavar="N", type=int, default=None
+    )
+
+    parser.add_argument(
+        "--validate", dest="validate", help="validate the python code is correct", type=bool, default=True
+    )
 
     # FIXME recognize - as stdin
     # we do NOT support stdin
-    parser.add_argument("files", nargs="+",
-                        help="source filenames. stdin is not supported",
-                        type=argparse.FileType('r'))
+    parser.add_argument(
+        "files", nargs="+", help="source filenames. stdin is not supported", type=argparse.FileType("r")
+    )
 
-    parser.add_argument("--clang-args",
-                        action="store",
-                        default=None,
-                        required=False,
-                        help="clang options, in quotes: --clang-args=\"-std=c99 -Wall\"",
-                        type=str)
+    parser.add_argument(
+        "--clang-args",
+        action="store",
+        default=None,
+        required=False,
+        help='clang options, in quotes: --clang-args="-std=c99 -Wall"',
+        type=str,
+    )
 
     parser.epilog = """Cross-architecture: You can pass target modifiers to clang.
     For example, try --clang-args="-target x86_64" or "-target i386-linux" to change the target CPU arch."""
@@ -291,6 +327,7 @@ def main(argv=None):
 
     # handle input files, and outputs
     from ctypeslib.codegen.handler import InvalidTranslationUnitException
+
     try:
         with Input(options) as inputs, Output(options) as outputs:
             # start codegen
