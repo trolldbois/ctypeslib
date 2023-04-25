@@ -1,4 +1,5 @@
-"""Create ctypes wrapper code for abstract type descriptions.
+"""
+Create ctypes wrapper code for abstract type descriptions.
 Type descriptions are collections of typedesc instances.
 """
 

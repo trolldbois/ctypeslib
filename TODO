@@ -1,6 +1,8 @@
 ctypeslib TODO list
 ==================
 
+re-visit the dependency graph, so that most structure are codegen in a single declaration
+
 Test clang2py for
  -c comments
  -d docstrings
