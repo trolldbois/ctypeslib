@@ -90,10 +90,31 @@ class ClangHandler(object):
             return "_" + name
         return name
 
+    def _get_parent_typedef_name(self, cursor):
+        """Retrieves a typedef name for a given parent node, if one exists."""
+        field_name = None
+        parent = cursor.semantic_parent
+        if parent is None:
+            return field_name
+
+        parent_fields = parent.type.get_fields()
+        for p in parent_fields:
+            curr_decl = p.type.get_declaration()
+            if curr_decl == cursor.type.get_declaration():
+                if p.spelling:
+                    field_name = p.spelling
+                    log.debug('_get_parent_typedef_name: Got parent typedef name %s',field_name)
+
+        return field_name
+
     def _make_unknown_name(self, cursor, field_name):
         """Creates a name for unnamed type """
         parent = cursor.lexical_parent
-        pname = self.get_unique_name(parent)
+        # since parents are computed using `get_unique_name` recursively,
+        # we need to also check if a typedef exists for the parent.
+        parent_typedef_name = self._get_parent_typedef_name(parent)
+        pname = self.get_unique_name(parent, field_name=parent_typedef_name)
+
         log.debug('_make_unknown_name: Got parent get_unique_name %s',pname)
         # we only look at types declarations
         _cursor_decl = cursor.type.get_declaration()
@@ -101,6 +122,7 @@ class ClangHandler(object):
         # between unnamed siblings of a same struct
         _i = 0
         found = False
+
         # Look at the parent fields to find myself
         for m in parent.get_children():
             # FIXME: make the good indices for fields
