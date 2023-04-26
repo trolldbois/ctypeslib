@@ -260,7 +260,7 @@ def _make_parser(cfg):
 
     def version_string():
         version = "versions - %(prog)s:" \
-                  f"{ctypeslib.__version__} python-clang:{clang_version()} clang:{clang_py_version()} " \
+                  f"{ctypeslib.__version__} python-clang:{clang_py_version()} clang:{clang_version()} " \
                   f"clang_filename:{ctypeslib.__clang_library_filename}"  # pylint: disable=protected-access
         return version
 
