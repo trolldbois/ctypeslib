@@ -519,10 +519,10 @@ class Generator:
         """Return head dependencies on other record types.
         Head dependencies is exclusive of body dependency. It's one or the other.
         """
-        r = set()
+        r = dict()
         for m in struct.members:
             if isinstance(m.type, typedesc.PointerType) and typedesc.is_record(m.type.typ):
-                r.add(m.type)
+                r[m.type] = None
         # remove all already defined heads
         r = [_ for _ in r if _.name not in self.head_generated]
         return r
@@ -531,14 +531,14 @@ class Generator:
         """Return head dependencies on other record types.
         Head dependencies is exclusive of body dependency. It's one or the other.
         """
-        r = set()
+        r = dict()
         for m in struct.members:
             if isinstance(m.type, typedesc.ArrayType) and typedesc.is_record(m.type.typ):
-                r.add(m.type.typ)
+                r[m.type.typ] = None
             elif typedesc.is_record(m.type):
-                r.add(m.type)
+                r[m.type] = None
             elif m.type not in self.done:
-                r.add(m.type)
+                r[m.type] = None
         # remove all already defined bodies
         r = [_ for _ in r if _.name not in self.body_generated]
         return r
