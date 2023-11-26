@@ -7,3 +7,4 @@ ctypeslib.egg-info/
 ctypeslib2.egg-info/
 *.gitignore~
 *.so
+.*.swp
