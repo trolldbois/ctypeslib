@@ -31,12 +31,12 @@ First, you should install LLVM clang.
 See the LLVM Clang instructions at http://apt.llvm.org/ or use your distribution's packages.
 
 Either use an installer relevant for your OS (APT, downloads, etc..) to install libclang 
-```
+```sh
 $ sudo apt install libclang1-11
 ```
 
 or you can use the LLVM install script that installs the whole llvm toolkit 
-```
+```sh
  wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
  # then install llvm version 16 
  ./llvm.sh 16
@@ -65,7 +65,7 @@ But if you encounter a version compatibility issue, you might have to fix the pr
 using one of the following solutions:
 
 1. set the CLANG_LIBRARY_PATH environmental variable to the clang library file or path
-```
+```sh
 $ export CLANG_LIBRARY_PATH=/lib/x86_64-linux-gnu/libclang-11.so.1
 $ clang2py --version
 versions - clang2py:2.3.3 clang:11.1.0 python-clang:11.0
@@ -81,30 +81,30 @@ versions - clang2py:2.3.3 clang:11.1.0 python-clang:11.0
 ## Usage
 ### Use ctypeslib2 as a Library in your own python code
 
+```py
+import ctypeslib
+py_module = ctypeslib.translate('''int i = 12;''')
+print(py_module.i)  # Prints 12
 
-    import ctypeslib
-    py_module = ctypeslib.translate('''int i = 12;''')
-    print(py_module.i)  # Prints 12
+py_module2 = ctypeslib.translate('''struct coordinates { int i ; int y; };''')
+print(py_module2.struct_coordinates)  # <class 'struct_coordinates'>
+print(py_module2.struct_coordinates(1,2))  # <struct_coordinates object at 0xabcde12345>
 
-    py_module2 = ctypeslib.translate('''struct coordinates { int i ; int y; };''')
-    print(py_module2.struct_coordinates)  # <class 'struct_coordinates'>
-    print(py_module2.struct_coordinates(1,2))  # <struct_coordinates object at 0xabcde12345>
+# input files, output file
+py_module3 = ctypeslib.translate_files(['mytest.c'], outfile=open('mytest.py', 'w'))
+print(open('mytest.py').read())
 
-    # input files, output file
-    py_module3 = ctypeslib.translate_files(['mytest.c'], outfile=open('mytest.py', 'w'))
-    print(open('mytest.py').read())
+# input files, output code
+py_module4 = ctypeslib.translate_files(['mytest.c'])
+print(open('mytest.py').read())
 
-    # input files, output code
-    py_module4 = ctypeslib.translate_files(['mytest.c'])
-    print(open('mytest.py').read())
-
-    # input files, output code, with clang options, like cross-platform
-    from ctypeslib.codegen import config
-    cfg = config.CodegenConfig()
-    cfg.clang_opts.extend(['-target', 'arm-gnu-linux'])
-    py_module5 = ctypeslib.translate_files(['mytest.c'], cfg=cfg)
-    print(open('mytest.py').read())
-
+# input files, output code, with clang options, like cross-platform
+from ctypeslib.codegen import config
+cfg = config.CodegenConfig()
+cfg.clang_opts.extend(['-target', 'arm-gnu-linux'])
+py_module5 = ctypeslib.translate_files(['mytest.c'], cfg=cfg)
+print(open('mytest.py').read())
+```
 
 Look at `test/test_api.py` for more advanced Library usage
 
@@ -112,101 +112,103 @@ Look at `test/test_api.py` for more advanced Library usage
 ### Use ctypeslib2 on the command line
 
 Source file:
-
-    $ cat t.c 
-    struct my_bitfield {
+```c
+// t.c 
+struct my_bitfield {
     long a:3;
     long b:4;
     unsigned long long c:3;
     unsigned long long d:3;
     long f:2;
-    };
+};
+```
 
 Run c-to-python script:
 
     clang2py t.c
 
 Output:
+```py
+# -*- coding: utf-8 -*-
+#
+# TARGET arch is: []
+# WORD_SIZE is: 8
+# POINTER_SIZE is: 8
+# LONGDOUBLE_SIZE is: 16
+#
+import ctypes
 
-    # -*- coding: utf-8 -*-
-    #
-    # TARGET arch is: []
-    # WORD_SIZE is: 8
-    # POINTER_SIZE is: 8
-    # LONGDOUBLE_SIZE is: 16
-    #
-    import ctypes
-    
-    class struct_my_bitfield(ctypes.Structure):
-        _pack_ = True # source:False
-        _fields_ = [
-        ('a', ctypes.c_int64, 3),
-        ('b', ctypes.c_int64, 4),
-        ('c', ctypes.c_int64, 3),
-        ('d', ctypes.c_int64, 3),
-        ('f', ctypes.c_int64, 2),
-        ('PADDING_0', ctypes.c_int64, 49)]
-    
-    __all__ = \
-        ['struct_my_bitfield']
+class struct_my_bitfield(ctypes.Structure):
+    _pack_ = True # source:False
+    _fields_ = [
+    ('a', ctypes.c_int64, 3),
+    ('b', ctypes.c_int64, 4),
+    ('c', ctypes.c_int64, 3),
+    ('d', ctypes.c_int64, 3),
+    ('f', ctypes.c_int64, 2),
+    ('PADDING_0', ctypes.c_int64, 49)]
+
+__all__ = \
+    ['struct_my_bitfield']
+```
 
 ### use ctypeslib with additional clang arguments:
 
 Source file:
+```c
+// test-stdbool.c 
+#include <stdbool.h>
 
-    $ cat test-stdbool.c 
-    #include <stdbool.h>
-    
-    typedef struct s_foo {
+typedef struct s_foo {
     bool bar1;
     bool bar2;
     bool bar3;
-    } foo;
-
+} foo;
+```
 
 Run c-to-python script (with any relevant include folder):
 
     clang2py --clang-args="-I/usr/include/clang/4.0/include" test-stdbool.c
 
 Output:
+```py
+# -*- coding: utf-8 -*-
+#
+# TARGET arch is: ['-I/usr/include/clang/4.0/include']
+# WORD_SIZE is: 8
+# POINTER_SIZE is: 8
+# LONGDOUBLE_SIZE is: 16
+#
+import ctypes
 
-    # -*- coding: utf-8 -*-
-    #
-    # TARGET arch is: ['-I/usr/include/clang/4.0/include']
-    # WORD_SIZE is: 8
-    # POINTER_SIZE is: 8
-    # LONGDOUBLE_SIZE is: 16
-    #
-    import ctypes
-    
-    class struct_s_foo(ctypes.Structure):
-        _pack_ = True # source:False
-        _fields_ = [
-        ('bar1', ctypes.c_bool),
-        ('bar2', ctypes.c_bool),
-        ('bar3', ctypes.c_bool),]
-    
-    foo = struct_s_foo
-    __all__ = ['struct_s_foo', 'foo']
+class struct_s_foo(ctypes.Structure):
+    _pack_ = True # source:False
+    _fields_ = [
+    ('bar1', ctypes.c_bool),
+    ('bar2', ctypes.c_bool),
+    ('bar3', ctypes.c_bool),]
 
+foo = struct_s_foo
+__all__ = ['struct_s_foo', 'foo']
+```
 
 ## _pack_ and PADDING explanation
 
     clang2py test/data/test-record.c
 
 This outputs:
+```py
+# ...
 
-    # ...
-    
-    class struct_Node2(Structure):
-        _pack_ = True # source:False
-        _fields_ = [ 
-        ('m1', ctypes.c_ubyte),
-        ('PADDING_0', ctypes.c_ubyte * 7),
-        ('m2', POINTER_T(struct_Node)),]
+class struct_Node2(Structure):
+    _pack_ = True # source:False
+    _fields_ = [ 
+    ('m1', ctypes.c_ubyte),
+    ('PADDING_0', ctypes.c_ubyte * 7),
+    ('m2', POINTER_T(struct_Node)),]
 
-    # ...
-
+# ...
+```
 The PADDING_0 field is added to force the ctypes memory Structure to align fields offset with the definition given
 by the clang compiler.
 
