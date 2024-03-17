@@ -28,7 +28,7 @@
 
 ### LLVM Clang library
 First, you should install LLVM clang.
-See the LLVM Clang instructions at http://apt.llvm.org/ or use your distribution's packages.
+See the LLVM Clang instructions at http://apt.llvm.org/ or use your distribution's packages. As clang is the default compiler on macOS, Mac users should see [the section below.](#macos-install)
 
 Either use an installer relevant for your OS (APT, downloads, etc..) to install libclang 
 ```
@@ -57,26 +57,58 @@ if you are not using the latest LLVM clang version, you will need to specify the
   - If you are using llvm clang 11: `pip install ctypeslib2 clang==11`
   - etc...
 
-### Alternate configurations
+### Alternative install for Ubuntu and Debian
 
 On Ubuntu, libclang libraries are installed with version in the filename.
 This library tries to load a few different versions to help you out. (`__init__.py`)
 But if you encounter a version compatibility issue, you might have to fix the problem
 using one of the following solutions:
 
-1. set the CLANG_LIBRARY_PATH environmental variable to the clang library file or path
-```
-$ export CLANG_LIBRARY_PATH=/lib/x86_64-linux-gnu/libclang-11.so.1
-$ clang2py --version
-versions - clang2py:2.3.3 clang:11.1.0 python-clang:11.0
-```
- 
-2. OR Install the development package libclang-<version\>-dev to get a file called libclang.so
+* Set the CLANG_LIBRARY_PATH environmental variable to the clang library file or path
+    ```
+    $ export CLANG_LIBRARY_PATH=/lib/x86_64-linux-gnu/libclang-11.so.1
+    $ clang2py --version
+    versions - clang2py:2.3.3 clang:11.1.0 python-clang:11.0
+    ```
 
-`$ sudo apt get install libclang-11-dev`
-2. OR create a link to libclang-<version\>.so.1 named libclang.so
-3. OR hardcode a call to clang.cindex.Config.load_library_file('libclang-<version\>.so.1') in your code before importing ctypeslib
+* **OR** Install the development package libclang-<version\>-dev to get a file called libclang.so (e.g. `sudo apt get install libclang-11-dev`)
 
+* **OR** create a link to libclang-<version\>.so.1 named libclang.so
+* **OR** hardcode a call to clang.cindex.Config.load_library_file('libclang-<version\>.so.1') in your code before importing ctypeslib
+
+### macOS install
+
+Install the XCode Command Line Tools with `xcode-select --install` so that clang and essential headers are available.
+
+Identify the version of `clang` with
+
+```
+% xcrun clang --version
+Apple clang version 15.0.0 (clang-1500.3.9.4)
+Target: arm64-apple-darwin23.3.0
+Thread model: posix
+InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+```
+
+ensure the Apple-provided clang is the active one in your environment
+
+```
+% which clang
+/usr/bin/clang
+% clang --version
+Apple clang version 15.0.0 (clang-1500.3.9.4)
+Target: arm64-apple-darwin23.3.0
+Thread model: posix
+InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+```
+
+and install ctypeslib2 and the corresponding Python bindings to clang with pip
+
+```
+% pip install ctypeslib2 'clang>=15,<16'
+```
+
+(In theory it is possible to install different versions of clang with e.g. conda. To avoid invoking installing the XCode Command Line Tools or invoking xcrun at all from ctypeslib2, `export CTYPESLIB2_SKIP_MACOS_SDK=1` in the environment. You will need to then supply the necessary options yourself with `--clang-args` or the `cfg=` argument to `translate()` and `translate_files()`.)
 
 ## Usage
 ### Use ctypeslib2 as a Library in your own python code

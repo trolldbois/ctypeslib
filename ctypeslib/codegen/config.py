@@ -2,6 +2,8 @@
 The configuration class that will modify the behavior of ctypeslib
 """
 import re
+import subprocess
+import sys
 
 from ctypeslib.library import Library
 from ctypeslib.codegen import typedesc
@@ -37,7 +39,12 @@ class CodegenConfig:
 
     def __init__(self):
         self._init_types()
-        pass
+        if sys.platform == 'darwin' and not os.environ.get('CTYPESLIB2_SKIP_MACOS_SDK', False):
+            try:
+                sysroot = subprocess.check_output(['xcrun', '--show-sdk-path'])
+            except subprocess.CalledProcessError:
+                raise RuntimeError("The XCode Command Line Tools must be installed to provide the C standard library headers. Set CTYPESLIB2_SKIP_MACOS_SDK=1 in the environment to skip this check.")
+            self.clang_opts.extend(['-isysroot', sysroot])
 
     def parse_options(self, options):
         self.symbols = options.symbols
