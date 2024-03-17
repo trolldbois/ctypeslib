@@ -316,7 +316,6 @@ def main(argv=None):
     cfg.local_platform_triple = f"{platform.machine()}-{platform.system()}"
     cfg.known_symbols = {}
     cfg.searched_dlls = []
-    cfg.clang_opts = []
 
     parser = _make_parser(cfg)
     options = parser.parse_args(argv)
