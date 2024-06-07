@@ -17,11 +17,11 @@ class AsDictMixin:
             type_ = type(value)
             if hasattr(value, "_length_") and hasattr(value, "_type_"):
                 # array
-                if not hasattr(type_, "as_dict"):
-                    value = [v for v in value]
-                else:
-                    type_ = type_._type_
+                type_ = type_._type_
+                if hasattr(type_, 'as_dict'):
                     value = [type_.as_dict(v) for v in value]
+                else:
+                    value = [i for i in value]
             elif hasattr(value, "contents") and hasattr(value, "_type_"):
                 # pointer
                 try:
