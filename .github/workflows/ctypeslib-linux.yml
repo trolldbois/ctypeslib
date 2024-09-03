@@ -78,7 +78,7 @@ jobs:
       if: ${{runner.os == 'macOS' }}
       run: |
         echo "DYLD_LIBRARY_PATH=$(pwd)/test/data/:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4.1.7
       with:
         name: Packages
         path: ~/packages/
