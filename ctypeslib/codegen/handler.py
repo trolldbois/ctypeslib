@@ -133,7 +133,7 @@ class ClangHandler(object):
         if cursor.kind == CursorKind.CXX_BASE_SPECIFIER:
             name = cursor.type.spelling
         # if it's a record decl or field decl and its type is anonymous
-        if name == '':
+        if name == '' or '(anonymous at' in name:
             # if cursor.is_anonymous():
             # a unnamed object at the root TU
             if (cursor.semantic_parent

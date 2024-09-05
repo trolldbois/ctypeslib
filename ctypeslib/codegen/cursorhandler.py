@@ -985,14 +985,15 @@ class CursorHandler(ClangHandler):
         # Note: cursor.is_anonymous seems to be unreliable/inconsistent across
         # libclang versions, and we will consider the field as anonymous if
         # cursor.spelling is empty
+        # but at least with clang-17.. anonymous fields have a name "type (anonymous at ..)"
         name = cursor.spelling
         offset = parent.type.get_offset(name)
-        if not name and cursor.is_anonymous() and not cursor.is_bitfield():
+        if (not name or "(anonymous" in name) and cursor.is_anonymous() and not cursor.is_bitfield():
             # anonymous type, that is not a bitfield field case:
             offset = cursor.get_field_offsetof()
             # name = self.get_unique_name(cursor)
             # we want to keep name empty if the field is unnamed.
-        elif not name:
+        elif not name or "(anonymous" in name:
             # anonymous bitfield case:
             # get offset by iterating all fields of parent
             # corner case for anonymous fields
