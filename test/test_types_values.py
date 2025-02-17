@@ -73,8 +73,8 @@ class ConstantsTest(ClangTest):
         double d = 0.0036;
         float f = 2.5;
         """)
-        self.failUnlessAlmostEqual(self.namespace.d, 0.0036)
-        self.failUnlessAlmostEqual(self.namespace.f, 2.5)
+        self.assertAlmostEqual()(self.namespace.d, 0.0036)
+        self.assertAlmostEqual()(self.namespace.f, 2.5)
 
     def test_typedef(self):
         self.convert("""
