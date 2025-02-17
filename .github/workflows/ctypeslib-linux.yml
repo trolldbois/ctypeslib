@@ -37,8 +37,8 @@ jobs:
         # os: [ubuntu-latest, macos-latest, windows-latest]
         # python-version: [ 3.5, 3.6, 3.7, 3.8, 3.9 ]
          os: [ubuntu-latest, macos-latest, windows-latest]
-         python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11' ]
-         clang-version: ['11', '12', '13', '14', '15']
+         python-version: [ '3.7', '3.8', '3.9', '3.10', '3.11', '3.12', '3.13' ]
+         clang-version: ['11', '12', '13', '14', '15', '16', '17', '18', '19']
 
     steps:
     - uses: actions/checkout@v4
@@ -78,7 +78,7 @@ jobs:
       if: ${{runner.os == 'macOS' }}
       run: |
         echo "DYLD_LIBRARY_PATH=$(pwd)/test/data/:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-    - uses: actions/download-artifact@v4.1.7
+    - uses: actions/download-artifact@v4
       with:
         name: Packages
         path: ~/packages/
