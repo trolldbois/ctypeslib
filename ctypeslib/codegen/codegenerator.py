@@ -226,7 +226,11 @@ class Generator:
                     body = float_value
                 # what about integers you ask ? body token that represents token are Integer here.
                 # either it's just a thing we gonna print, or we need to have a registered item
-                print("%s = %s # macro" % (macro.name, body), file=self.stream)
+                if sum(x=='(' for x in body) != sum(x==')' for x in body):
+                    # unbalanced parens means comment
+                    print("# %s = %s # macro" % (macro.name, body), file=self.stream)
+                else:
+                    print("%s = %s # macro" % (macro.name, body), file=self.stream)
                 self.macros += 1
                 self.names.append(macro.name)
         # This is why we need to have token types all the way here.
@@ -515,10 +519,10 @@ class Generator:
         """Return head dependencies on other record types.
         Head dependencies is exclusive of body dependency. It's one or the other.
         """
-        r = set()
+        r = dict()
         for m in struct.members:
             if isinstance(m.type, typedesc.PointerType) and typedesc.is_record(m.type.typ):
-                r.add(m.type)
+                r[m.type] = None
         # remove all already defined heads
         r = [_ for _ in r if _.name not in self.head_generated]
         return r
@@ -527,14 +531,14 @@ class Generator:
         """Return head dependencies on other record types.
         Head dependencies is exclusive of body dependency. It's one or the other.
         """
-        r = set()
+        r = dict()
         for m in struct.members:
             if isinstance(m.type, typedesc.ArrayType) and typedesc.is_record(m.type.typ):
-                r.add(m.type.typ)
+                r[m.type.typ] = None
             elif typedesc.is_record(m.type):
-                r.add(m.type)
+                r[m.type] = None
             elif m.type not in self.done:
-                r.add(m.type)
+                r[m.type] = None
         # remove all already defined bodies
         r = [_ for _ in r if _.name not in self.body_generated]
         return r
@@ -850,14 +854,14 @@ class Generator:
         if self.generate_locations and func.location:
             print("# %s %s" % func.location, file=self.stream)
         # Generate the function decl code
-        print("%s = %s.%s" % (func.name, libname, func.name), file=self.stream)
-        print(
-            "%s.restype = %s" % (func.name, self.type_name(func.returns)),
-            file=self.stream,
-        )
+        print("try:", file=self.stream)
+        print("    %s = %s.%s" % (func.name, libname, func.name), file=self.stream)
+        print("    %s.restype = %s" % (func.name, self.type_name(func.returns)), file=self.stream)
         if self.generate_comments:
             print("# %s(%s)" % (func.name, ", ".join(argnames)), file=self.stream)
-        print("%s.argtypes = [%s]" % (func.name, ", ".join(args)), file=self.stream)
+        print("    %s.argtypes = [%s]" % (func.name, ", ".join(args)), file=self.stream)
+        print("except AttributeError:", file=self.stream)
+        print("    pass", file=self.stream)
 
         if self.generate_docstrings:
 

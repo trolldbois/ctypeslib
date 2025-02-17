@@ -47,6 +47,7 @@ class Library(metaclass=LibraryMeta):
         for line in output.split('\n'):
             fields = line.split(' ', 2)
             if len(fields) >= 3 and fields[1] in ("T", "D", "G", "R", "S"):
+                if '@@' in fields[2]: fields[2] = fields[2].split('@@')[0]
                 self.__symbols[fields[2]] = fields[0]
 
     def __getattr__(self, name):
