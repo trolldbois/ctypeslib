@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 from ctypes import RTLD_LOCAL, RTLD_GLOBAL
 
 
@@ -36,7 +37,12 @@ class Library(metaclass=LibraryMeta):
     # nm will print lines like this:
     # <addr> <kind> <name>
     def _get_symbols(self, nm):
-        cmd = [nm, "--dynamic", "--defined-only", self._filepath]
+
+        cmd = [nm,]
+        if sys.platform != 'darwin':
+            # fix for #125, nm error "File format has no dynamic symbol table" for dylib
+            cmd.append("--dynamic")
+        cmd.extend(["--defined-only", self._filepath])
         output = subprocess.check_output(cmd, universal_newlines=True)
         for line in output.split('\n'):
             fields = line.split(' ', 2)
