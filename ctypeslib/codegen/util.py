@@ -114,7 +114,7 @@ def log_entity(func):
     def fn(*args, **kwargs):
         name = args[0].get_unique_name(args[1])
         if name == '':
-            parent = args[1].semantic_parent
+            parent = getattr(args[1], 'semantic_parent', None)
             if parent:
                 name = 'child of %s' % parent.displayname
         log.debug("%s: displayname:'%s'",func.__name__, name)

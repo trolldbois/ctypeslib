@@ -1,6 +1,6 @@
 """Abstract Handler with helper methods."""
 
-from clang.cindex import CursorKind, TypeKind
+from clang.cindex import CursorKind, TypeKind, Cursor
 
 from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.util import log_entity
@@ -127,6 +127,8 @@ class ClangHandler(object):
 
     def get_unique_name(self, cursor, field_name=None):
         """get the spelling or create a unique name for a cursor"""
+        # this gets called for both cursors and types!
+        # so cursor.kind can be a CursorKind or a TypeKind
         if cursor.kind in [CursorKind.UNEXPOSED_DECL]:
             return ''
         # covers most cases
@@ -134,6 +136,12 @@ class ClangHandler(object):
         if cursor.kind == CursorKind.CXX_BASE_SPECIFIER:
             name = cursor.type.spelling
         # if it's a record decl or field decl and its type is anonymous
+        # clang > 16 changes anonymous names to have a parenthetical name
+        # so force it to have blank name like it did in earlier clang versions
+        # only cursors, not types have .is_anonymous()
+        if (isinstance(cursor.kind, CursorKind) and
+                cursor.is_anonymous() and '(' in name):
+            name = ''
         if name == '':
             # if cursor.is_anonymous():
             # a unnamed object at the root TU
