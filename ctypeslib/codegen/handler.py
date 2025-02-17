@@ -6,6 +6,7 @@ from ctypeslib.codegen import typedesc
 from ctypeslib.codegen.util import log_entity
 
 import logging
+import re
 log = logging.getLogger('handler')
 
 
@@ -157,6 +158,8 @@ class ClangHandler(object):
                     CursorKind.TYPE_REF: '',
                     CursorKind.CXX_BASE_SPECIFIER: 'class'
                     }
+            if 'unnamed at' in name:
+                name = re.sub('[^a-zA-Z0-9]', '_', name)
             name = '%s_%s'%(names[cursor.kind],name)
         log.debug('get_unique_name: name "%s"',name)
         return name
