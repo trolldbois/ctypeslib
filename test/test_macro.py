@@ -431,6 +431,12 @@ char d[] = APREPOST;''')
     def test_define_wchar_t(self):
         """'L' means wchar_t"""
         # currently this fails because of wchar being an int on this arch.
+        # 2025 FIXME
+        #  exec(output, namespace)
+        #      File "<string>", line 259
+        #     __REDIRECT_FORTIFY_NTH = nameproto__asm__(__ASMNAME(#alias))[UndefinedIdentifier(name=__attribute__), '(', '(', UndefinedIdentifier(name=__nothrow__), True, ')', ')'] # macro
+        #                                                        ^
+        # SyntaxError: '(' was never closed
         self.convert("""
         #define SPAM "spam"
         #define STRING_NULL "NULL"
@@ -585,16 +591,12 @@ int tab1[] = MACRO_EXAMPLE(1,2);
         # but not functions.
         self.assertNotIn("HI", self.namespace)
 
-    @unittest.expectedFailure
     def test_defines_predefined(self):
         self.convert('''
 #define DATE __DATE__
 char c1[] = DATE;
 char f[] = __FILE__;
 char v2[] = __clang_version__;
-
-// this fails for now
-int v = __STDC_VERSION__;
 ''')
         # print(self.text_output)
         self.assertIn("c1", self.namespace)
@@ -603,10 +605,17 @@ int v = __STDC_VERSION__;
         self.assertEqual(self.namespace.c1, this_date)
         self.assertIn("# DATE = __DATE__", self.text_output)
         self.assertIn("f", self.namespace)
-        self.assertIn("v", self.namespace)
         self.assertIn("v2", self.namespace)
         # v2 = '11.0.0' for example
         self.assertIn("v2 = '", self.text_output)
+
+    @unittest.expectedFailure
+    def test_defines_predefined_failing(self):
+        self.convert('''
+// this fails for now
+int v = __STDC_VERSION__;
+''')
+        self.assertIn("v", self.namespace)
         # this is the current limit
         self.assertNotEqual(self.namespace.v, [])
 
