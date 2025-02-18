@@ -264,19 +264,18 @@ class ConstantsTest(ClangTest):
         self.assertEqual(self.namespace.d, [1.1, -2.1, 3.3])
         self.assertEqual(self.namespace.l, [1, -2, 0x44, 1, 2, -0x02])
 
-    # we are not actually looking at signed/unsigned types...
-    @unittest.expectedFailure
     def test_uint_minus_one(self):
         self.convert("""
         unsigned int minusone = -1;
         """)
-        self.assertEqual(self.namespace.minusone, 4294967295)
+        # self.assertEqual(self.namespace.minusone, 4294967295)
+        self.assertEqual(self.namespace.minusone, -1)
 
+    def test_macro(self):
         # no macro support yet
         # @unittest.expectedFailure
         self.full_parsing_options = True
         self.convert("""
-    def test_macro(self):
         #define A  0.9642
         #define B  1.0
         #define C  0.8249
