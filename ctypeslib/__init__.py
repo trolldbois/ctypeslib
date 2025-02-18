@@ -106,7 +106,7 @@ try:
     from clang import cindex
     from ctypeslib.codegen.codegenerator import translate, translate_files
 
-    __clang_py_version__ = get_distribution('clang').version
+    __clang_py_version__ = importlib.metadata.version('clang')
     __clang_library_filename = __configure_clang_cindex()
     if __clang_library_filename is None:
         warnings.warn("Could not find the clang library. please install llvm libclang", RuntimeWarning)
