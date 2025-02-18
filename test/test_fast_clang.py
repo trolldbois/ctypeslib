@@ -44,6 +44,8 @@ class CompareSizes(ClangTest):
     @unittest.expectedFailure
     def test_includes_x32(self):
         """Test sizes of pod with std include."""
+        # 2025 FIXME
+        # ctypeslib.codegen.handler.InvalidTranslationUnitException: 'bits/libc-header-start.h' file not found (/usr/include/stdint.h:26:10) during processing test/data/test-stdint.cpp
         targets = ['int8_t', 'intptr_t', 'intmax_t']
         # no size here ['a','b','c','d','e','f','g','h']
         # will fail with IncorrectWordSizeError
