@@ -15,21 +15,13 @@ import sys
 import warnings
 from ctypes.util import find_library
 
-from pkg_resources import get_distribution, DistributionNotFound
+import importlib.metadata
+from importlib.metadata import PackageNotFoundError
 
 try:
-    __dist = get_distribution('ctypeslib2')
-    # Normalize case for Windows systems
-    # if you are in a virtualenv, ./local/* are aliases to ./*
-    __dist_loc = os.path.normcase(os.path.realpath(__dist.location))
-    __here = os.path.normcase(os.path.realpath(__file__))
-    if not __here.startswith(os.path.join(__dist_loc, 'ctypeslib')):
-        # not installed, but there is another version that *is*
-        raise DistributionNotFound
-except DistributionNotFound:
+    __version__ = importlib.metadata.version('ctypeslib22')
+except PackageNotFoundError:
     __version__ = 'Please install the latest version of this python package'
-else:
-    __version__ = __dist.version
 
 
 def __find_clang_libraries():
