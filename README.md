@@ -15,6 +15,9 @@
 
 ## Status update
 
+ - 2025-02:
+   - Updating for clang 19 and py13. 
+   - Dropping testing/support for versions older than 3 from latest.
  - 2023-04:
    - Please read the installation instructions
  - 2021-02:
@@ -32,16 +35,16 @@ See the LLVM Clang instructions at http://apt.llvm.org/ or use your distribution
 
 Either use an installer relevant for your OS (APT, downloads, etc..) to install libclang 
 ```sh
-$ sudo apt install libclang1-11
+$ sudo apt install libclang1-19
 ```
 
 or you can use the LLVM install script that installs the whole llvm toolkit 
 ```sh
  wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
- # then install llvm version 16 
- ./llvm.sh 16
- # or version 11 or any other version
- ./llvm.sh 11
+ # then install llvm version 19 
+ ./llvm.sh 19
+ # or version 17 or any other version
+ ./llvm.sh 17
 ```
 or you can use anaconda, or any local installation of your favorite choice
 
