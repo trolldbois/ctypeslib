@@ -1082,6 +1082,14 @@ class CodeTranslator:
         self.filter_types()
         self.filter_symbols()
         self.filter_expressions()
+
+        # clang's AST does not guarantee a fixed declaration order
+        # sort items by name or location. This results in a reproducible output.
+        self.filtered_items = sorted(
+            self.filtered_items, 
+            key=lambda x: (x.location[0], x.location[1], x.name) if hasattr(x, 'location') else x.name
+        )
+
         log.debug("Left with %d items after filtering", len(self.filtered_items))
         loops = self.generator.generate(self.parser, self.filtered_items)
         if self.cfg.verbose:
