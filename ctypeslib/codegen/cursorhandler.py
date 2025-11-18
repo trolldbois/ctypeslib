@@ -1027,7 +1027,8 @@ class CursorHandler(ClangHandler):
         else:
             bits = cursor.type.get_size() * 8
             if bits < 0:
-                log.warning('Bad source code, bitsize == %d <0 on %s', bits, name)
+                # Flex array members have a size of -2
+                # log.warning('Bad source code, bitsize == %d <0 on %s', bits, name)
                 bits = 0
         log.debug('FIELD_DECL: field is %d bits', bits)
         # try to get a representation of the type
