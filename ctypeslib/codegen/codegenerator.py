@@ -789,7 +789,7 @@ class Generator:
         if cc == "stdcall":
             self.need_WinLibraries()
             if library._name not in self._stdcall_libraries:
-                _ = "_stdcall_libraries[%r] =%s ctypes.WinDLL(%r)" % (library._name, stub_comment, library._filepath)
+                _ = "_stdcall_libraries[%r] =%s ctypes.WinDLL(%r)" % (library._name, stub_comment, library._name)
                 print(_, file=self.imports)
                 self._stdcall_libraries[library._name] = None
             return "_stdcall_libraries[%r]" % library._name
@@ -801,7 +801,7 @@ class Generator:
         else:
             global_flag = ""
         if library._name not in self._c_libraries:
-            print("_libraries[%r] =%s ctypes.CDLL(%r%s)" % (library._name, stub_comment, library._filepath, global_flag),
+            print("_libraries[%r] =%s ctypes.CDLL(%r%s)" % (library._name, stub_comment, library._name, global_flag),
                   file=self.imports)
             self._c_libraries[library._name] = None
         return "_libraries[%r]" % library._name
