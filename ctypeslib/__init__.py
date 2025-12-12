@@ -10,6 +10,7 @@ and providing tools for handling errors and exceptions that may occur when calli
 
 import ctypes
 import os
+import platform
 import re
 import sys
 import warnings
@@ -106,7 +107,19 @@ try:
     from clang import cindex
     from ctypeslib.codegen.codegenerator import translate, translate_files
 
-    __clang_py_version__ = importlib.metadata.version('clang')
+    try:
+        __clang_py_version__ = importlib.metadata.version("clang")
+    except PackageNotFoundError:
+        # Python packages are not required to provide a version that
+        # is queryable via the importlib metadata.
+        if sys.platform == "linux" and platform.freedesktop_os_release()["ID"] == "debian":
+            # The path for the library filename in Debian can provide a hint as
+            # to the major version of the clang library without loading it.
+            # @see https://salsa.debian.org/pkg-llvm-team/llvm-toolchain/-/blob/19/debian/patches/python-clangpath.diff
+            __clang_py_version__ = cindex.conf.get_filename().split("-")[1].split(".")[0]
+        else:
+            raise ImportError("Could not determine clang.py version")
+
     __clang_library_filename = __configure_clang_cindex()
     if __clang_library_filename is None:
         warnings.warn("Could not find the clang library. please install llvm libclang", RuntimeWarning)
