@@ -19,7 +19,7 @@ import importlib.metadata
 from importlib.metadata import PackageNotFoundError
 
 try:
-    __version__ = importlib.metadata.version('ctypeslib22')
+    __version__ = importlib.metadata.version('ctypeslib2')
 except PackageNotFoundError:
     __version__ = 'Please install the latest version of this python package'
 
