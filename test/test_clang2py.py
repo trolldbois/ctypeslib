@@ -308,6 +308,13 @@ class OrderingTest(ClangTest):
         enum = output.index("E = ctypes.c_uint32")
         self.assertGreater(decl, enum, "Generated incorrect ordering")
 
+    def test_enum_typedef(self):
+        p, c_output, _ = clang2py(['./test/data/test-enum-typedef.c'])
+        self.assertEqual(0, p.returncode)
+        p, h_output, _ = clang2py(['./test/data/test-enum-typedef.h'])
+        self.assertEqual(0, p.returncode)
+        self.assertEqual(c_output, h_output)
+
 
 class TestLocation(ClangTest):
 

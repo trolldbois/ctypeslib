@@ -208,15 +208,19 @@ class Clang_Parser:
             log.debug("register: %s already defined: %s", name, obj.name)
             return self.all[name]
         if name in self.all:
-            if not isinstance(self.all[name], typedesc.Structure) or (self.all[name].members is not None):
-                # code.interact(local=locals())
-                raise DuplicateDefinitionException(
-                    f"register: {name} which has a previous incompatible definition: {obj.name}"
-                    f"\ndefined here: {obj.location}"
-                    f"\npreviously defined here: {self.all[name].location}"
-                )
             if isinstance(self.all[name], typedesc.Structure) and (self.all[name].members is None):
                 return obj
+            if isinstance(obj, typedesc.Typedef) and obj.typ == self.all[name]:
+                # covers parsing order edge case where typedef is parsed before
+                # inline enum (or other) declaration. See test/data/test-enum-typedef.{c,h}
+                return self.all[name]
+
+            # code.interact(local=locals())
+            raise DuplicateDefinitionException(
+                f"register: {name} which has a previous incompatible definition: {obj.name}"
+                f"\ndefined here: {obj.location}"
+                f"\npreviously defined here: {self.all[name].location}"
+            )
         log.debug("register: %s ", name)
         self.all[name] = obj
         self.all_set.add((name, obj))
